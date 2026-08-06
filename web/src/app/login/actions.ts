@@ -16,7 +16,12 @@ export async function login(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    redirect("/login?error=" + encodeURIComponent("Credenciales inválidas."));
+    // Distinguir "contraseña incorrecta" de un problema de configuración, para
+    // no diagnosticar a ciegas.
+    const msg = /invalid login credentials/i.test(error.message)
+      ? "Email o contraseña incorrectos."
+      : `Error de acceso: ${error.message}`;
+    redirect("/login?error=" + encodeURIComponent(msg));
   }
 
   redirect("/");
