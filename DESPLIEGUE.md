@@ -75,29 +75,28 @@ frontend.**
 
 ---
 
-## Parte B — Vercel (despliegue de la app, fase posterior)
+## Parte B — Vercel (desplegar la app web)
 
-La Fase 2 es solo el motor (sin UI todavía). Cuando construyamos las pantallas
-(Fase 3+), el despliegue en Vercel será:
+El repo es un **monorepo** (`engine/` + `web/`). La app Next.js vive en `web/`.
 
-1. 🔑 Sube el repositorio a **GitHub** (privado).
-2. 🔑 En <https://vercel.com> → **Add New → Project** → importa ese repo.
-3. Configura las **Environment Variables** en Vercel (Settings → Environment
-   Variables), tomadas de Supabase (Project Settings → API / Database):
-   - `DATABASE_URL` — cadena de conexión de Postgres (usar el **pooler** de
-     Supabase para serverless).
-   - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY` — solo en variables de servidor, nunca en el
-     cliente.
-   - `SUPABASE_ANON_KEY` — para el cliente autenticado (cuando haya UI).
-4. Deploy. Vercel reconstruye en cada push a la rama principal.
+1. 🔑 En <https://vercel.com> → **Add New → Project** → importa el repo
+   `TRDAgencyTeam/comisiones-team-leadtion` desde GitHub.
+2. En la pantalla de configuración del proyecto:
+   - **Root Directory:** selecciona **`web`** (¡importante! la app no está en la
+     raíz). Vercel detectará Next.js automáticamente.
+   - **Framework Preset:** Next.js (se autodetecta).
+3. **Environment Variables** → agrega (para todos los entornos):
+   - `DATABASE_URL` = la cadena del **Transaction pooler** de Supabase (puerto
+     6543), la misma que usamos en la migración.
+     > Es una variable de **servidor** (no lleva prefijo `NEXT_PUBLIC_`), así que
+     > nunca se expone al navegador. Es lo único que la app necesita hoy.
+4. **Deploy.** Vercel reconstruye en cada push a `main`.
 
-Ver `.env.example` para la lista de variables.
+Cuando agreguemos login/UI de cliente (Fase 3+) sumaremos `SUPABASE_URL`,
+`SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` (ver `.env.example`).
 
-> 🔑 **Alternativamente**, si me compartes los valores de conexión (o me dices
-> que ejecute `npx supabase login` / `npx vercel login` y completas el paso del
-> navegador tú), puedo dejar el enlace y las variables configuradas y correr la
-> verificación del motor contra tu Supabase real.
+> Verificado en local (`npm run build` + `npm start` en `web/`, leyendo de
+> Supabase): fundadores $122.40 al 2026-08-05, Alejandro $31.05 al 2026-09-05.
 
 ---
 
@@ -112,7 +111,10 @@ Ver `.env.example` para la lista de variables.
   clientes=62, pagos=868, colaboradores=4.
 - ✅ **Motor verificado contra Supabase real**: los 4 casos de la Sección 6 pasan
   ($122.40 / $122.40 / $20.70 / $31.05). Reejecutar con `npm run db:verify`.
-- ⬜ Enlazar Vercel (fase de UI).
+- ✅ **Repo en GitHub**: `TRDAgencyTeam/comisiones-team-leadtion` (privado).
+- ✅ **App web (esqueleto)**: Next.js en `web/`, pantalla de comisiones en vivo
+  sobre Supabase, verificada en local. Falta desplegarla en Vercel (Parte B).
+- ⬜ Importar el repo en Vercel con Root Directory = `web` + `DATABASE_URL`.
 
 > 🔒 La contraseña de la base se compartió por chat para esta migración. Si
 > quieres, ya puedes **rotarla** en Supabase (Settings → Database → Reset
