@@ -1,8 +1,11 @@
-import { calcularComision } from "comisiones-cs-engine/rules";
-import type { ResultadoComision } from "comisiones-cs-engine/types";
-import { fuente } from "@/lib/db";
+import { cargarResultados, type ResultadoVista } from "@/lib/comisiones";
 import { getUsuario } from "@/lib/supabase/server";
 import { logout } from "@/app/login/actions";
+import {
+  marcarCicloPagado,
+  marcarHitoPagado,
+  deshacerHitoPagado,
+} from "@/app/pagos-actions";
 
 // Siempre datos frescos desde Supabase (sin caché estática).
 export const dynamic = "force-dynamic";
@@ -10,17 +13,7 @@ export const dynamic = "force-dynamic";
 const CORTE_POR_DEFECTO = "2026-08-05";
 const usd = (n: number) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD" });
-
-async function calcular(corte: string): Promise<ResultadoComision[]> {
-  const [clientes, colaboradores] = await Promise.all([
-    fuente.cargarClientes(),
-    fuente.cargarColaboradores(),
-  ]);
-  return colaboradores
-    .filter((c) => c.categoria === "fundador" || c.categoria === "nuevo")
-    .map((c) => calcularComision(c, clientes, corte))
-    .sort((a, b) => b.total - a.total);
-}
+const fechaCorta = (iso: string | null) => (iso ? iso.slice(0, 10) : "");
 
 export default async function Page({
   searchParams,
@@ -31,10 +24,10 @@ export default async function Page({
   const corte = corteParam || CORTE_POR_DEFECTO;
   const usuario = await getUsuario();
 
-  let resultados: ResultadoComision[] | null = null;
+  let resultados: ResultadoVista[] | null = null;
   let error: string | null = null;
   try {
-    resultados = await calcular(corte);
+    resultados = await cargarResultados(corte);
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
@@ -52,28 +45,27 @@ export default async function Page({
         </div>
       )}
       <main className="wrap">
-      <header className="page">
-        <h1>Comisiones CS — LEADTION</h1>
-        <p>Cálculo en vivo del equipo de Customer Success · TRD Agency</p>
-      </header>
+        <header className="page">
+          <h1>Comisiones CS — LEADTION</h1>
+          <p>Cálculo y control de pagos · equipo de Customer Success · TRD Agency</p>
+        </header>
 
-      <form className="toolbar" method="get">
-        <label>
-          Fecha de corte
-          <input type="date" name="corte" defaultValue={corte} />
-        </label>
-        <button type="submit">Calcular</button>
-      </form>
+        <form className="toolbar" method="get">
+          <label>
+            Fecha de corte
+            <input type="date" name="corte" defaultValue={corte} />
+          </label>
+          <button type="submit">Calcular</button>
+        </form>
 
-      {error && (
-        <div className="card">
-          <strong>No se pudo calcular.</strong>
-          <p className="empty">{error}</p>
-        </div>
-      )}
+        {error && (
+          <div className="card">
+            <strong>No se pudo calcular.</strong>
+            <p className="empty">{error}</p>
+          </div>
+        )}
 
-      {resultados &&
-        resultados.map((r) => (
+        {resultados?.map((r) => (
           <section className="card" key={r.colaboradorId}>
             <div className="card-head">
               <div>
@@ -81,49 +73,99 @@ export default async function Page({
                 <span className="cat">{r.categoria}</span>
                 {r.enPeriodoPrueba && <span className="badge">en prueba</span>}
               </div>
-              <div className="total">{usd(r.total)}</div>
+              <div className="totales">
+                <span className="t-pendiente">
+                  Pendiente <b>{usd(r.totalPendiente)}</b>
+                </span>
+                <span className="t-pagado">
+                  Pagado <b>{usd(r.totalPagado)}</b>
+                </span>
+              </div>
             </div>
 
             {r.lineas.length === 0 ? (
               <p className="empty">Sin comisión a esta fecha de corte.</p>
             ) : (
-              <div className="table-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Cliente</th>
-                      <th>Activación</th>
-                      <th>Hitos</th>
-                      <th className="num">Subtotal</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {r.lineas.map((l) => (
-                      <tr key={l.clienteId}>
-                        <td>{l.clienteNombre}</td>
-                        <td>{l.fechaActivacion}</td>
-                        <td>
-                          {l.hitos.map((h) => (
-                            <span className="hito-chip" key={h.hito} title={`base ${usd(h.base)} · ${h.tasa * 100}% · ${h.mesesBase} meses`}>
-                              {h.hito} {usd(h.monto)}
-                            </span>
-                          ))}
-                        </td>
-                        <td className="num">{usd(l.subtotal)}</td>
+              <>
+                {r.totalPendiente > 0 && (
+                  <form action={marcarCicloPagado} className="ciclo-form">
+                    <input type="hidden" name="colaboradorId" value={r.colaboradorId} />
+                    <input type="hidden" name="corte" value={corte} />
+                    <button type="submit" className="btn-ciclo">
+                      Marcar todo lo pendiente como pagado ({usd(r.totalPendiente)})
+                    </button>
+                  </form>
+                )}
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Cliente</th>
+                        <th>Activación</th>
+                        <th>Hito</th>
+                        <th className="num">Monto</th>
+                        <th>Estado</th>
+                        <th></th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {r.lineas.flatMap((l) =>
+                        l.hitos.map((h) => (
+                          <tr key={`${l.clienteId}-${h.hito}`}>
+                            <td>{l.clienteNombre}</td>
+                            <td>{l.fechaActivacion}</td>
+                            <td>
+                              <span className="hito-chip">{h.hito}</span>
+                            </td>
+                            <td className="num">{usd(h.monto)}</td>
+                            <td>
+                              {h.estado === "pagado" ? (
+                                <span className="estado-pagado">
+                                  ✓ Pagado {fechaCorta(h.pagadoEn)}
+                                </span>
+                              ) : (
+                                <span className="estado-pendiente">Pendiente</span>
+                              )}
+                            </td>
+                            <td className="num">
+                              {h.estado === "pagado" ? (
+                                <form action={deshacerHitoPagado}>
+                                  <input type="hidden" name="colaboradorId" value={r.colaboradorId} />
+                                  <input type="hidden" name="clienteId" value={l.clienteId} />
+                                  <input type="hidden" name="hito" value={h.hito} />
+                                  <button type="submit" className="btn-deshacer" title="Deshacer pago">
+                                    deshacer
+                                  </button>
+                                </form>
+                              ) : (
+                                <form action={marcarHitoPagado}>
+                                  <input type="hidden" name="colaboradorId" value={r.colaboradorId} />
+                                  <input type="hidden" name="clienteId" value={l.clienteId} />
+                                  <input type="hidden" name="hito" value={h.hito} />
+                                  <input type="hidden" name="corte" value={corte} />
+                                  <button type="submit" className="btn-pagar" title="Marcar pagado">
+                                    Marcar pagado
+                                  </button>
+                                </form>
+                              )}
+                            </td>
+                          </tr>
+                        )),
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </section>
         ))}
 
-      <p className="foot">
-        Corte <code>{corte}</code> · datos leídos de Supabase y calculados por el
-        motor de reglas (Fase 2). El CHS se asume aprobado para el cálculo de
-        referencia; la aprobación real por el admin llega en una fase posterior.
-      </p>
+        <p className="foot">
+          Corte <code>{corte}</code> · datos de Supabase, cálculo por el motor de
+          reglas (Fase 2). Marcar un hito como pagado lo registra en{" "}
+          <code>comision_hitos</code> y deja de contar como pendiente. El CHS se
+          asume aprobado para el cálculo de referencia.
+        </p>
       </main>
     </>
   );

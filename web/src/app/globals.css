@@ -124,3 +124,31 @@ tr:last-child td { border-bottom: none; }
   margin: 0; padding: 9px 12px; border-radius: 8px;
   background: var(--pending-soft); color: var(--pending); font-size: 0.85rem;
 }
+
+/* --- Totales por colaborador (pendiente / pagado) --- */
+.totales { display: flex; gap: 18px; align-items: baseline; }
+.t-pendiente, .t-pagado { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.t-pendiente b { display: block; font-size: 1.35rem; color: var(--pending); font-variant-numeric: tabular-nums; }
+.t-pagado b { display: block; font-size: 1.35rem; color: var(--accent); font-variant-numeric: tabular-nums; }
+
+/* --- Acciones de pago --- */
+.ciclo-form { margin: 14px 0 4px; }
+.btn-ciclo {
+  padding: 9px 16px; border: 1px solid var(--accent); border-radius: 8px;
+  background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; font-size: 0.85rem;
+}
+.btn-ciclo:hover { filter: brightness(1.05); }
+
+.estado-pagado { color: var(--accent); font-weight: 600; font-size: 0.82rem; white-space: nowrap; }
+.estado-pendiente { color: var(--pending); font-weight: 600; font-size: 0.82rem; }
+
+.btn-pagar {
+  padding: 5px 12px; border: 1px solid var(--accent); border-radius: 7px;
+  background: none; color: var(--accent); font-weight: 600; cursor: pointer; font-size: 0.8rem; white-space: nowrap;
+}
+.btn-pagar:hover { background: var(--accent-soft); }
+.btn-deshacer {
+  padding: 5px 10px; border: 1px solid var(--border); border-radius: 7px;
+  background: none; color: var(--muted); cursor: pointer; font-size: 0.78rem;
+}
+.btn-deshacer:hover { border-color: var(--pending); color: var(--pending); }
