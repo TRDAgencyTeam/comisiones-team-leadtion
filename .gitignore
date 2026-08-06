@@ -2,6 +2,12 @@
 node_modules/
 engine/dist/
 
+# Next.js
+.next/
+web/.next/
+next-env.d.ts
+*.tsbuildinfo
+
 # Entorno / secretos (Supabase, Vercel)
 .env
 .env.*

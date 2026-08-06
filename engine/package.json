@@ -7,6 +7,13 @@
   "engines": {
     "node": ">=22"
   },
+  "exports": {
+    ".": "./src/index.ts",
+    "./rules": "./src/rules.ts",
+    "./types": "./src/types.ts",
+    "./dates": "./src/dates.ts",
+    "./postgres": "./src/db.postgres.ts"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -20,6 +27,7 @@
   "devDependencies": {
     "@types/node": "^22.20.1",
     "@types/pg": "^8.20.4",
+    "pg": "^8.22.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
@@ -27,8 +35,5 @@
   "allowScripts": {
     "esbuild@0.28.1": true,
     "esbuild@0.21.5": true
-  },
-  "dependencies": {
-    "pg": "^8.22.0"
   }
 }
