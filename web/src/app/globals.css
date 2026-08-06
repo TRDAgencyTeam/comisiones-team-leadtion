@@ -85,3 +85,42 @@ tr:last-child td { border-bottom: none; }
 .table-scroll { overflow-x: auto; }
 .foot { margin-top: 28px; color: var(--muted); font-size: 0.82rem; }
 .foot code { background: var(--panel); border: 1px solid var(--border); padding: 1px 5px; border-radius: 5px; }
+
+/* --- Barra superior (usuario / salir) --- */
+.topbar {
+  display: flex; justify-content: flex-end; align-items: center; gap: 12px;
+  max-width: 960px; margin: 0 auto; padding: 12px 24px 0;
+  font-size: 0.85rem; color: var(--muted);
+}
+.topbar form { display: inline; }
+.topbar .logout {
+  background: none; border: 1px solid var(--border); color: var(--text);
+  padding: 5px 12px; border-radius: 8px; cursor: pointer; font-size: 0.82rem;
+}
+.topbar .logout:hover { border-color: var(--muted); }
+
+/* --- Login --- */
+.login-wrap {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.login-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+  padding: 32px 30px; width: 100%; max-width: 380px; box-shadow: var(--shadow);
+}
+.login-card h1 { margin: 0 0 2px; font-size: 1.4rem; }
+.login-card .sub { margin: 0 0 22px; color: var(--muted); font-size: 0.88rem; }
+.login-form { display: flex; flex-direction: column; gap: 14px; }
+.login-form label { display: flex; flex-direction: column; gap: 5px; font-size: 0.8rem; color: var(--muted); }
+.login-form input {
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font-size: 0.95rem;
+}
+.login-form button {
+  margin-top: 6px; padding: 11px; border: none; border-radius: 8px;
+  background: var(--accent); color: #fff; font-weight: 650; font-size: 0.95rem; cursor: pointer;
+}
+.login-error {
+  margin: 0; padding: 9px 12px; border-radius: 8px;
+  background: var(--pending-soft); color: var(--pending); font-size: 0.85rem;
+}

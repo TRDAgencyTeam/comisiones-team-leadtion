@@ -1,6 +1,8 @@
 import { calcularComision } from "comisiones-cs-engine/rules";
 import type { ResultadoComision } from "comisiones-cs-engine/types";
 import { fuente } from "@/lib/db";
+import { getUsuario } from "@/lib/supabase/server";
+import { logout } from "@/app/login/actions";
 
 // Siempre datos frescos desde Supabase (sin caché estática).
 export const dynamic = "force-dynamic";
@@ -27,6 +29,7 @@ export default async function Page({
 }) {
   const { corte: corteParam } = await searchParams;
   const corte = corteParam || CORTE_POR_DEFECTO;
+  const usuario = await getUsuario();
 
   let resultados: ResultadoComision[] | null = null;
   let error: string | null = null;
@@ -37,7 +40,18 @@ export default async function Page({
   }
 
   return (
-    <main className="wrap">
+    <>
+      {usuario && (
+        <div className="topbar">
+          <span>{usuario.email}</span>
+          <form action={logout}>
+            <button type="submit" className="logout">
+              Salir
+            </button>
+          </form>
+        </div>
+      )}
+      <main className="wrap">
       <header className="page">
         <h1>Comisiones CS — LEADTION</h1>
         <p>Cálculo en vivo del equipo de Customer Success · TRD Agency</p>
@@ -110,6 +124,7 @@ export default async function Page({
         motor de reglas (Fase 2). El CHS se asume aprobado para el cálculo de
         referencia; la aprobación real por el admin llega en una fase posterior.
       </p>
-    </main>
+      </main>
+    </>
   );
 }
