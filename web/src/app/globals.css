@@ -37,7 +37,39 @@ body {
   line-height: 1.5;
 }
 
-.wrap { max-width: 960px; margin: 0 auto; padding: 40px 24px 80px; }
+.wrap { max-width: 960px; margin: 0 auto; padding: 24px 24px 80px; }
+
+/* --- Menú de navegación --- */
+.nav {
+  display: flex; gap: 6px; max-width: 960px; margin: 10px auto 0;
+  padding: 0 24px; border-bottom: 1px solid var(--border);
+}
+.nav-link {
+  padding: 10px 14px; text-decoration: none; color: var(--muted);
+  font-size: 0.9rem; font-weight: 550; border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.nav-link:hover { color: var(--text); }
+.nav-link.activo { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* --- KPIs del dashboard --- */
+.kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 18px; }
+@media (max-width: 640px) { .kpis { grid-template-columns: 1fr; } }
+.kpi {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  padding: 18px 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 6px;
+}
+.kpi-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.kpi-num { font-size: 1.7rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.kpi-total .kpi-num { color: var(--text); }
+.kpi-pend .kpi-num { color: var(--pending); }
+.kpi-pag .kpi-num { color: var(--accent); }
+
+.link-ver, .fila-total td { font-size: 0.9rem; }
+.link-ver { color: var(--accent); text-decoration: none; font-weight: 600; }
+.link-ver:hover { text-decoration: underline; }
+.fila-total td { font-weight: 700; border-top: 2px solid var(--border); }
+.user-email { color: var(--muted); }
 
 header.page h1 { font-size: 1.6rem; margin: 0 0 4px; }
 header.page p { margin: 0; color: var(--muted); font-size: 0.95rem; }
@@ -86,12 +118,14 @@ tr:last-child td { border-bottom: none; }
 .foot { margin-top: 28px; color: var(--muted); font-size: 0.82rem; }
 .foot code { background: var(--panel); border: 1px solid var(--border); padding: 1px 5px; border-radius: 5px; }
 
-/* --- Barra superior (usuario / salir) --- */
+/* --- Barra superior (marca / usuario / salir) --- */
 .topbar {
-  display: flex; justify-content: flex-end; align-items: center; gap: 12px;
-  max-width: 960px; margin: 0 auto; padding: 12px 24px 0;
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  max-width: 960px; margin: 0 auto; padding: 14px 24px 0;
   font-size: 0.85rem; color: var(--muted);
 }
+.topbar .brand { font-weight: 650; color: var(--text); }
+.topbar-right { display: flex; align-items: center; gap: 12px; }
 .topbar form { display: inline; }
 .topbar .logout {
   background: none; border: 1px solid var(--border); color: var(--text);
