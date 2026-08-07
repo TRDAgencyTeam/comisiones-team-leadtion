@@ -12,7 +12,7 @@ export type ISODate = string;
 
 export type CategoriaColaborador = "fundador" | "nuevo";
 export type RolColaborador = "admin" | "cs" | "comercial";
-export type EstadoCliente = "activo" | "cancelado";
+export type EstadoCliente = "activo" | "cancelado" | "pausado";
 
 export interface Colaborador {
   id: number;

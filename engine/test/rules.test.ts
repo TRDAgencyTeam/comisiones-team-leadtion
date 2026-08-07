@@ -138,6 +138,29 @@ describe("Sección 6 — el admin (Mauro) no genera comisión", () => {
   });
 });
 
+describe("Cliente pausado/congelado no genera comisión", () => {
+  const clientePausado = {
+    id: 999,
+    nombre: "Cliente Pausado",
+    fechaActivacion: "2026-03-03", // alcanzaría T1 al corte si estuviera activo
+    estadoActual: "pausado" as const,
+    fechaCancelacion: null,
+  };
+
+  it("un cliente pausado queda excluido, aunque haya alcanzado su hito", () => {
+    const r = calcularComision(COLABORADORES.andres, [clientePausado], CORTE_FUNDADORES);
+    expect(r.total).toBe(0);
+    expect(r.lineas).toHaveLength(0);
+    expect(r.excluidos.some((e) => e.clienteId === 999 && /pausada/.test(e.motivo))).toBe(true);
+  });
+
+  it("el mismo cliente, activo, sí comisiona (control)", () => {
+    const activo = { ...clientePausado, estadoActual: "activo" as const };
+    const r = calcularComision(COLABORADORES.andres, [activo], CORTE_FUNDADORES);
+    expect(r.total).toBe(10.05);
+  });
+});
+
 describe("CHS como bloqueo opcional (no bloquea por defecto)", () => {
   it("con bloquearPorChs=true y todo 'pendiente', el total cae a 0", () => {
     const r = calcularComision(COLABORADORES.andres, CLIENTES, CORTE_FUNDADORES, {

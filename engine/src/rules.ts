@@ -189,6 +189,11 @@ export function calcularComision(
       excluidos.push(excluir(c, "sin fecha de activación"));
       continue;
     }
+    // Cuenta pausada/congelada: no está pagando, no genera comisión mientras dure.
+    if (c.estadoActual === "pausado") {
+      excluidos.push(excluir(c, "cuenta pausada/congelada (no genera comisión)"));
+      continue;
+    }
     // Fuera de la ventana de elegibilidad del colaborador.
     if (lt(c.fechaActivacion, inicio)) {
       excluidos.push(excluir(c, `activado antes de la ventana (${inicio})`));
