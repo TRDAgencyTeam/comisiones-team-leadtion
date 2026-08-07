@@ -35,22 +35,23 @@ export default async function NuevoClientePage({
             Plan con que entró
             <select name="planTipo" defaultValue="">
               <option value="">— Sin especificar</option>
-              <option value="agente_ai">Agente AI</option>
-              <option value="reactivacion">Reactivación</option>
+              <option value="agente_ai">Agente AI (entra pagando $847)</option>
+              <option value="reactivacion">Reactivación ($991 en 3 fases)</option>
             </select>
           </label>
           <label>
             Soporte activo
             <select name="soporteValor" defaultValue="">
-              <option value="">— Sin soporte</option>
+              <option value="">— Sin soporte (solo membresía)</option>
               <option value="87">Soporte $87</option>
               <option value="119">Soporte $119</option>
               <option value="157">Soporte $157</option>
             </select>
+            <small>El soporte ya incluye la membresía. Para Agente IA solo aplican $119 o $157.</small>
           </label>
-          <label>
-            Plan (texto, opcional)
-            <input type="text" name="plan" placeholder="PRO, LITE, COMUNIDAD…" />
+          <label className="check-label">
+            <input type="checkbox" name="marketing" value="1" />
+            Entró con plan de marketing (la licencia se paga dentro del plan de mkt)
           </label>
           <label>
             Valor mostrado (opcional)

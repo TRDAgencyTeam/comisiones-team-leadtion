@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { cargarResultados } from "@/lib/comisiones";
-import { estadisticasClientes, type EstadisticasClientes } from "@/lib/clientes";
+import {
+  estadisticasClientes,
+  ingresosPorMes,
+  type EstadisticasClientes,
+  type IngresoMes,
+} from "@/lib/clientes";
+import { BarChart } from "@/components/BarChart";
 
 export const dynamic = "force-dynamic";
 
@@ -30,13 +36,16 @@ export default async function DashboardPage({
   }[] = [];
 
   let stats: EstadisticasClientes | null = null;
+  let ingresos: IngresoMes[] = [];
 
   try {
-    const [resultados, est] = await Promise.all([
+    const [resultados, est, ing] = await Promise.all([
       cargarResultados(corte),
       estadisticasClientes(),
+      ingresosPorMes(12),
     ]);
     stats = est;
+    ingresos = ing;
     for (const r of resultados) {
       totalMes += r.total;
       totalPendiente += r.totalPendiente;
@@ -92,6 +101,25 @@ export default async function DashboardPage({
               <span className="kpi-num">{usd(round2(totalPagado))}</span>
             </div>
           </div>
+
+          {ingresos.length > 0 && (
+            <section className="card">
+              <div className="card-head">
+                <span className="who">Ingresos por mes</span>
+                <span className="cat">licencias + servicios cobrados</span>
+              </div>
+              <BarChart
+                data={ingresos.map((m) => ({
+                  label: `${m.mes.slice(5)}/${m.mes.slice(2, 4)}`,
+                  value: m.ingreso,
+                }))}
+                formatValue={(n) =>
+                  n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${Math.round(n)}`
+                }
+                ariaLabel="Ingresos por mes"
+              />
+            </section>
+          )}
 
           <section className="card">
             <div className="card-head">

@@ -128,7 +128,11 @@ function ColaboradorCard({ r, corte }: { r: ResultadoVista; corte: string }) {
                 {r.lineas.flatMap((l) =>
                   l.hitos.map((h) => (
                     <tr key={`${l.clienteId}-${h.hito}`}>
-                      <td>{l.clienteNombre}</td>
+                      <td>
+                        <Link href={`/clientes/${l.clienteId}`} className="link-cliente">
+                          {l.clienteNombre}
+                        </Link>
+                      </td>
                       <td>{l.fechaActivacion}</td>
                       <td>
                         <span className="hito-chip">{h.hito}</span>

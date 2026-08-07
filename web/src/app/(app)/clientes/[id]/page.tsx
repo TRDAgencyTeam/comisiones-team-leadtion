@@ -62,6 +62,25 @@ export default async function FichaClientePage({
         {c.notas && <p className="notas">{c.notas}</p>}
       </section>
 
+      <section className="card">
+        <div className="card-head">
+          <span className="who">Inversión del cliente (LTV)</span>
+          <span className="total">{usd(c.ltv)}</span>
+        </div>
+        <div className="mini-stats">
+          <div className="mini-stat"><span className="ms-num">{usd(c.ltv)}</span><span className="ms-lbl">Total invertido</span></div>
+          <div className="mini-stat"><span className="ms-num">{c.mesesConCobro}</span><span className="ms-lbl">Meses con cobro</span></div>
+          <div className="mini-stat"><span className="ms-num">{usd(c.promedioMensual)}</span><span className="ms-lbl">Promedio mensual</span></div>
+          {c.incluyeCrmMarketing && (
+            <div className="mini-stat"><span className="ms-num ms-warn">Marketing</span><span className="ms-lbl">Licencia vía plan de mkt</span></div>
+          )}
+        </div>
+        <p className="foot" style={{ marginTop: 14 }}>
+          LTV = suma de todos los cobros mensuales registrados (licencia + servicios).
+          El detalle por mes está más abajo.
+        </p>
+      </section>
+
       {/* --- Estado de la cuenta + acciones --- */}
       <section className="card">
         <div className="card-head"><span className="who">Estado de la cuenta</span></div>

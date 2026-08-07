@@ -416,3 +416,7 @@ tr:last-child td { border-bottom: none; }
   .brand-logo-auto .for-light { display: none; }
   .brand-logo-auto .for-dark { display: inline-block; }
 }
+
+/* --- Checkbox en formularios --- */
+.check-label { flex-direction: row !important; align-items: center; gap: 8px !important; color: var(--text) !important; font-size: 0.9rem !important; }
+.check-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }

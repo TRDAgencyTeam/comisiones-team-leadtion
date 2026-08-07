@@ -11,13 +11,13 @@ export async function crearCliente(formData: FormData) {
 
   const nombre = String(formData.get("nombre") ?? "").trim();
   const fechaActivacion = String(formData.get("fechaActivacion") ?? "").trim();
-  const plan = String(formData.get("plan") ?? "").trim() || null;
   const planTipoRaw = String(formData.get("planTipo") ?? "").trim();
   const planTipo = planTipoRaw === "" ? null : planTipoRaw;
   const valorRaw = String(formData.get("valorLicencia") ?? "").trim();
   const valorLicencia = valorRaw === "" ? null : Number(valorRaw);
   const soporteRaw = String(formData.get("soporteValor") ?? "").trim();
   const soporteValor = soporteRaw === "" ? null : Number(soporteRaw);
+  const marketing = String(formData.get("marketing") ?? "") === "1";
 
   if (!nombre || !fechaActivacion) {
     redirect("/clientes/nuevo?error=" + encodeURIComponent("Nombre y fecha de activación son obligatorios."));
@@ -25,11 +25,11 @@ export async function crearCliente(formData: FormData) {
 
   const rows = await consulta(
     `insert into public.clientes
-       (nombre, plan, plan_tipo, fecha_activacion, estado_actual,
-        valor_licencia_general, soporte_valor, creado_por_rol, estado_actualizado_en)
-     values ($1, $2, $3, $4, 'activo', $5, $6, 'admin', now())
+       (nombre, plan_tipo, fecha_activacion, estado_actual, valor_licencia_general,
+        soporte_valor, incluye_crm_en_marketing, creado_por_rol, estado_actualizado_en)
+     values ($1, $2, $3, 'activo', $4, $5, $6, 'admin', now())
      returning id`,
-    [nombre, plan, planTipo, fechaActivacion, valorLicencia, soporteValor],
+    [nombre, planTipo, fechaActivacion, valorLicencia, soporteValor, marketing],
   );
   const id = rows[0]!.id;
   await consulta(

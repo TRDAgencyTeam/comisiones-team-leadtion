@@ -60,6 +60,12 @@ export interface FichaCliente {
   comisionEquipo: number;
   aportes: AporteColaborador[];
   historialEstado: CambioEstado[];
+  /** Lifetime value: suma de todos los cobros mensuales registrados. */
+  ltv: number;
+  /** Meses con cobro (valor > 0). */
+  mesesConCobro: number;
+  /** Promedio por mes cobrado. */
+  promedioMensual: number;
 }
 
 /** Normaliza fechas de Postgres (Date | string) a 'YYYY-MM-DD'. */
@@ -181,6 +187,25 @@ export async function listarClientes(
   }));
 }
 
+export interface IngresoMes {
+  mes: string; // 'YYYY-MM'
+  ingreso: number;
+}
+
+/** Ingresos reales por mes (suma de cobros en pagos_mensuales). */
+export async function ingresosPorMes(limite = 12): Promise<IngresoMes[]> {
+  const rows = await consulta(
+    `select to_char(mes,'YYYY-MM') mes, coalesce(sum(valor),0)::float ingreso
+       from public.pagos_mensuales
+      where valor is not null and valor > 0
+      group by 1 order by 1 desc limit $1`,
+    [limite],
+  );
+  return rows
+    .map((r) => ({ mes: String(r.mes), ingreso: round2(Number(r.ingreso)) }))
+    .reverse(); // cronológico ascendente para el gráfico
+}
+
 /** Clientes agrupados por mes de activación (cohorte mensual). */
 export async function clientesPorMes(): Promise<ClientesPorMes[]> {
   const rows = await consulta(
@@ -227,12 +252,24 @@ export async function obtenerCliente(
     comisionPorCliente(corte),
   ]);
 
+  const pagos: PagoMes[] = pagosRows.map((p) => ({
+    mes: toISO(p.mes)!,
+    estadoMes: String(p.estado_mes),
+    valor: p.valor === null ? null : Number(p.valor),
+  }));
+  const conCobro = pagos.filter((p) => (p.valor ?? 0) > 0);
+  const ltv = round2(conCobro.reduce((s, p) => s + (p.valor ?? 0), 0));
+  const mesesConCobro = conCobro.length;
+
   return {
     id: Number(r.id),
     nombre: String(r.nombre),
     plan: (r.plan as string | null) ?? null,
     planTipo: (r.plan_tipo as "agente_ai" | "reactivacion" | null) ?? null,
     soporteValor: r.soporte_valor === null ? null : Number(r.soporte_valor),
+    ltv,
+    mesesConCobro,
+    promedioMensual: mesesConCobro ? round2(ltv / mesesConCobro) : 0,
     fechaActivacion: toISO(r.fecha_activacion),
     estado: r.estado_actual as EstadoCliente,
     motivoEstado: (r.motivo_estado as string | null) ?? null,
@@ -241,11 +278,7 @@ export async function obtenerCliente(
     incluyeCrmMarketing: Boolean(r.incluye_crm_en_marketing),
     serviciosAdicionales: (r.servicios_adicionales as string | null) ?? null,
     notas: (r.notas as string | null) ?? null,
-    pagos: pagosRows.map((p) => ({
-      mes: toISO(p.mes)!,
-      estadoMes: String(p.estado_mes),
-      valor: p.valor === null ? null : Number(p.valor),
-    })),
+    pagos,
     comisionEquipo: round2(comision.total.get(id) ?? 0),
     aportes: comision.detalle.get(id) ?? [],
     historialEstado: histRows.map((h) => ({
