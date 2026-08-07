@@ -190,20 +190,38 @@ export async function listarClientes(
 export interface IngresoMes {
   mes: string; // 'YYYY-MM'
   ingreso: number;
+  /** Porción de licencia/membresía (hasta $69 por cobro). */
+  licencia: number;
+  /** Porción de servicios (lo que excede de $69 por cobro). */
+  servicio: number;
 }
 
-/** Ingresos reales por mes (suma de cobros en pagos_mensuales). */
+/** Membresía fija que cuenta como "licencia" en el desglose de ingresos. */
+const MEMBRESIA = 69;
+
+/**
+ * Ingresos reales por mes con desglose licencia vs servicio. Por cada cobro:
+ * hasta $69 = licencia (membresía incluida), el excedente = servicios.
+ */
 export async function ingresosPorMes(limite = 12): Promise<IngresoMes[]> {
   const rows = await consulta(
-    `select to_char(mes,'YYYY-MM') mes, coalesce(sum(valor),0)::float ingreso
+    `select to_char(mes,'YYYY-MM') mes,
+            coalesce(sum(least(valor, $2)), 0)::float licencia,
+            coalesce(sum(greatest(valor - $2, 0)), 0)::float servicio,
+            coalesce(sum(valor), 0)::float ingreso
        from public.pagos_mensuales
       where valor is not null and valor > 0
       group by 1 order by 1 desc limit $1`,
-    [limite],
+    [limite, MEMBRESIA],
   );
   return rows
-    .map((r) => ({ mes: String(r.mes), ingreso: round2(Number(r.ingreso)) }))
-    .reverse(); // cronológico ascendente para el gráfico
+    .map((r) => ({
+      mes: String(r.mes),
+      ingreso: round2(Number(r.ingreso)),
+      licencia: round2(Number(r.licencia)),
+      servicio: round2(Number(r.servicio)),
+    }))
+    .reverse();
 }
 
 /** Clientes agrupados por mes de activación (cohorte mensual). */

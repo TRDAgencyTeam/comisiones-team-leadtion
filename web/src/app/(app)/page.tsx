@@ -106,18 +106,31 @@ export default async function DashboardPage({
             <section className="card">
               <div className="card-head">
                 <span className="who">Ingresos por mes</span>
-                <span className="cat">licencias + servicios cobrados</span>
+                <div className="leyenda">
+                  <span className="leg"><i className="sw-lic" /> Licencias</span>
+                  <span className="leg"><i className="sw-serv" /> Servicios</span>
+                </div>
               </div>
               <BarChart
                 data={ingresos.map((m) => ({
                   label: `${m.mes.slice(5)}/${m.mes.slice(2, 4)}`,
-                  value: m.ingreso,
+                  parts: [
+                    { value: m.licencia, color: "var(--accent)" },
+                    { value: m.servicio, color: "var(--brand-cyan)" },
+                  ],
                 }))}
                 formatValue={(n) =>
                   n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${Math.round(n)}`
                 }
-                ariaLabel="Ingresos por mes"
+                ariaLabel="Ingresos por mes (licencias + servicios)"
               />
+              <p className="foot" style={{ marginTop: 8 }}>
+                En el periodo mostrado:{" "}
+                <b>{usd(round2(ingresos.reduce((s, m) => s + m.licencia, 0)))}</b> en
+                licencias y{" "}
+                <b>{usd(round2(ingresos.reduce((s, m) => s + m.servicio, 0)))}</b> en
+                servicios (membresía fija $69 = licencia; el resto = servicio).
+              </p>
             </section>
           )}
 

@@ -420,3 +420,10 @@ tr:last-child td { border-bottom: none; }
 /* --- Checkbox en formularios --- */
 .check-label { flex-direction: row !important; align-items: center; gap: 8px !important; color: var(--text) !important; font-size: 0.9rem !important; }
 .check-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
+
+/* --- Leyenda de gráficos --- */
+.leyenda { display: flex; gap: 14px; align-items: center; }
+.leg { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--muted); }
+.leg i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+.sw-lic { background: var(--accent); }
+.sw-serv { background: var(--brand-cyan); }
