@@ -24,7 +24,8 @@ export async function login(formData: FormData) {
     redirect("/login?error=" + encodeURIComponent(msg));
   }
 
-  redirect("/");
+  // Tras entrar, el admin elige módulo (Customer Success / Comercial).
+  redirect("/modulos");
 }
 
 /** Cierra la sesión. */

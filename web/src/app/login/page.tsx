@@ -1,4 +1,5 @@
-import { login } from "./actions";
+import { Logo } from "@/components/Brand";
+import { LoginForm } from "./LoginForm";
 
 export const dynamic = "force-dynamic";
 
@@ -10,23 +11,15 @@ export default async function LoginPage({
   const { error } = await searchParams;
 
   return (
-    <main className="login-wrap">
+    <main className="login-wrap login-brand">
       <div className="login-card">
-        <h1>Comisiones CS</h1>
-        <p className="sub">Panel de administración · TRD Agency</p>
+        <div className="login-logo">
+          <Logo height={34} />
+        </div>
+        <h1>Portal Colaboradores</h1>
+        <p className="sub">Customer Success · TRD Agency</p>
 
-        <form action={login} className="login-form">
-          <label>
-            Email
-            <input type="email" name="email" required autoComplete="email" autoFocus />
-          </label>
-          <label>
-            Contraseña
-            <input type="password" name="password" required autoComplete="current-password" />
-          </label>
-          {error && <p className="login-error">{error}</p>}
-          <button type="submit">Entrar</button>
-        </form>
+        <LoginForm error={error} />
       </div>
     </main>
   );

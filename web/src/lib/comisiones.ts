@@ -32,6 +32,7 @@ export interface ResultadoVista {
   colaboradorNombre: string;
   categoria: string | null;
   enPeriodoPrueba: boolean;
+  activo: boolean;
   lineas: LineaVista[];
   total: number;
   totalPendiente: number;
@@ -70,16 +71,23 @@ async function cargarPagados(): Promise<Map<string, string | null>> {
  * pago a una fecha de corte.
  */
 export async function cargarResultados(corte: string): Promise<ResultadoVista[]> {
-  const [clientes, colaboradores, pagados] = await Promise.all([
+  const [clientes, colaboradores, pagados, activos] = await Promise.all([
     fuente.cargarClientes(),
     fuente.cargarColaboradores(),
     cargarPagados(),
+    cargarActivos(),
   ]);
 
   return colaboradores
     .filter((c) => c.categoria === "fundador" || c.categoria === "nuevo")
-    .map((c) => construirVista(c, clientes, corte, pagados))
+    .map((c) => construirVista(c, clientes, corte, pagados, activos.get(c.id) ?? true))
     .sort((a, b) => b.totalPendiente - a.totalPendiente || b.total - a.total);
+}
+
+/** Mapa colaboradorId -> activo (el motor no maneja el flag `activo`). */
+async function cargarActivos(): Promise<Map<number, boolean>> {
+  const rows = await consulta(`select id, activo from public.colaboradores`);
+  return new Map(rows.map((r) => [Number(r.id), Boolean(r.activo)]));
 }
 
 function construirVista(
@@ -87,6 +95,7 @@ function construirVista(
   clientes: Cliente[],
   corte: string,
   pagados: Map<string, string | null>,
+  activo: boolean,
 ): ResultadoVista {
   const r = calcularComision(colaborador, clientes, corte);
 
@@ -114,6 +123,7 @@ function construirVista(
     colaboradorNombre: r.colaboradorNombre,
     categoria: r.categoria,
     enPeriodoPrueba: r.enPeriodoPrueba,
+    activo,
     lineas,
     total: r.total,
     totalPendiente: round2(lineas.reduce((s, l) => s + l.subtotalPendiente, 0)),

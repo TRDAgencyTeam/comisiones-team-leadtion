@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cargarResultados } from "@/lib/comisiones";
+import { estadisticasClientes, type EstadisticasClientes } from "@/lib/clientes";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +29,14 @@ export default async function DashboardPage({
     pagado: number;
   }[] = [];
 
+  let stats: EstadisticasClientes | null = null;
+
   try {
-    const resultados = await cargarResultados(corte);
+    const [resultados, est] = await Promise.all([
+      cargarResultados(corte),
+      estadisticasClientes(),
+    ]);
+    stats = est;
     for (const r of resultados) {
       totalMes += r.total;
       totalPendiente += r.totalPendiente;
@@ -125,6 +132,39 @@ export default async function DashboardPage({
               </table>
             </div>
           </section>
+
+          {stats && (
+            <section className="card">
+              <div className="card-head">
+                <span className="who">Clientes</span>
+                <Link href="/clientes" className="link-ver">Ver todos →</Link>
+              </div>
+              <div className="mini-stats">
+                <div className="mini-stat"><span className="ms-num">{stats.total}</span><span className="ms-lbl">Total</span></div>
+                <div className="mini-stat"><span className="ms-num ms-ok">{stats.activos}</span><span className="ms-lbl">Activos</span></div>
+                <div className="mini-stat"><span className="ms-num ms-warn">{stats.pausados}</span><span className="ms-lbl">Pausados</span></div>
+                <div className="mini-stat"><span className="ms-num ms-bad">{stats.cancelados}</span><span className="ms-lbl">Cancelados</span></div>
+                <div className="mini-stat"><span className="ms-num">{stats.conMarketing}</span><span className="ms-lbl">En marketing</span></div>
+              </div>
+              <h3 className="sub-h">Cuentas más antiguas (activas)</h3>
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr><th>Cliente</th><th>Desde</th><th className="num">Antigüedad</th></tr>
+                  </thead>
+                  <tbody>
+                    {stats.masAntiguos.map((c) => (
+                      <tr key={c.id}>
+                        <td><Link href={`/clientes/${c.id}`} className="link-cliente">{c.nombre}</Link></td>
+                        <td>{c.fechaActivacion}</td>
+                        <td className="num">{c.mesesActivo} {c.mesesActivo === 1 ? "mes" : "meses"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
 
           <p className="foot">
             Corte <code>{corte}</code>. El total del mes es la comisión generada a

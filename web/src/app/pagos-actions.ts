@@ -50,6 +50,7 @@ export async function marcarHitoPagado(formData: FormData) {
   if (detalle) await insertarPago(colaboradorId, clienteId, detalle, corte);
 
   revalidatePath("/");
+  revalidatePath("/comisiones");
 }
 
 /** Marca TODOS los hitos pendientes de un colaborador a este corte como pagados. */
@@ -67,6 +68,7 @@ export async function marcarCicloPagado(formData: FormData) {
   }
 
   revalidatePath("/");
+  revalidatePath("/comisiones");
 }
 
 /** Deshace el registro de pago de un hito (por si se marcó por error). */
@@ -84,4 +86,5 @@ export async function deshacerHitoPagado(formData: FormData) {
   );
 
   revalidatePath("/");
+  revalidatePath("/comisiones");
 }

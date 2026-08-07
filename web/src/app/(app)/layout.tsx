@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { getUsuario } from "@/lib/supabase/server";
 import { logout } from "@/app/login/actions";
 import { NavLinks } from "@/components/NavLinks";
+import { Logo } from "@/components/Brand";
 
 /**
  * Shell del panel de administración: barra superior (usuario + salir) y menú de
@@ -16,9 +18,10 @@ export default async function AppLayout({
   return (
     <>
       <div className="topbar">
-        <div className="brand">Comisiones CS · LEADTION</div>
+        <div className="brand"><Logo height={26} /></div>
         <div className="topbar-right">
           {usuario && <span className="user-email">{usuario.email}</span>}
+          <Link href="/modulos" className="logout">Módulos</Link>
           <form action={logout}>
             <button type="submit" className="logout">
               Salir

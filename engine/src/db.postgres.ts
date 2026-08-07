@@ -42,7 +42,9 @@ export class FuentePostgres {
       id: Number(r.id),
       nombre: String(r.nombre),
       fechaActivacion: aISODate(r.fecha_activacion),
-      estadoActual: r.estado_actual as Cliente["estadoActual"],
+      // El motor solo distingue activo/cancelado. Un cliente 'pausado' se trata
+      // como activo a efectos de comisión (la pausa es informativa/auditoría).
+      estadoActual: r.estado_actual === "cancelado" ? "cancelado" : "activo",
       fechaCancelacion: aISODate(r.fecha_cancelacion),
     }));
   }

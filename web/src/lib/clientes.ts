@@ -4,15 +4,23 @@ import { cargarResultados } from "@/lib/comisiones";
 
 /** Datos y consultas de la sección Clientes (lista, ficha, historial). */
 
+export type EstadoCliente = "activo" | "cancelado" | "pausado";
+
 export interface ClienteResumen {
   id: number;
   nombre: string;
   plan: string | null;
   fechaActivacion: string | null;
-  estado: "activo" | "cancelado";
+  estado: EstadoCliente;
   fechaCancelacion: string | null;
   /** Comisión total que este cliente representa para el equipo, al corte. */
   comisionEquipo: number;
+}
+
+export interface ClientesPorMes {
+  mes: string; // 'YYYY-MM'
+  total: number;
+  activos: number;
 }
 
 export interface PagoMes {
@@ -28,12 +36,21 @@ export interface AporteColaborador {
   estado: "pendiente" | "pagado";
 }
 
+export interface CambioEstado {
+  estado: string;
+  motivo: string | null;
+  cambiadoEn: string;
+}
+
 export interface FichaCliente {
   id: number;
   nombre: string;
   plan: string | null;
+  planTipo: "agente_ai" | "reactivacion" | null;
+  soporteValor: number | null;
   fechaActivacion: string | null;
-  estado: "activo" | "cancelado";
+  estado: EstadoCliente;
+  motivoEstado: string | null;
   fechaCancelacion: string | null;
   valorLicencia: number | null;
   incluyeCrmMarketing: boolean;
@@ -42,6 +59,7 @@ export interface FichaCliente {
   pagos: PagoMes[];
   comisionEquipo: number;
   aportes: AporteColaborador[];
+  historialEstado: CambioEstado[];
 }
 
 /** Normaliza fechas de Postgres (Date | string) a 'YYYY-MM-DD'. */
@@ -75,12 +93,80 @@ async function comisionPorCliente(corte: string) {
 
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
-/** Lista todos los clientes con la comisión que representan para el equipo. */
-export async function listarClientes(corte: string): Promise<ClienteResumen[]> {
+export interface ClienteAntiguo {
+  id: number;
+  nombre: string;
+  fechaActivacion: string;
+  mesesActivo: number;
+}
+
+export interface EstadisticasClientes {
+  total: number;
+  activos: number;
+  cancelados: number;
+  pausados: number;
+  conMarketing: number;
+  masAntiguos: ClienteAntiguo[];
+}
+
+/** Meses transcurridos entre una fecha ISO y hoy (aprox., por mes calendario). */
+function mesesDesde(iso: string): number {
+  const [ay, am] = iso.split("-").map(Number);
+  const hoy = new Date();
+  return (hoy.getUTCFullYear() * 12 + hoy.getUTCMonth()) - ((ay ?? 0) * 12 + ((am ?? 1) - 1));
+}
+
+/** Conteos globales de clientes + los activos más antiguos (para el Dashboard). */
+export async function estadisticasClientes(): Promise<EstadisticasClientes> {
+  const [conteo, antiguos] = await Promise.all([
+    consulta(
+      `select
+         count(*)::int total,
+         count(*) filter (where estado_actual='activo')::int activos,
+         count(*) filter (where estado_actual='cancelado')::int cancelados,
+         count(*) filter (where estado_actual='pausado')::int pausados,
+         count(*) filter (where incluye_crm_en_marketing)::int marketing
+       from public.clientes`,
+    ),
+    consulta(
+      `select id, nombre, fecha_activacion from public.clientes
+        where estado_actual='activo' and fecha_activacion is not null
+        order by fecha_activacion asc limit 6`,
+    ),
+  ]);
+  const c = conteo[0]!;
+  return {
+    total: Number(c.total),
+    activos: Number(c.activos),
+    cancelados: Number(c.cancelados),
+    pausados: Number(c.pausados),
+    conMarketing: Number(c.marketing),
+    masAntiguos: antiguos.map((r) => {
+      const f = toISO(r.fecha_activacion)!;
+      return { id: Number(r.id), nombre: String(r.nombre), fechaActivacion: f, mesesActivo: mesesDesde(f) };
+    }),
+  };
+}
+
+/** Lista clientes (con búsqueda y orden) y la comisión que representan al equipo. */
+export async function listarClientes(
+  corte: string,
+  opts: { q?: string; orden?: "antiguo" | "nuevo" } = {},
+): Promise<ClienteResumen[]> {
+  const q = (opts.q ?? "").trim();
+  const dir = opts.orden === "antiguo" ? "asc" : "desc";
+  const params: unknown[] = [];
+  let where = "";
+  if (q) {
+    params.push(`%${q}%`);
+    where = `where nombre ilike $1`;
+  }
   const [rows, comision] = await Promise.all([
     consulta(
       `select id, nombre, plan, fecha_activacion, estado_actual, fecha_cancelacion
-         from public.clientes order by fecha_activacion desc nulls last, nombre`,
+         from public.clientes ${where}
+        order by fecha_activacion ${dir} nulls last, nombre`,
+      params,
     ),
     comisionPorCliente(corte),
   ]);
@@ -89,9 +175,26 @@ export async function listarClientes(corte: string): Promise<ClienteResumen[]> {
     nombre: String(r.nombre),
     plan: (r.plan as string | null) ?? null,
     fechaActivacion: toISO(r.fecha_activacion),
-    estado: r.estado_actual as "activo" | "cancelado",
+    estado: r.estado_actual as EstadoCliente,
     fechaCancelacion: toISO(r.fecha_cancelacion),
     comisionEquipo: round2(comision.total.get(Number(r.id)) ?? 0),
+  }));
+}
+
+/** Clientes agrupados por mes de activación (cohorte mensual). */
+export async function clientesPorMes(): Promise<ClientesPorMes[]> {
+  const rows = await consulta(
+    `select to_char(fecha_activacion,'YYYY-MM') mes,
+            count(*)::int total,
+            count(*) filter (where estado_actual='activo')::int activos
+       from public.clientes
+      where fecha_activacion is not null
+      group by 1 order by 1 desc`,
+  );
+  return rows.map((r) => ({
+    mes: String(r.mes),
+    total: Number(r.total),
+    activos: Number(r.activos),
   }));
 }
 
@@ -101,18 +204,24 @@ export async function obtenerCliente(
   corte: string,
 ): Promise<FichaCliente | null> {
   const rows = await consulta(
-    `select id, nombre, plan, fecha_activacion, estado_actual, fecha_cancelacion,
-            valor_licencia_general, incluye_crm_en_marketing, servicios_adicionales, notas
+    `select id, nombre, plan, plan_tipo, soporte_valor, fecha_activacion, estado_actual,
+            motivo_estado, fecha_cancelacion, valor_licencia_general,
+            incluye_crm_en_marketing, servicios_adicionales, notas
        from public.clientes where id = $1`,
     [id],
   );
   if (rows.length === 0) return null;
   const r = rows[0]!;
 
-  const [pagosRows, comision] = await Promise.all([
+  const [pagosRows, histRows, comision] = await Promise.all([
     consulta(
       `select mes, estado_mes, valor from public.pagos_mensuales
         where cliente_id = $1 order by mes`,
+      [id],
+    ),
+    consulta(
+      `select estado, motivo, cambiado_en from public.cliente_estado_historial
+        where cliente_id = $1 order by cambiado_en desc`,
       [id],
     ),
     comisionPorCliente(corte),
@@ -122,8 +231,11 @@ export async function obtenerCliente(
     id: Number(r.id),
     nombre: String(r.nombre),
     plan: (r.plan as string | null) ?? null,
+    planTipo: (r.plan_tipo as "agente_ai" | "reactivacion" | null) ?? null,
+    soporteValor: r.soporte_valor === null ? null : Number(r.soporte_valor),
     fechaActivacion: toISO(r.fecha_activacion),
-    estado: r.estado_actual as "activo" | "cancelado",
+    estado: r.estado_actual as EstadoCliente,
+    motivoEstado: (r.motivo_estado as string | null) ?? null,
     fechaCancelacion: toISO(r.fecha_cancelacion),
     valorLicencia: r.valor_licencia_general === null ? null : Number(r.valor_licencia_general),
     incluyeCrmMarketing: Boolean(r.incluye_crm_en_marketing),
@@ -136,5 +248,10 @@ export async function obtenerCliente(
     })),
     comisionEquipo: round2(comision.total.get(id) ?? 0),
     aportes: comision.detalle.get(id) ?? [],
+    historialEstado: histRows.map((h) => ({
+      estado: String(h.estado),
+      motivo: (h.motivo as string | null) ?? null,
+      cambiadoEn: h.cambiado_en instanceof Date ? h.cambiado_en.toISOString() : String(h.cambiado_en),
+    })),
   };
 }

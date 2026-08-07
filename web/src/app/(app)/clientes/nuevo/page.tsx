@@ -32,11 +32,28 @@ export default async function NuevoClientePage({
             <small>Determina desde cuándo genera comisión y sus hitos.</small>
           </label>
           <label>
-            Plan (opcional)
+            Plan con que entró
+            <select name="planTipo" defaultValue="">
+              <option value="">— Sin especificar</option>
+              <option value="agente_ai">Agente AI</option>
+              <option value="reactivacion">Reactivación</option>
+            </select>
+          </label>
+          <label>
+            Soporte activo
+            <select name="soporteValor" defaultValue="">
+              <option value="">— Sin soporte</option>
+              <option value="87">Soporte $87</option>
+              <option value="119">Soporte $119</option>
+              <option value="157">Soporte $157</option>
+            </select>
+          </label>
+          <label>
+            Plan (texto, opcional)
             <input type="text" name="plan" placeholder="PRO, LITE, COMUNIDAD…" />
           </label>
           <label>
-            Valor de licencia mostrado (opcional)
+            Valor mostrado (opcional)
             <input type="number" name="valorLicencia" step="0.01" placeholder="Ej. 197" />
             <small>Solo referencia. La base de comisión es $67/$69 según la fecha.</small>
           </label>

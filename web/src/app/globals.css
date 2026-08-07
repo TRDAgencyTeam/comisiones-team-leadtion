@@ -1,11 +1,42 @@
+/* --- Tipografía de marca: Agrandir ---
+   Los archivos se cargan desde /brand/fonts/ (colócalos ahí; ver
+   web/public/brand/README.txt). Si faltan, cae a una sans del sistema. */
+@font-face {
+  font-family: "Agrandir";
+  src: url("/brand/fonts/Agrandir-Regular.woff2") format("woff2"),
+       url("/brand/fonts/Agrandir-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Agrandir";
+  src: url("/brand/fonts/Agrandir-Bold.woff2") format("woff2"),
+       url("/brand/fonts/Agrandir-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-display: swap;
+}
+
 :root {
+  /* Colores de marca Leadtion */
+  --brand-indigo: #2e2a6e;   /* protagonista */
+  --brand-cyan: #00e5cc;     /* botones (texto negro) */
+  --brand-blue: #1e5080;
+  --brand-slate: #2b333c;
+
   --bg: #f6f7f9;
   --panel: #ffffff;
   --border: #e4e7ec;
   --text: #1a1d23;
   --muted: #6b7280;
-  --accent: #16a34a;
-  --accent-soft: #dcfce7;
+  /* Acento = índigo de marca (protagonista) */
+  --accent: #2e2a6e;
+  --accent-soft: #e6e5f5;
+  /* Botón primario = cyan de marca con texto negro */
+  --btn: #00e5cc;
+  --btn-text: #05201c;
+  /* Estados de dinero (semánticos, claros) */
+  --paid: #0f9d6b;
+  --paid-soft: #d7f4e8;
   --pending: #b45309;
   --pending-soft: #fef3c7;
   --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.1);
@@ -18,8 +49,12 @@
     --border: #262b36;
     --text: #e6e8eb;
     --muted: #98a2b3;
-    --accent: #22c55e;
-    --accent-soft: #14361f;
+    --accent: #9d98ef;        /* índigo claro para contraste en oscuro */
+    --accent-soft: #23204a;
+    --btn: #00e5cc;
+    --btn-text: #05201c;
+    --paid: #34d399;
+    --paid-soft: #10362a;
     --pending: #f59e0b;
     --pending-soft: #3a2c0a;
     --shadow: none;
@@ -32,9 +67,15 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
-    Arial, sans-serif;
+  font-family: "Agrandir", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
   line-height: 1.5;
+}
+
+/* Títulos en Agrandir Bold */
+h1, h2, h3, .brand, .who, .kpi-num, .card .total {
+  font-family: "Agrandir", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 700;
 }
 
 .wrap { max-width: 960px; margin: 0 auto; padding: 24px 24px 80px; }
@@ -63,7 +104,7 @@ body {
 .kpi-num { font-size: 1.7rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .kpi-total .kpi-num { color: var(--text); }
 .kpi-pend .kpi-num { color: var(--pending); }
-.kpi-pag .kpi-num { color: var(--accent); }
+.kpi-pag .kpi-num { color: var(--paid); }
 
 .link-ver, .fila-total td { font-size: 0.9rem; }
 .link-ver { color: var(--accent); text-decoration: none; font-weight: 600; }
@@ -84,8 +125,8 @@ header.page p { margin: 0; color: var(--muted); font-size: 0.95rem; }
   background: var(--panel); color: var(--text); font-size: 0.95rem;
 }
 .toolbar button {
-  padding: 8px 16px; border: 1px solid var(--accent); border-radius: 8px;
-  background: var(--accent); color: #fff; font-weight: 600; cursor: pointer;
+  padding: 8px 16px; border: 1px solid var(--btn); border-radius: 8px;
+  background: var(--btn); color: var(--btn-text); font-weight: 700; cursor: pointer;
   font-size: 0.9rem;
 }
 
@@ -110,7 +151,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 tr:last-child td { border-bottom: none; }
 .hito-chip {
   display: inline-block; font-size: 0.7rem; padding: 1px 7px; border-radius: 6px;
-  background: var(--accent-soft); color: var(--accent); font-weight: 600;
+  background: var(--accent-soft); color: var(--accent); font-weight: 700;
 }
 .empty { color: var(--muted); font-style: italic; margin-top: 12px; }
 
@@ -130,6 +171,7 @@ tr:last-child td { border-bottom: none; }
 .topbar .logout {
   background: none; border: 1px solid var(--border); color: var(--text);
   padding: 5px 12px; border-radius: 8px; cursor: pointer; font-size: 0.82rem;
+  text-decoration: none; display: inline-block;
 }
 .topbar .logout:hover { border-color: var(--muted); }
 
@@ -151,9 +193,10 @@ tr:last-child td { border-bottom: none; }
   background: var(--bg); color: var(--text); font-size: 0.95rem;
 }
 .login-form button {
-  margin-top: 6px; padding: 11px; border: none; border-radius: 8px;
-  background: var(--accent); color: #fff; font-weight: 650; font-size: 0.95rem; cursor: pointer;
+  margin-top: 6px; padding: 12px; border: none; border-radius: 8px;
+  background: var(--btn); color: var(--btn-text); font-weight: 700; font-size: 0.95rem; cursor: pointer;
 }
+.login-form button:disabled { opacity: 0.7; cursor: default; }
 .login-error {
   margin: 0; padding: 9px 12px; border-radius: 8px;
   background: var(--pending-soft); color: var(--pending); font-size: 0.85rem;
@@ -163,24 +206,24 @@ tr:last-child td { border-bottom: none; }
 .totales { display: flex; gap: 18px; align-items: baseline; }
 .t-pendiente, .t-pagado { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
 .t-pendiente b { display: block; font-size: 1.35rem; color: var(--pending); font-variant-numeric: tabular-nums; }
-.t-pagado b { display: block; font-size: 1.35rem; color: var(--accent); font-variant-numeric: tabular-nums; }
+.t-pagado b { display: block; font-size: 1.35rem; color: var(--paid); font-variant-numeric: tabular-nums; }
 
 /* --- Acciones de pago --- */
 .ciclo-form { margin: 14px 0 4px; }
 .btn-ciclo {
-  padding: 9px 16px; border: 1px solid var(--accent); border-radius: 8px;
-  background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; font-size: 0.85rem;
+  padding: 9px 16px; border: 1px solid var(--btn); border-radius: 8px;
+  background: var(--btn); color: var(--btn-text); font-weight: 700; cursor: pointer; font-size: 0.85rem;
 }
 .btn-ciclo:hover { filter: brightness(1.05); }
 
-.estado-pagado { color: var(--accent); font-weight: 600; font-size: 0.82rem; white-space: nowrap; }
+.estado-pagado { color: var(--paid); font-weight: 600; font-size: 0.82rem; white-space: nowrap; }
 .estado-pendiente { color: var(--pending); font-weight: 600; font-size: 0.82rem; }
 
 .btn-pagar {
-  padding: 5px 12px; border: 1px solid var(--accent); border-radius: 7px;
-  background: none; color: var(--accent); font-weight: 600; cursor: pointer; font-size: 0.8rem; white-space: nowrap;
+  padding: 5px 12px; border: 1px solid var(--paid); border-radius: 7px;
+  background: none; color: var(--paid); font-weight: 700; cursor: pointer; font-size: 0.8rem; white-space: nowrap;
 }
-.btn-pagar:hover { background: var(--accent-soft); }
+.btn-pagar:hover { background: var(--paid-soft); }
 .btn-deshacer {
   padding: 5px 10px; border: 1px solid var(--border); border-radius: 7px;
   background: none; color: var(--muted); cursor: pointer; font-size: 0.78rem;
@@ -190,8 +233,8 @@ tr:last-child td { border-bottom: none; }
 /* --- Clientes: encabezado, botones, tablas --- */
 .page-head-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
 .btn-primary {
-  display: inline-block; padding: 9px 16px; border: 1px solid var(--accent); border-radius: 8px;
-  background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; font-size: 0.9rem;
+  display: inline-block; padding: 9px 16px; border: 1px solid var(--btn); border-radius: 8px;
+  background: var(--btn); color: var(--btn-text); font-weight: 700; cursor: pointer; font-size: 0.9rem;
   text-decoration: none; white-space: nowrap;
 }
 .btn-primary:hover { filter: brightness(1.05); }
@@ -241,3 +284,129 @@ tr:last-child td { border-bottom: none; }
 .em-riesgo { background: var(--pending-soft); color: var(--pending); }
 .em-gris { background: var(--border); color: var(--muted); }
 @media (prefers-color-scheme: dark) { .em-mkt { background: #16294d; color: #93c5fd; } }
+
+/* --- Login de marca + loader palpitante --- */
+.login-brand {
+  background:
+    radial-gradient(1100px 600px at 18% 15%, rgba(30, 80, 128, 0.55), transparent 60%),
+    radial-gradient(900px 520px at 85% 85%, rgba(0, 229, 204, 0.16), transparent 55%),
+    linear-gradient(160deg, #10131b 0%, #171a2e 55%, #0b0d13 100%);
+}
+.login-brand .login-card {
+  background: rgba(18, 20, 30, 0.72);
+  border-color: rgba(255, 255, 255, 0.09);
+  color: #e8eaf2;
+  backdrop-filter: blur(10px);
+}
+.login-brand .login-card h1 { color: #fff; }
+.login-brand .sub { color: #a7adc4; }
+.login-brand .login-form label { color: #9aa0bd; }
+.login-brand .login-form input {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+.login-logo { display: flex; justify-content: center; margin-bottom: 20px; color: #fff; }
+
+.loader-overlay {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+  background:
+    radial-gradient(900px 520px at 50% 40%, rgba(30, 80, 128, 0.4), transparent 60%),
+    linear-gradient(160deg, #10131b 0%, #0b0d13 100%);
+}
+.loader-overlay p { color: #c7cbe0; font-size: 0.9rem; margin: 0; letter-spacing: 0.02em; }
+.pulse { animation: latido 1.1s ease-in-out infinite; transform-origin: center; }
+@keyframes latido {
+  0%, 100% { transform: scale(0.9); opacity: 0.65; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+
+/* --- Selección de módulos --- */
+.modulos-wrap { min-height: 100vh; display: flex; flex-direction: column;
+  background:
+    radial-gradient(1000px 560px at 15% 10%, rgba(30, 80, 128, 0.5), transparent 60%),
+    radial-gradient(820px 480px at 88% 90%, rgba(0, 229, 204, 0.14), transparent 55%),
+    linear-gradient(160deg, #10131b 0%, #171a2e 55%, #0b0d13 100%);
+  color: #e8eaf2;
+}
+.modulos-top { display: flex; justify-content: space-between; align-items: center;
+  padding: 18px 26px; color: #fff; }
+.modulos-top .user-email { color: #a7adc4; }
+.modulos-top .logout { background: none; border: 1px solid rgba(255,255,255,0.18);
+  color: #e8eaf2; padding: 5px 12px; border-radius: 8px; cursor: pointer; font-size: 0.82rem; }
+.modulos-centro { flex: 1; display: flex; flex-direction: column; justify-content: center;
+  align-items: center; text-align: center; padding: 24px 24px 80px; }
+.modulos-centro h1 { color: #fff; font-size: 1.8rem; margin: 0 0 6px; }
+.modulos-centro .sub { color: #a7adc4; margin: 0 0 30px; }
+.modulos-grid { display: grid; grid-template-columns: repeat(2, minmax(220px, 280px)); gap: 18px; }
+@media (max-width: 620px) { .modulos-grid { grid-template-columns: 1fr; } }
+.modulo-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  text-align: left; padding: 24px; border-radius: 16px; text-decoration: none;
+  background: rgba(18, 20, 30, 0.66); border: 1px solid rgba(255,255,255,0.10);
+  color: #e8eaf2; transition: transform 0.12s, border-color 0.12s; backdrop-filter: blur(8px); }
+.modulo-card.activa:hover { transform: translateY(-3px); border-color: var(--brand-cyan); }
+.modulo-card.deshab { opacity: 0.5; }
+.modulo-icono { font-size: 1.6rem; color: var(--brand-cyan); }
+.modulo-nombre { font-family: "Agrandir", sans-serif; font-weight: 700; font-size: 1.15rem; color: #fff; }
+.modulo-desc { font-size: 0.85rem; color: #a7adc4; }
+.modulo-card.activa .modulo-cta { margin-top: 6px; color: var(--brand-cyan); font-weight: 700; font-size: 0.9rem; }
+.modulo-card.deshab .modulo-cta { margin-top: 6px; color: #8890a8; font-size: 0.85rem; }
+
+/* --- Pestañas de colaboradores (Comisiones) --- */
+.col-tabs { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+.col-tab {
+  display: flex; flex-direction: column; gap: 2px; text-decoration: none;
+  padding: 10px 16px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--panel); min-width: 130px;
+}
+.col-tab-nombre { font-weight: 650; color: var(--text); font-size: 0.92rem; }
+.col-tab-monto { font-size: 0.76rem; color: var(--pending); font-variant-numeric: tabular-nums; }
+.col-tab.activa { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.col-tab.activa .col-tab-nombre { color: var(--accent); }
+
+/* --- Mini-estadísticas de clientes --- */
+.mini-stats { display: flex; flex-wrap: wrap; gap: 22px; margin-top: 14px; }
+.mini-stat { display: flex; flex-direction: column; }
+.ms-num { font-family: "Agrandir", sans-serif; font-weight: 700; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.ms-lbl { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+.ms-ok { color: var(--paid); }
+.ms-warn { color: var(--pending); }
+.ms-bad { color: #dc2626; }
+.sub-h { margin: 22px 0 0; font-size: 0.9rem; color: var(--muted); font-weight: 600; }
+
+/* --- Toolbar: búsqueda y select --- */
+.toolbar input[type="search"], .toolbar select {
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--panel); color: var(--text); font-size: 0.95rem; min-width: 180px;
+}
+.toolbar select { min-width: 160px; }
+.estado-pausado { color: #7c3aed; font-weight: 600; font-size: 0.82rem; }
+.em-pausado { background: #ede9fe; color: #6d28d9; }
+@media (prefers-color-scheme: dark) {
+  .em-pausado { background: #2a1a4d; color: #c4b5fd; }
+  .estado-pausado { color: #c4b5fd; }
+}
+
+/* --- Ficha: acciones de estado + historial --- */
+.acciones-estado { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 12px; }
+.accion-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.accion-form input[type="text"] {
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font-size: 0.88rem; min-width: 180px;
+}
+.accion-form input[type="date"] {
+  padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--panel); color: var(--text); font-size: 0.85rem;
+}
+.btn-warn {
+  padding: 8px 14px; border: 1px solid #7c3aed; border-radius: 8px;
+  background: none; color: #7c3aed; font-weight: 700; cursor: pointer; font-size: 0.85rem; white-space: nowrap;
+}
+.btn-warn:hover { background: #ede9fe; }
+@media (prefers-color-scheme: dark) { .btn-warn { color: #c4b5fd; border-color: #7c3aed; } .btn-warn:hover { background: #2a1a4d; } }
+
+.hist-estados { list-style: none; padding: 0; margin: 10px 0 0; display: flex; flex-direction: column; gap: 8px; }
+.hist-estados li { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; flex-wrap: wrap; }
+.hist-fecha { color: var(--muted); font-variant-numeric: tabular-nums; }
+.hist-motivo { color: var(--text); }
