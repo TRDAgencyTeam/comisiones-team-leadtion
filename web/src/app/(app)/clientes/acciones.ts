@@ -43,6 +43,39 @@ export async function crearCliente(formData: FormData) {
   redirect(`/clientes/${id}`);
 }
 
+/** Actualiza los datos comerciales de un cliente (plan, soporte, marketing…). */
+export async function actualizarCliente(formData: FormData) {
+  if (!(await getUsuario())) redirect("/login");
+
+  const id = Number(formData.get("id"));
+  const nombre = String(formData.get("nombre") ?? "").trim();
+  const fechaActivacion = String(formData.get("fechaActivacion") ?? "").trim();
+  const planTipoRaw = String(formData.get("planTipo") ?? "").trim();
+  const planTipo = planTipoRaw === "" ? null : planTipoRaw;
+  const valorRaw = String(formData.get("valorLicencia") ?? "").trim();
+  const valorLicencia = valorRaw === "" ? null : Number(valorRaw);
+  const soporteRaw = String(formData.get("soporteValor") ?? "").trim();
+  const soporteValor = soporteRaw === "" ? null : Number(soporteRaw);
+  const marketing = String(formData.get("marketing") ?? "") === "1";
+
+  if (!nombre || !fechaActivacion) {
+    redirect(`/clientes/${id}/editar?error=` + encodeURIComponent("Nombre y fecha de activación son obligatorios."));
+  }
+
+  await consulta(
+    `update public.clientes
+        set nombre=$2, fecha_activacion=$3, plan_tipo=$4,
+            valor_licencia_general=$5, soporte_valor=$6, incluye_crm_en_marketing=$7
+      where id=$1`,
+    [id, nombre, fechaActivacion, planTipo, valorLicencia, soporteValor, marketing],
+  );
+
+  revalidatePath(`/clientes/${id}`);
+  revalidatePath("/clientes");
+  revalidatePath("/");
+  redirect(`/clientes/${id}`);
+}
+
 /**
  * Cambia el estado del cliente: cancelar, pausar/congelar o reactivar.
  * Registra el motivo y lo guarda en el historial para auditoría futura.

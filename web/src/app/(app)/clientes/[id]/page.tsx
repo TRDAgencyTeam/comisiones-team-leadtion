@@ -41,13 +41,18 @@ export default async function FichaClientePage({
     <main className="wrap">
       <p className="volver"><Link href="/clientes">← Clientes</Link></p>
 
-      <header className="page">
-        <h1>{c.nombre}</h1>
-        <p>
-          <span className={`em ${badge.cls}`}>{badge.txt}</span>
-          {c.plan ? ` · ${c.plan}` : ""}
-          {c.motivoEstado && c.estado !== "activo" ? ` · ${c.motivoEstado}` : ""}
-        </p>
+      <header className="page page-head-row">
+        <div>
+          <h1>{c.nombre}</h1>
+          <p>
+            <span className={`em ${badge.cls}`}>{badge.txt}</span>
+            {c.plan ? ` · ${c.plan}` : ""}
+            {c.motivoEstado && c.estado !== "activo" ? ` · ${c.motivoEstado}` : ""}
+          </p>
+        </div>
+        <Link href={`/clientes/${c.id}/editar`} className="btn-secondary">
+          Editar datos
+        </Link>
       </header>
 
       <section className="card">
