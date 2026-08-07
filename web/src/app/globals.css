@@ -215,7 +215,7 @@ tr:last-child td { border-bottom: none; }
 /* Formulario vertical (agregar cliente) */
 .form-vert { display: flex; flex-direction: column; gap: 16px; max-width: 460px; }
 .form-vert label { display: flex; flex-direction: column; gap: 5px; font-size: 0.82rem; color: var(--muted); }
-.form-vert input {
+.form-vert input, .form-vert select {
   padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
   background: var(--bg); color: var(--text); font-size: 0.95rem;
 }

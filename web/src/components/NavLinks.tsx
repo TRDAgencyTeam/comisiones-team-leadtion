@@ -7,6 +7,7 @@ const LINKS = [
   { href: "/", label: "Dashboard" },
   { href: "/comisiones", label: "Comisiones" },
   { href: "/clientes", label: "Clientes" },
+  { href: "/colaboradores", label: "Colaboradores" },
 ];
 
 export function NavLinks() {
