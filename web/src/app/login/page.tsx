@@ -14,7 +14,7 @@ export default async function LoginPage({
     <main className="login-wrap login-brand">
       <div className="login-card">
         <div className="login-logo">
-          <Logo height={34} />
+          <Logo height={38} variant="light" />
         </div>
         <h1>Portal Colaboradores</h1>
         <p className="sub">Customer Success · TRD Agency</p>

@@ -14,7 +14,7 @@ function SubmitZone() {
       </button>
       {pending && (
         <div className="loader-overlay" role="status" aria-live="polite">
-          <LeadtionSymbol size={80} className="pulse" />
+          <LeadtionSymbol size={92} color="white" className="pulse" />
           <p>Cargando la plataforma…</p>
         </div>
       )}

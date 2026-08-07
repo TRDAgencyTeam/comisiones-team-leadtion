@@ -3,15 +3,13 @@
    web/public/brand/README.txt). Si faltan, cae a una sans del sistema. */
 @font-face {
   font-family: "Agrandir";
-  src: url("/brand/fonts/Agrandir-Regular.woff2") format("woff2"),
-       url("/brand/fonts/Agrandir-Regular.otf") format("opentype");
+  src: url("/brand/fonts/Agrandir-Regular.otf") format("opentype");
   font-weight: 400;
   font-display: swap;
 }
 @font-face {
   font-family: "Agrandir";
-  src: url("/brand/fonts/Agrandir-Bold.woff2") format("woff2"),
-       url("/brand/fonts/Agrandir-Bold.otf") format("opentype");
+  src: url("/brand/fonts/Agrandir-TextBold.otf") format("opentype");
   font-weight: 700;
   font-display: swap;
 }
@@ -410,3 +408,11 @@ tr:last-child td { border-bottom: none; }
 .hist-estados li { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; flex-wrap: wrap; }
 .hist-fecha { color: var(--muted); font-variant-numeric: tabular-nums; }
 .hist-motivo { color: var(--text); }
+
+/* --- Logo de marca: negro en claro, blanco en oscuro --- */
+.brand-logo-auto .for-dark { display: none; }
+.brand-logo-auto .for-light { display: inline-block; }
+@media (prefers-color-scheme: dark) {
+  .brand-logo-auto .for-light { display: none; }
+  .brand-logo-auto .for-dark { display: inline-block; }
+}

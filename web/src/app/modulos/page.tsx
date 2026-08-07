@@ -11,7 +11,7 @@ export default async function ModulosPage() {
   return (
     <main className="modulos-wrap">
       <div className="modulos-top">
-        <Logo height={30} />
+        <Logo height={30} variant="light" />
         <div className="topbar-right">
           {usuario && <span className="user-email">{usuario.email}</span>}
           <form action={logout}>
