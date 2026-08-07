@@ -186,3 +186,58 @@ tr:last-child td { border-bottom: none; }
   background: none; color: var(--muted); cursor: pointer; font-size: 0.78rem;
 }
 .btn-deshacer:hover { border-color: var(--pending); color: var(--pending); }
+
+/* --- Clientes: encabezado, botones, tablas --- */
+.page-head-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.btn-primary {
+  display: inline-block; padding: 9px 16px; border: 1px solid var(--accent); border-radius: 8px;
+  background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; font-size: 0.9rem;
+  text-decoration: none; white-space: nowrap;
+}
+.btn-primary:hover { filter: brightness(1.05); }
+.btn-secondary {
+  display: inline-block; padding: 9px 16px; border: 1px solid var(--border); border-radius: 8px;
+  background: none; color: var(--text); font-weight: 600; cursor: pointer; font-size: 0.9rem; text-decoration: none;
+}
+.btn-danger {
+  padding: 8px 14px; border: 1px solid var(--pending); border-radius: 8px;
+  background: none; color: var(--pending); font-weight: 600; cursor: pointer; font-size: 0.85rem; white-space: nowrap;
+}
+.btn-danger:hover { background: var(--pending-soft); }
+
+.link-cliente { color: var(--text); text-decoration: none; font-weight: 550; }
+.link-cliente:hover { color: var(--accent); text-decoration: underline; }
+.estado-cancelado { color: var(--pending); font-weight: 600; font-size: 0.82rem; }
+.volver { margin: 0 0 4px; }
+.volver a { color: var(--muted); text-decoration: none; font-size: 0.88rem; }
+.volver a:hover { color: var(--text); }
+
+/* Formulario vertical (agregar cliente) */
+.form-vert { display: flex; flex-direction: column; gap: 16px; max-width: 460px; }
+.form-vert label { display: flex; flex-direction: column; gap: 5px; font-size: 0.82rem; color: var(--muted); }
+.form-vert input {
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font-size: 0.95rem;
+}
+.form-vert small { color: var(--muted); font-size: 0.75rem; }
+.form-actions { display: flex; gap: 10px; margin-top: 4px; }
+.estado-form { display: flex; gap: 8px; align-items: center; }
+.estado-form input[type="date"] {
+  padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--panel); color: var(--text); font-size: 0.85rem;
+}
+
+/* Ficha: datos */
+.datos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; }
+.datos-grid > div { display: flex; flex-direction: column; gap: 3px; font-size: 0.95rem; }
+.dato-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.notas { margin: 14px 0 0; color: var(--muted); font-size: 0.88rem; }
+
+/* Badges de estado mensual */
+.em { display: inline-block; font-size: 0.74rem; padding: 2px 9px; border-radius: 999px; font-weight: 600; }
+.em-activo { background: var(--accent-soft); color: var(--accent); }
+.em-cancelado { background: var(--pending-soft); color: var(--pending); }
+.em-mkt { background: #dbeafe; color: #1d4ed8; }
+.em-riesgo { background: var(--pending-soft); color: var(--pending); }
+.em-gris { background: var(--border); color: var(--muted); }
+@media (prefers-color-scheme: dark) { .em-mkt { background: #16294d; color: #93c5fd; } }
