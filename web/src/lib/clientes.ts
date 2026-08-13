@@ -68,6 +68,18 @@ export interface FichaCliente {
   promedioMensual: number;
 }
 
+/**
+ * Fecha de pago de un mes: el día de pago es el mismo día de la activación.
+ * `mesISO` es 'YYYY-MM-01'. Devuelve 'YYYY-MM-DD' (día clampeado al mes).
+ */
+export function fechaPago(fechaActivacion: string | null, mesISO: string): string {
+  const dia = fechaActivacion ? Number(fechaActivacion.slice(8, 10)) : 1;
+  const [y, m] = mesISO.split("-").map(Number);
+  const diasMes = new Date(Date.UTC(y!, m!, 0)).getUTCDate();
+  const d = Math.min(dia || 1, diasMes);
+  return `${mesISO.slice(0, 7)}-${String(d).padStart(2, "0")}`;
+}
+
 /** Normaliza fechas de Postgres (Date | string) a 'YYYY-MM-DD'. */
 function toISO(v: unknown): string | null {
   if (v === null || v === undefined) return null;

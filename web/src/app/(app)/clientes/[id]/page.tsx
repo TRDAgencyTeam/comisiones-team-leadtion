@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { obtenerCliente } from "@/lib/clientes";
+import { obtenerCliente, fechaPago } from "@/lib/clientes";
 import { cambiarEstadoCliente } from "../acciones";
 
 export const dynamic = "force-dynamic";
@@ -178,19 +178,30 @@ export default async function FichaClientePage({
       </section>
 
       <section className="card">
-        <div className="card-head"><span className="who">Historial mensual</span></div>
+        <div className="card-head">
+          <span className="who">Historial mensual</span>
+          <Link href={`/clientes/${c.id}/historial`} className="btn-secondary">Editar historial</Link>
+        </div>
         {c.pagos.length === 0 ? (
           <p className="empty">Sin historial mensual registrado.</p>
         ) : (
           <div className="table-scroll">
             <table>
-              <thead><tr><th>Mes</th><th>Estado</th><th className="num">Valor</th></tr></thead>
+              <thead><tr><th>Mes</th><th>Fecha de pago</th><th>Estado</th><th className="num">Valor</th></tr></thead>
               <tbody>
                 {c.pagos.map((p) => {
                   const e = ESTADO_MES[p.estadoMes] ?? { txt: p.estadoMes, cls: "em-gris" };
+                  const fp = fechaPago(c.fechaActivacion, p.mes);
+                  const vencido = fp <= hoy;
                   return (
                     <tr key={p.mes}>
                       <td>{p.mes.slice(0, 7)}</td>
+                      <td>
+                        {fp}{" "}
+                        <span className={vencido ? "tag-venc" : "tag-prox"}>
+                          {vencido ? "vencido" : "próximo"}
+                        </span>
+                      </td>
                       <td><span className={`em ${e.cls}`}>{e.txt}</span></td>
                       <td className="num">{p.valor !== null ? usd(p.valor) : "—"}</td>
                     </tr>

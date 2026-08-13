@@ -427,3 +427,13 @@ tr:last-child td { border-bottom: none; }
 .leg i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
 .sw-lic { background: var(--accent); }
 .sw-serv { background: var(--brand-cyan); }
+
+/* --- Historial editable + tags de vencimiento --- */
+.tag-venc { font-size: 0.68rem; padding: 1px 6px; border-radius: 5px; background: var(--pending-soft); color: var(--pending); font-weight: 600; }
+.tag-prox { font-size: 0.68rem; padding: 1px 6px; border-radius: 5px; background: var(--paid-soft); color: var(--paid); font-weight: 600; }
+.row-venc td { background: color-mix(in srgb, var(--pending) 6%, transparent); }
+.hist-select, .hist-input {
+  padding: 6px 8px; border: 1px solid var(--border); border-radius: 7px;
+  background: var(--bg); color: var(--text); font-size: 0.88rem;
+}
+.hist-input { width: 110px; text-align: right; font-variant-numeric: tabular-nums; }

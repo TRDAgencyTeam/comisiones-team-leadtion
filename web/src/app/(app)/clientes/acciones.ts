@@ -43,6 +43,48 @@ export async function crearCliente(formData: FormData) {
   redirect(`/clientes/${id}`);
 }
 
+/**
+ * Guarda cambios en el historial mensual: valor y estado por mes. Recibe inputs
+ * con nombres `valor::YYYY-MM-01` y `estado::YYYY-MM-01`. Actualiza solo los
+ * meses existentes del cliente.
+ */
+export async function guardarHistorial(formData: FormData) {
+  if (!(await getUsuario())) redirect("/login");
+
+  const id = Number(formData.get("id"));
+  const cambios = new Map<string, { valor: number | null; estado: string | null }>();
+
+  for (const [key, val] of formData.entries()) {
+    const v = String(val);
+    if (key.startsWith("valor::")) {
+      const mes = key.slice("valor::".length);
+      const prev = cambios.get(mes) ?? { valor: null, estado: null };
+      prev.valor = v.trim() === "" ? null : Number(v);
+      cambios.set(mes, prev);
+    } else if (key.startsWith("estado::")) {
+      const mes = key.slice("estado::".length);
+      const prev = cambios.get(mes) ?? { valor: null, estado: null };
+      prev.estado = v;
+      cambios.set(mes, prev);
+    }
+  }
+
+  for (const [mes, { valor, estado }] of cambios) {
+    if (!estado) continue;
+    await consulta(
+      `update public.pagos_mensuales
+          set valor=$3, estado_mes=$4
+        where cliente_id=$1 and mes=$2`,
+      [id, mes, valor, estado],
+    );
+  }
+
+  revalidatePath(`/clientes/${id}`);
+  revalidatePath("/clientes");
+  revalidatePath("/");
+  redirect(`/clientes/${id}`);
+}
+
 /** Actualiza los datos comerciales de un cliente (plan, soporte, marketing…). */
 export async function actualizarCliente(formData: FormData) {
   if (!(await getUsuario())) redirect("/login");
