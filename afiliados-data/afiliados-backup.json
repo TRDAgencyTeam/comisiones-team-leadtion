@@ -1,0 +1,559 @@
+{
+  "leadtion_afs": [
+    {
+      "id": "afl-1",
+      "nombre": "Carolina Zanabria",
+      "email": "",
+      "tipo": "agencia",
+      "ingreso": "2025-10-01",
+      "notas": "",
+      "comision_agencia": 10
+    },
+    {
+      "id": "afl-2",
+      "nombre": "Katherine Vargas",
+      "email": "",
+      "tipo": "partner",
+      "ingreso": "2025-11-01",
+      "notas": "",
+      "comision_agencia": -1
+    },
+    {
+      "id": "afl-3",
+      "nombre": "Yamile Albornoz",
+      "email": "",
+      "tipo": "partner",
+      "ingreso": "2025-12-01",
+      "notas": "",
+      "comision_agencia": -1
+    },
+    {
+      "id": "afl-4",
+      "nombre": "Catalina Smith",
+      "email": "",
+      "tipo": "partner",
+      "ingreso": "2026-03-01",
+      "notas": "",
+      "comision_agencia": -1
+    },
+    {
+      "id": "afl-5",
+      "nombre": "Ivelisse",
+      "email": "",
+      "tipo": "partner",
+      "ingreso": "2026-06-01",
+      "notas": "",
+      "comision_agencia": -1
+    },
+    {
+      "nombre": "Oriana Piazza",
+      "email": "oriana@gmail.com",
+      "tipo": "agencia",
+      "ingreso": "2026-07-07",
+      "notas": "",
+      "comision_agencia": 5,
+      "id": "afl-1785868417069",
+      "creado_en": "2026-08-04T18:33:37.069Z"
+    },
+    {
+      "nombre": "Victor Ortiz",
+      "email": "Victor@gail.com",
+      "tipo": "partner",
+      "ingreso": "2026-08-13",
+      "notas": "Asistente de Yamile y Mayra",
+      "comision_agencia": -1,
+      "id": "afl-1786639631275",
+      "creado_en": "2026-08-13T16:47:11.275Z"
+    }
+  ],
+  "leadtion_cls": [
+    {
+      "id": "cl-1",
+      "nombre": "Karen Millan",
+      "email": "",
+      "afiliado_id": "afl-1",
+      "fecha_inicio": "octubre 2025",
+      "precio_licencia": 67
+    },
+    {
+      "id": "cl-2",
+      "nombre": "Nur Vega",
+      "email": "",
+      "afiliado_id": "afl-1",
+      "fecha_inicio": "noviembre 2025",
+      "precio_licencia": 67
+    },
+    {
+      "id": "cl-3",
+      "nombre": "Mylet",
+      "email": "",
+      "afiliado_id": "afl-1",
+      "fecha_inicio": "diciembre 2025",
+      "precio_licencia": 67
+    },
+    {
+      "id": "cl-4",
+      "nombre": "Yamile",
+      "email": "",
+      "afiliado_id": "afl-2",
+      "fecha_inicio": "noviembre 2025",
+      "precio_licencia": 67
+    },
+    {
+      "id": "cl-5",
+      "nombre": "Elisa Sandobal",
+      "email": "",
+      "afiliado_id": "afl-3",
+      "fecha_inicio": "diciembre 2025",
+      "precio_licencia": 67
+    },
+    {
+      "id": "cl-6",
+      "nombre": "Gonzalo Morales",
+      "email": "",
+      "afiliado_id": "afl-1",
+      "fecha_inicio": "enero 2026",
+      "precio_licencia": 67
+    },
+    {
+      "id": "cl-7",
+      "nombre": "Marcela Cazares",
+      "email": "",
+      "afiliado_id": "afl-4",
+      "fecha_inicio": "marzo 2026",
+      "precio_licencia": 69
+    },
+    {
+      "id": "cl-8",
+      "nombre": "Francisco Lara",
+      "email": "",
+      "afiliado_id": "afl-1",
+      "fecha_inicio": "mayo 2026",
+      "precio_licencia": 69
+    },
+    {
+      "id": "cl-9",
+      "nombre": "Yolanda Uzeta",
+      "email": "",
+      "afiliado_id": "afl-5",
+      "fecha_inicio": "junio 2026",
+      "precio_licencia": 69
+    },
+    {
+      "id": "cl-10",
+      "nombre": "Melida Cabral",
+      "email": "",
+      "afiliado_id": "afl-5",
+      "fecha_inicio": "junio 2026",
+      "precio_licencia": 69
+    },
+    {
+      "nombre": "Maria Quintanilla",
+      "email": "maria@gmail.com",
+      "afiliado_id": "afl-1785868417069",
+      "fecha_inicio": "julio 2026",
+      "precio_licencia": 69,
+      "id": "cl-1785868549658",
+      "creado_en": "2026-08-04T18:35:49.658Z"
+    },
+    {
+      "nombre": "Melia Residenses",
+      "email": "melia@gmail.com",
+      "afiliado_id": "afl-1",
+      "fecha_inicio": "agosto 2026",
+      "precio_licencia": 69,
+      "id": "cl-1786574740770",
+      "creado_en": "2026-08-12T22:45:40.770Z"
+    },
+    {
+      "nombre": "Mayra Gonzales",
+      "email": "mayra@gmail.com",
+      "afiliado_id": "afl-1786639631275",
+      "fecha_inicio": "agosto 2026",
+      "precio_licencia": 69,
+      "id": "cl-1786639699433",
+      "creado_en": "2026-08-13T16:48:19.433Z"
+    }
+  ],
+  "leadtion_srvs": [
+    {
+      "id": "srv-1",
+      "cliente_id": "cl-1",
+      "tipo": "text_ai",
+      "nombre_personalizado": "",
+      "precio": 497
+    },
+    {
+      "id": "srv-2",
+      "cliente_id": "cl-2",
+      "tipo": "text_ai",
+      "nombre_personalizado": "",
+      "precio": 497
+    },
+    {
+      "id": "srv-3",
+      "cliente_id": "cl-3",
+      "tipo": "text_ai",
+      "nombre_personalizado": "",
+      "precio": 497
+    },
+    {
+      "id": "srv-4",
+      "cliente_id": "cl-6",
+      "tipo": "voz_ai",
+      "nombre_personalizado": "",
+      "precio": 730
+    },
+    {
+      "id": "srv-5",
+      "cliente_id": "cl-7",
+      "tipo": "text_ai",
+      "nombre_personalizado": "",
+      "precio": 598
+    },
+    {
+      "id": "srv-6",
+      "cliente_id": "cl-8",
+      "tipo": "text_ai",
+      "nombre_personalizado": "",
+      "precio": 797
+    },
+    {
+      "id": "srv-7",
+      "cliente_id": "cl-9",
+      "tipo": "reactivacion",
+      "nombre_personalizado": "",
+      "precio": 545
+    },
+    {
+      "id": "srv-8",
+      "cliente_id": "cl-10",
+      "tipo": "reactivacion",
+      "nombre_personalizado": "",
+      "precio": 545
+    },
+    {
+      "tipo": "reactivacion",
+      "nombre_personalizado": "",
+      "precio": 597,
+      "id": "srv-1785868549658-0",
+      "cliente_id": "cl-1785868549658"
+    },
+    {
+      "tipo": "agente_ai",
+      "nombre_personalizado": "",
+      "precio": 847,
+      "id": "srv-1785868549658-1",
+      "cliente_id": "cl-1785868549658"
+    },
+    {
+      "tipo": "agente_ai",
+      "nombre_personalizado": "",
+      "precio": 847,
+      "id": "srv-1786574740771-0",
+      "cliente_id": "cl-1786574740770"
+    }
+  ],
+  "leadtion_pagos": [
+    {
+      "id": "pago-cl-1-0",
+      "cliente_id": "cl-1",
+      "mes_num": 0,
+      "fecha_pago": "2026-04-30",
+      "monto": 49.7,
+      "notas": "Pagado antes de mayo 2026",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "id": "pago-cl-1-1",
+      "cliente_id": "cl-1",
+      "mes_num": 1,
+      "fecha_pago": "2026-04-30",
+      "monto": 20.1,
+      "notas": "Pagado antes de mayo 2026",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "id": "pago-cl-1-2",
+      "cliente_id": "cl-1",
+      "mes_num": 2,
+      "fecha_pago": "2026-04-30",
+      "monto": 20.1,
+      "notas": "Pagado antes de mayo 2026",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "id": "pago-cl-2-0",
+      "cliente_id": "cl-2",
+      "mes_num": 0,
+      "fecha_pago": "2026-04-30",
+      "monto": 49.7,
+      "notas": "Pagado antes de mayo 2026",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "id": "pago-cl-2-1",
+      "cliente_id": "cl-2",
+      "mes_num": 1,
+      "fecha_pago": "2026-04-30",
+      "monto": 20.1,
+      "notas": "Pagado antes de mayo 2026",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "id": "pago-cl-2-2",
+      "cliente_id": "cl-2",
+      "mes_num": 2,
+      "fecha_pago": "2026-04-30",
+      "monto": 20.1,
+      "notas": "Pagado antes de mayo 2026",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "id": "pago-cl-3-0",
+      "cliente_id": "cl-3",
+      "mes_num": 0,
+      "fecha_pago": "2026-04-30",
+      "monto": 49.7,
+      "notas": "Pagado antes de mayo 2026",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "id": "pago-cl-3-1",
+      "cliente_id": "cl-3",
+      "mes_num": 1,
+      "fecha_pago": "2026-04-30",
+      "monto": 20.1,
+      "notas": "Pagado antes de mayo 2026",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "id": "pago-cl-3-2",
+      "cliente_id": "cl-3",
+      "mes_num": 2,
+      "fecha_pago": "2026-04-30",
+      "monto": 20.1,
+      "notas": "Pagado antes de mayo 2026",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "id": "pago-cl-4-0",
+      "cliente_id": "cl-4",
+      "mes_num": 0,
+      "fecha_pago": "2026-04-30",
+      "monto": 20.1,
+      "notas": "Pagado antes de mayo 2026",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "id": "pago-cl-4-1",
+      "cliente_id": "cl-4",
+      "mes_num": 1,
+      "fecha_pago": "2026-04-30",
+      "monto": 20.1,
+      "notas": "Pagado antes de mayo 2026",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "id": "pago-cl-4-2",
+      "cliente_id": "cl-4",
+      "mes_num": 2,
+      "fecha_pago": "2026-04-30",
+      "monto": 20.1,
+      "notas": "Pagado antes de mayo 2026",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "id": "pago-cl-5-0",
+      "cliente_id": "cl-5",
+      "mes_num": 0,
+      "fecha_pago": "2026-04-30",
+      "monto": 20.1,
+      "notas": "Pagado antes de mayo 2026",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "id": "pago-cl-5-1",
+      "cliente_id": "cl-5",
+      "mes_num": 1,
+      "fecha_pago": "2026-04-30",
+      "monto": 20.1,
+      "notas": "Pagado antes de mayo 2026",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "id": "pago-cl-5-2",
+      "cliente_id": "cl-5",
+      "mes_num": 2,
+      "fecha_pago": "2026-04-30",
+      "monto": 20.1,
+      "notas": "Pagado antes de mayo 2026",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "id": "pago-cl-6-0",
+      "cliente_id": "cl-6",
+      "mes_num": 0,
+      "fecha_pago": "2026-04-30",
+      "monto": 73,
+      "notas": "Pagado antes de mayo 2026",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "id": "pago-cl-6-1",
+      "cliente_id": "cl-6",
+      "mes_num": 1,
+      "fecha_pago": "2026-04-30",
+      "monto": 20.1,
+      "notas": "Pagado antes de mayo 2026",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "id": "pago-cl-6-2",
+      "cliente_id": "cl-6",
+      "mes_num": 2,
+      "fecha_pago": "2026-04-30",
+      "monto": 20.1,
+      "notas": "Pagado antes de mayo 2026",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "id": "pago-cl-7-0",
+      "cliente_id": "cl-7",
+      "mes_num": 0,
+      "fecha_pago": "2026-05-27",
+      "monto": 20.7,
+      "notas": "Pagado completo",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "id": "pago-cl-7-1",
+      "cliente_id": "cl-7",
+      "mes_num": 1,
+      "fecha_pago": "2026-05-27",
+      "monto": 20.7,
+      "notas": "Pagado completo",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "id": "pago-cl-7-2",
+      "cliente_id": "cl-7",
+      "mes_num": 2,
+      "fecha_pago": "2026-05-27",
+      "monto": 20.7,
+      "notas": "Pagado completo",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "cliente_id": "cl-1785868549658",
+      "mes_num": 0,
+      "fecha_pago": "2026-07-27",
+      "monto": "72.20",
+      "notas": "Tranferencia por Bancolombia por $230.112",
+      "id": "pago-1785868612352",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "cliente_id": "cl-10",
+      "mes_num": 1,
+      "fecha_pago": "2026-07-10",
+      "monto": "20.70",
+      "notas": "",
+      "id": "pago-1785868695205",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "cliente_id": "cl-9",
+      "mes_num": 1,
+      "fecha_pago": "2026-07-10",
+      "monto": "20.70",
+      "notas": "",
+      "id": "pago-1785868705759",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "cliente_id": "cl-9",
+      "mes_num": 2,
+      "fecha_pago": "2026-08-04",
+      "monto": "20.70",
+      "notas": "",
+      "id": "pago-1785868797879",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "cliente_id": "cl-10",
+      "mes_num": 2,
+      "fecha_pago": "2026-08-04",
+      "monto": "20.70",
+      "notas": "",
+      "id": "pago-1785868799615",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "cliente_id": "cl-8",
+      "mes_num": 0,
+      "fecha_pago": "2026-08-12",
+      "monto": "79.70",
+      "notas": "",
+      "id": "pago-1786574410421",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "cliente_id": "cl-8",
+      "mes_num": 1,
+      "fecha_pago": "2026-08-12",
+      "monto": "20.70",
+      "notas": "",
+      "id": "pago-1786574429684",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "cliente_id": "cl-9",
+      "mes_num": 0,
+      "fecha_pago": "2026-08-12",
+      "monto": "20.70",
+      "notas": "",
+      "id": "pago-1786574432364",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    },
+    {
+      "cliente_id": "cl-10",
+      "mes_num": 0,
+      "fecha_pago": "2026-08-12",
+      "monto": "20.70",
+      "notas": "",
+      "id": "pago-1786574433892",
+      "comprobante_path": "",
+      "comprobante_nombre": ""
+    }
+  ]
+}
