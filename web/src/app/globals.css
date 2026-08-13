@@ -442,3 +442,13 @@ tr:last-child td { border-bottom: none; }
 .volver-modulos { margin: 0 0 10px; }
 .volver-modulos a { color: #a7adc4; text-decoration: none; font-size: 0.88rem; }
 .volver-modulos a:hover { color: #fff; }
+
+/* --- Módulo Afiliados --- */
+.brand { display: inline-flex; align-items: center; gap: 8px; }
+.brand-modulo { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--btn-text);
+  background: var(--brand-cyan); padding: 2px 8px; border-radius: 999px; font-weight: 700; }
+.kpis-4 { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 760px) { .kpis-4 { grid-template-columns: repeat(2, 1fr); } }
+.tag-agencia { font-size: 0.68rem; padding: 1px 7px; border-radius: 5px; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.tag-partner { font-size: 0.68rem; padding: 1px 7px; border-radius: 5px; background: var(--paid-soft); color: var(--paid); font-weight: 700; }
+.td-concepto { font-size: 0.82rem; color: var(--muted); }

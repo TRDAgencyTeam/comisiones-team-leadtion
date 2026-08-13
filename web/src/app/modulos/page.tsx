@@ -32,12 +32,12 @@ export default async function ModulosPage() {
             <span className="modulo-cta">Entrar →</span>
           </Link>
 
-          <div className="modulo-card deshab" aria-disabled="true">
-            <span className="modulo-icono">◇</span>
+          <Link href="/afiliados" className="modulo-card activa">
+            <span className="modulo-icono">◆</span>
             <span className="modulo-nombre">Comisiones Afiliados</span>
-            <span className="modulo-desc">Realtors y agencias que recomiendan. Se integrará aquí.</span>
-            <span className="modulo-cta">Próximamente</span>
-          </div>
+            <span className="modulo-desc">Realtors y agencias que recomiendan el CRM.</span>
+            <span className="modulo-cta">Entrar →</span>
+          </Link>
         </div>
       </div>
     </main>
