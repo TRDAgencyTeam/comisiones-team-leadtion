@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
+import { fechaPago } from "@/lib/clientes";
 import { getUsuario } from "@/lib/supabase/server";
 
 /** Crea un cliente nuevo para que el sistema lo tenga en cuenta en comisiones. */
@@ -111,6 +112,22 @@ export async function actualizarCliente(formData: FormData) {
       where id=$1`,
     [id, nombre, fechaActivacion, planTipo, valorLicencia, soporteValor, marketing],
   );
+
+  // Un toque: si aún estamos dentro del día de pago del mes actual (hasta las
+  // 23:59), sincroniza también el valor de ESE mes en el historial. Pasado ese
+  // día, el mes se edita manualmente desde "Editar historial".
+  if (valorLicencia !== null) {
+    const hoy = new Date().toISOString().slice(0, 10);
+    const mesActual = hoy.slice(0, 7) + "-01";
+    const fp = fechaPago(fechaActivacion, mesActual);
+    if (hoy <= fp) {
+      await consulta(
+        `update public.pagos_mensuales set valor=$3
+          where cliente_id=$1 and mes=$2`,
+        [id, mesActual, valorLicencia],
+      );
+    }
+  }
 
   revalidatePath(`/clientes/${id}`);
   revalidatePath("/clientes");

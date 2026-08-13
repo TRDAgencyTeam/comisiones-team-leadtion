@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { obtenerCliente, fechaPago } from "@/lib/clientes";
+import { obtenerCliente, fechaPago, mesLargo, fechaLarga } from "@/lib/clientes";
 import { guardarHistorial } from "../../acciones";
 
 export const dynamic = "force-dynamic";
@@ -52,12 +52,12 @@ export default async function EditarHistorialPage({
               <tbody>
                 {c.pagos.map((p) => {
                   const fp = fechaPago(c.fechaActivacion, p.mes);
-                  const vencido = fp <= hoy;
+                  const vencido = fp < hoy;
                   return (
                     <tr key={p.mes} className={vencido ? "row-venc" : ""}>
-                      <td>{p.mes.slice(0, 7)}</td>
+                      <td>{mesLargo(p.mes)}</td>
                       <td>
-                        {fp}{" "}
+                        {fechaLarga(fp)}{" "}
                         <span className={vencido ? "tag-venc" : "tag-prox"}>
                           {vencido ? "vencido" : "próximo"}
                         </span>

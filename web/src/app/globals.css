@@ -437,3 +437,8 @@ tr:last-child td { border-bottom: none; }
   background: var(--bg); color: var(--text); font-size: 0.88rem;
 }
 .hist-input { width: 110px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* --- Volver en selección de módulos --- */
+.volver-modulos { margin: 0 0 10px; }
+.volver-modulos a { color: #a7adc4; text-decoration: none; font-size: 0.88rem; }
+.volver-modulos a:hover { color: #fff; }

@@ -5,7 +5,7 @@ import { logout } from "@/app/login/actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function ModulosPage() {
+export default async function ModulosEquipoPage() {
   const usuario = await getUsuario();
 
   return (
@@ -21,21 +21,24 @@ export default async function ModulosPage() {
       </div>
 
       <div className="modulos-centro">
-        <h1>¿Qué quieres hacer en Leadtion?</h1>
-        <p className="sub">Elige el área con la que vas a trabajar.</p>
+        <p className="volver-modulos">
+          <Link href="/modulos">← Volver</Link>
+        </p>
+        <h1>Comisiones Equipo Interno</h1>
+        <p className="sub">¿Con qué equipo vas a trabajar?</p>
 
         <div className="modulos-grid">
-          <Link href="/modulos/equipo" className="modulo-card activa">
+          <Link href="/" className="modulo-card activa">
             <span className="modulo-icono">◆</span>
-            <span className="modulo-nombre">Comisiones Equipo Interno</span>
-            <span className="modulo-desc">Customer Success y Comercial (equipo propio).</span>
+            <span className="modulo-nombre">Customer Success</span>
+            <span className="modulo-desc">Comisiones y gestión de cuentas del equipo CS.</span>
             <span className="modulo-cta">Entrar →</span>
           </Link>
 
           <div className="modulo-card deshab" aria-disabled="true">
             <span className="modulo-icono">◇</span>
-            <span className="modulo-nombre">Comisiones Afiliados</span>
-            <span className="modulo-desc">Realtors y agencias que recomiendan. Se integrará aquí.</span>
+            <span className="modulo-nombre">Comercial</span>
+            <span className="modulo-desc">Comisiones del área comercial. Disponible próximamente.</span>
             <span className="modulo-cta">Próximamente</span>
           </div>
         </div>

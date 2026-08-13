@@ -68,6 +68,23 @@ export interface FichaCliente {
   promedioMensual: number;
 }
 
+const MESES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+];
+
+/** 'YYYY-MM(-DD)' -> "Agosto 2026". */
+export function mesLargo(mesISO: string): string {
+  const [y, m] = mesISO.split("-").map(Number);
+  return `${MESES[(m ?? 1) - 1]} ${y}`;
+}
+
+/** 'YYYY-MM-DD' -> "13 de agosto de 2026". */
+export function fechaLarga(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return `${d} de ${(MESES[(m ?? 1) - 1] ?? "").toLowerCase()} de ${y}`;
+}
+
 /**
  * Fecha de pago de un mes: el día de pago es el mismo día de la activación.
  * `mesISO` es 'YYYY-MM-01'. Devuelve 'YYYY-MM-DD' (día clampeado al mes).
