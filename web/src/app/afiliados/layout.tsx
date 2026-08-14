@@ -28,6 +28,10 @@ export default async function AfiliadosLayout({
         </div>
       </div>
       <AfiliadosNav />
+      <div className="acciones-modulo">
+        <Link href="/afiliados/afiliados/nuevo" className="btn-secondary">+ Nuevo afiliado</Link>
+        <Link href="/afiliados/clientes/nuevo" className="btn-primary">+ Nuevo cliente</Link>
+      </div>
       {children}
     </>
   );

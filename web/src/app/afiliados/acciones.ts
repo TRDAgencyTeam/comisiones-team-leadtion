@@ -70,6 +70,28 @@ export async function crearAfiliado(formData: FormData) {
   redirect("/afiliados/afiliados");
 }
 
+/** Edita un afiliado (nombre, tipo, %, email, notas). */
+export async function editarAfiliado(formData: FormData) {
+  if (!(await getUsuario())) redirect("/login");
+  const ref = String(formData.get("ref"));
+  const nombre = String(formData.get("nombre") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim() || null;
+  const tipo = String(formData.get("tipo") ?? "partner");
+  const notas = String(formData.get("notas") ?? "").trim() || null;
+  const comRaw = String(formData.get("comision_agencia") ?? "").trim();
+  const comision = tipo === "agencia" && comRaw !== "" ? Number(comRaw) : tipo === "partner" ? -1 : null;
+
+  if (!nombre) redirect(`/afiliados/afiliados/${ref}?error=` + encodeURIComponent("El nombre es obligatorio."));
+
+  await consulta(
+    `update public.afiliados set nombre=$2, email=$3, tipo=$4, notas=$5, comision_agencia=$6 where ref=$1`,
+    [ref, nombre, email, tipo, notas, comision],
+  );
+  revalidatePath("/afiliados");
+  revalidatePath(`/afiliados/afiliados/${ref}`);
+  redirect(`/afiliados/afiliados/${ref}`);
+}
+
 /** Crea un cliente referido (con licencia y, opcionalmente, un servicio). */
 export async function crearClienteAfiliado(formData: FormData) {
   if (!(await getUsuario())) redirect("/login");

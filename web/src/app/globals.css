@@ -466,3 +466,37 @@ tr:last-child td { border-bottom: none; }
 .nota-info { background: var(--accent-soft); border-radius: 8px; padding: 10px 14px; font-size: 0.83rem; color: var(--text); border-left: 3px solid var(--accent); }
 .nota-small { color: var(--muted); font-size: 0.76rem; }
 a.btn-pagar { text-decoration: none; display: inline-block; }
+
+/* --- Afiliados: acciones globales + tarjetas de perfil --- */
+.acciones-modulo { display: flex; justify-content: flex-end; gap: 10px; max-width: 960px; margin: 12px auto 0; padding: 0 24px; }
+
+.perfil-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; margin-top: 18px; }
+.perfil-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 18px;
+  box-shadow: var(--shadow); text-decoration: none; color: var(--text);
+  display: flex; flex-direction: column; gap: 12px; transition: transform 0.12s, border-color 0.12s;
+}
+.perfil-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+.perfil-top { display: flex; align-items: center; gap: 12px; }
+.perfil-avatar {
+  width: 42px; height: 42px; border-radius: 50%; background: var(--accent); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; flex-shrink: 0;
+}
+.perfil-avatar.grande { width: 60px; height: 60px; font-size: 1.6rem; }
+.perfil-nombre { font-family: "Agrandir", sans-serif; font-weight: 700; font-size: 1.02rem; }
+.perfil-stats { display: flex; gap: 16px; }
+.perfil-stats > div { display: flex; flex-direction: column; }
+.ps-num { font-weight: 700; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.ps-lbl { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+.perfil-pie { font-size: 0.78rem; color: var(--muted); border-top: 1px solid var(--border); padding-top: 10px; }
+
+.perfil-header { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.perfil-header-info { flex: 1; min-width: 180px; }
+.perfil-header-info h1 { margin: 0 0 2px; }
+.perfil-header-info p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+
+.cliente-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+.cliente-nombre { font-family: "Agrandir", sans-serif; font-weight: 700; font-size: 1rem; }
+.cliente-meta { font-size: 0.82rem; color: var(--muted); }
+.cliente-srv { margin: 4px 0; }
+.cliente-pagado { font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px; }
