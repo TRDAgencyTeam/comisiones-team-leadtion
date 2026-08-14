@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cargarBase, nivelAfiliado } from "@/lib/afiliados";
 
 export const dynamic = "force-dynamic";
@@ -12,9 +13,12 @@ export default async function AfiliadosListaPage() {
 
   return (
     <main className="wrap">
-      <header className="page">
-        <h1>Afiliados</h1>
-        <p>Agencias (% pactado) y partners (% por nivel según clientes activos).</p>
+      <header className="page page-head-row">
+        <div>
+          <h1>Afiliados</h1>
+          <p>Agencias (% pactado) y partners (% por nivel según clientes activos).</p>
+        </div>
+        <Link href="/afiliados/afiliados/nuevo" className="btn-primary">+ Nuevo afiliado</Link>
       </header>
 
       {error && <div className="card"><strong>No se pudo cargar.</strong><p className="empty">{error}</p></div>}

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cargarBase, SRV_LABELS } from "@/lib/afiliados";
 
 export const dynamic = "force-dynamic";
@@ -14,9 +15,12 @@ export default async function ClientesAfiliadosPage() {
 
   return (
     <main className="wrap">
-      <header className="page">
-        <h1>Clientes referidos</h1>
-        <p>Clientes traídos por cada afiliado, con sus servicios.</p>
+      <header className="page page-head-row">
+        <div>
+          <h1>Clientes referidos</h1>
+          <p>Clientes traídos por cada afiliado, con sus servicios.</p>
+        </div>
+        <Link href="/afiliados/clientes/nuevo" className="btn-primary">+ Nuevo cliente</Link>
       </header>
 
       {error && <div className="card"><strong>No se pudo cargar.</strong><p className="empty">{error}</p></div>}

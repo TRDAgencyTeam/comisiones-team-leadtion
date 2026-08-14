@@ -452,3 +452,17 @@ tr:last-child td { border-bottom: none; }
 .tag-agencia { font-size: 0.68rem; padding: 1px 7px; border-radius: 5px; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
 .tag-partner { font-size: 0.68rem; padding: 1px 7px; border-radius: 5px; background: var(--paid-soft); color: var(--paid); font-weight: 700; }
 .td-concepto { font-size: 0.82rem; color: var(--muted); }
+
+/* --- Afiliados: pulido comisiones/pago/formularios --- */
+.badge-mes { font-size: 0.66rem; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 700; margin-left: 8px; vertical-align: middle; }
+.pago-resumen { background: var(--bg); border-left: 3px solid var(--accent); border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 3px; font-size: 0.92rem; }
+.form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 560px) { .form-2col { grid-template-columns: 1fr; } }
+.form-2col label { display: flex; flex-direction: column; gap: 5px; font-size: 0.82rem; color: var(--muted); }
+.form-2col input, .form-2col select {
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font-size: 0.95rem;
+}
+.nota-info { background: var(--accent-soft); border-radius: 8px; padding: 10px 14px; font-size: 0.83rem; color: var(--text); border-left: 3px solid var(--accent); }
+.nota-small { color: var(--muted); font-size: 0.76rem; }
+a.btn-pagar { text-decoration: none; display: inline-block; }

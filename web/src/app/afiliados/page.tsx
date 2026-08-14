@@ -1,5 +1,5 @@
+import Link from "next/link";
 import { dashboardAfiliados } from "@/lib/afiliados";
-import { marcarPagadoAfiliado } from "./acciones";
 
 export const dynamic = "force-dynamic";
 
@@ -56,12 +56,9 @@ export default async function AfiliadosDashboard() {
                         <td className="td-concepto">{f.concepto}</td>
                         <td className="num">{usd(f.monto)}</td>
                         <td className="num">
-                          <form action={marcarPagadoAfiliado}>
-                            <input type="hidden" name="clienteRef" value={f.clienteRef} />
-                            <input type="hidden" name="mesNum" value={f.mesIdx} />
-                            <input type="hidden" name="monto" value={f.monto} />
-                            <button type="submit" className="btn-pagar">Pagar</button>
-                          </form>
+                          <Link href={`/afiliados/comisiones/pagar?c=${f.clienteRef}&m=${f.mesIdx}`} className="btn-pagar">
+                            Pagar
+                          </Link>
                         </td>
                       </tr>
                     ))}
