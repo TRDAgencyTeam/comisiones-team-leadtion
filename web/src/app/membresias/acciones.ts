@@ -5,6 +5,9 @@ import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { getUsuario } from "@/lib/supabase/server";
 
+const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+const mesTexto = (iso: string) => { const [y, m] = iso.split("-").map(Number); return `${MESES[(m ?? 1) - 1]} ${y}`; };
+
 /**
  * Crea un cliente en el maestro (tabla `clientes`). Al vivir en la misma tabla
  * que usa Customer Success, queda sincronizado con Comisiones CS de inmediato.
@@ -49,7 +52,28 @@ export async function crearMembresia(formData: FormData) {
     [id],
   );
 
+  // Personas asignadas (colaboradores CS) -> a quién se le paga comisión.
+  const asignados = formData.getAll("asignados").map((v) => Number(v)).filter(Boolean);
+  for (const colId of asignados) {
+    await consulta(
+      `insert into public.cliente_colaboradores (cliente_id, colaborador_id)
+       values ($1,$2) on conflict do nothing`,
+      [id, colId],
+    );
+  }
+
+  // Si vino recomendado por un afiliado -> sincronizar con módulo Afiliados.
+  const afiliadoRef = String(formData.get("afiliadoRef") ?? "").trim();
+  if (afiliadoRef) {
+    await consulta(
+      `insert into public.clientes_afiliados (ref, nombre, afiliado_ref, fecha_inicio, precio_licencia)
+       values ($1,$2,$3,$4,$5) on conflict (ref) do nothing`,
+      [`cl-mem-${id}`, nombre, afiliadoRef, mesTexto(fechaActivacion), valorLicencia || 69],
+    );
+  }
+
   revalidatePath("/membresias");
   revalidatePath("/");
+  revalidatePath("/afiliados");
   redirect(`/membresias/${id}`);
 }

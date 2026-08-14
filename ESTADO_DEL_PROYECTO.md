@@ -25,9 +25,13 @@ Login (Supabase Auth) → `/modulos`:
   **ficha** (`/membresias/[id]`: plan, soporte, API, LTV, historial, link a CS) y
   **creación** (`/membresias/nuevo` + acción `crearMembresia` con plan/soporte/API/
   bono/reserva/agencia). Al crearse en la tabla `clientes`, queda en CS automáticamente.
-  Falta: (1) sync con **Afiliados** (¿recomendado?→afiliado) y **personas asignadas**
-  (a quién se paga comisión CS); (2) generar historial `pagos_mensuales` según el plan;
-  (3) editar cliente; (4) dashboard P&L (ingresos vs costos, tasa USD/COP diaria).
+  **Sync HECHO**: al crear se guardan personas asignadas (`cliente_colaboradores`,
+  migración 0007) y, si vino recomendado, se registra en Afiliados (`clientes_afiliados`
+  ref `cl-mem-<id>`). Ficha muestra asignados + afiliado.
+  Falta: (1) generar historial `pagos_mensuales` según el plan (AI 847/0/157…);
+  (2) editar cliente / pausar-cancelar desde este módulo; (3) que las personas
+  asignadas realmente filtren la comisión CS (hoy CS paga por fecha a todos; decisión
+  pendiente); (4) dashboard P&L (ingresos vs costos, tasa USD/COP diaria).
 
 ## Reglas/decisiones clave (no re-preguntar)
 - Comisión CS: base $67/$69 por fecha; hitos T1/T2/T3; elegibilidad por fecha, sin

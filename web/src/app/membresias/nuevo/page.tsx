@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { crearMembresia } from "../acciones";
+import { opcionesFormulario } from "@/lib/membresias";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,7 @@ export default async function NuevaMembresiaPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+  const { colaboradores, afiliados } = await opcionesFormulario();
 
   return (
     <main className="wrap">
@@ -84,6 +86,26 @@ export default async function NuevaMembresiaPage({
           <label>
             Valor de licencia mostrado ($)
             <input type="number" name="valorLicencia" step="0.01" placeholder="69 (0 si agencia)" />
+          </label>
+
+          <div className="nota-info"><b>Personas asignadas (comisión CS).</b> A quiénes se les paga comisión por esta cuenta.</div>
+          <div className="check-group">
+            {colaboradores.map((col) => (
+              <label key={col.id} className="check-label">
+                <input type="checkbox" name="asignados" value={col.id} />
+                {col.nombre}
+              </label>
+            ))}
+          </div>
+
+          <label>
+            ¿Vino recomendado por un afiliado? (sincroniza con Afiliados)
+            <select name="afiliadoRef" defaultValue="">
+              <option value="">— No / directo</option>
+              {afiliados.map((a) => (
+                <option key={a.ref} value={a.ref}>{a.nombre} ({a.tipo})</option>
+              ))}
+            </select>
           </label>
 
           {error && <p className="login-error">{error}</p>}

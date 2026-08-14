@@ -504,3 +504,6 @@ a.btn-pagar { text-decoration: none; display: inline-block; }
 /* --- Módulo Membresías --- */
 .brand-mem { background: var(--brand-blue); color: #fff; }
 .modulos-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 260px)); }
+
+/* --- Grupo de checkboxes (personas asignadas) --- */
+.check-group { display: flex; flex-wrap: wrap; gap: 8px 20px; }

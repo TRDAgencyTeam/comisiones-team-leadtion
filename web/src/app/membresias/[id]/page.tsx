@@ -41,6 +41,8 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
           <div><span className="dato-label">Licencia mostrada</span>{c.valorLicencia != null ? usd(c.valorLicencia) : "—"}</div>
           {c.bono != null && <div><span className="dato-label">Bono reactivación</span>{usd(c.bono)}</div>}
           {c.reserva && <div><span className="dato-label">Inicio real</span>{c.fechaInicioReal ?? "pendiente"}</div>}
+          <div><span className="dato-label">Personas asignadas (CS)</span>{c.asignados.length ? c.asignados.map((a) => a.nombre).join(", ") : "—"}</div>
+          <div><span className="dato-label">Recomendado por</span>{c.afiliadoNombre ?? "Directo"}</div>
         </div>
       </section>
 

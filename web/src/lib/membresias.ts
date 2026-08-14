@@ -101,6 +101,22 @@ export interface FichaMembresia {
   fechaInicioReal: string | null; tiempoMeses: number; ltv: number;
   valorLicencia: number | null; apiEstado: string | null; apiValor: number | null;
   bono: number | null; reserva: boolean; pagos: PagoMes[];
+  asignados: { id: number; nombre: string }[]; afiliadoNombre: string | null;
+}
+
+/** Opciones para el formulario: colaboradores CS que comisionan + afiliados. */
+export async function opcionesFormulario(): Promise<{
+  colaboradores: { id: number; nombre: string }[];
+  afiliados: { ref: string; nombre: string; tipo: string }[];
+}> {
+  const [colabs, afs] = await Promise.all([
+    consulta(`select id, nombre from public.colaboradores where categoria in ('fundador','nuevo') order by nombre`),
+    consulta(`select ref, nombre, tipo from public.afiliados order by nombre`),
+  ]);
+  return {
+    colaboradores: colabs.map((r) => ({ id: Number(r.id), nombre: String(r.nombre) })),
+    afiliados: afs.map((r) => ({ ref: String(r.ref), nombre: String(r.nombre), tipo: String(r.tipo) })),
+  };
 }
 
 export async function obtenerMembresia(id: number): Promise<FichaMembresia | null> {
@@ -113,10 +129,11 @@ export async function obtenerMembresia(id: number): Promise<FichaMembresia | nul
   );
   if (rows.length === 0) return null;
   const r = rows[0]!;
-  const pagos = await consulta(
-    `select mes, estado_mes, valor from public.pagos_mensuales where cliente_id=$1 order by mes`,
-    [id],
-  );
+  const [pagos, asignRows, afRows] = await Promise.all([
+    consulta(`select mes, estado_mes, valor from public.pagos_mensuales where cliente_id=$1 order by mes`, [id]),
+    consulta(`select c.id, c.nombre from public.cliente_colaboradores cc join public.colaboradores c on c.id=cc.colaborador_id where cc.cliente_id=$1`, [id]),
+    consulta(`select a.nombre from public.clientes_afiliados ca join public.afiliados a on a.ref=ca.afiliado_ref where ca.ref = $1`, [`cl-mem-${id}`]),
+  ]);
   const f = toISO(r.fecha_activacion);
   const lista = pagos.map((p) => ({ mes: toISO(p.mes)!, estadoMes: String(p.estado_mes), valor: p.valor == null ? null : Number(p.valor) }));
   const ltv = round2(lista.filter((p) => (p.valor ?? 0) > 0).reduce((s, p) => s + (p.valor ?? 0), 0));
@@ -129,6 +146,8 @@ export async function obtenerMembresia(id: number): Promise<FichaMembresia | nul
     apiEstado: (r.api_estado as string) ?? null, apiValor: r.api_valor == null ? null : Number(r.api_valor),
     bono: r.bono_reactivacion == null ? null : Number(r.bono_reactivacion), reserva: Boolean(r.reserva),
     pagos: lista,
+    asignados: asignRows.map((a) => ({ id: Number(a.id), nombre: String(a.nombre) })),
+    afiliadoNombre: afRows.length ? String(afRows[0]!.nombre) : null,
   };
 }
 
