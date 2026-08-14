@@ -28,6 +28,9 @@ export default async function MembresiasLayout({
         </div>
       </div>
       <MembresiasNav />
+      <div className="acciones-modulo">
+        <Link href="/membresias/nuevo" className="btn-primary">+ Nuevo cliente</Link>
+      </div>
       {children}
     </>
   );

@@ -94,6 +94,44 @@ export async function listarMembresias(
   return lista;
 }
 
+export interface PagoMes { mes: string; estadoMes: string; valor: number | null; }
+export interface FichaMembresia {
+  id: number; nombre: string; planTipo: string | null; soporteValor: number | null;
+  esAgencia: boolean; estado: EstadoMembresia; fechaActivacion: string | null;
+  fechaInicioReal: string | null; tiempoMeses: number; ltv: number;
+  valorLicencia: number | null; apiEstado: string | null; apiValor: number | null;
+  bono: number | null; reserva: boolean; pagos: PagoMes[];
+}
+
+export async function obtenerMembresia(id: number): Promise<FichaMembresia | null> {
+  const rows = await consulta(
+    `select id, nombre, plan_tipo, soporte_valor, incluye_crm_en_marketing, estado_actual,
+            fecha_activacion, fecha_inicio_real, valor_licencia_general, api_estado, api_valor,
+            bono_reactivacion, reserva
+       from public.clientes where id = $1`,
+    [id],
+  );
+  if (rows.length === 0) return null;
+  const r = rows[0]!;
+  const pagos = await consulta(
+    `select mes, estado_mes, valor from public.pagos_mensuales where cliente_id=$1 order by mes`,
+    [id],
+  );
+  const f = toISO(r.fecha_activacion);
+  const lista = pagos.map((p) => ({ mes: toISO(p.mes)!, estadoMes: String(p.estado_mes), valor: p.valor == null ? null : Number(p.valor) }));
+  const ltv = round2(lista.filter((p) => (p.valor ?? 0) > 0).reduce((s, p) => s + (p.valor ?? 0), 0));
+  return {
+    id: Number(r.id), nombre: String(r.nombre), planTipo: (r.plan_tipo as string) ?? null,
+    soporteValor: r.soporte_valor == null ? null : Number(r.soporte_valor),
+    esAgencia: Boolean(r.incluye_crm_en_marketing), estado: r.estado_actual as EstadoMembresia,
+    fechaActivacion: f, fechaInicioReal: toISO(r.fecha_inicio_real), tiempoMeses: mesesDesde(f),
+    ltv, valorLicencia: r.valor_licencia_general == null ? null : Number(r.valor_licencia_general),
+    apiEstado: (r.api_estado as string) ?? null, apiValor: r.api_valor == null ? null : Number(r.api_valor),
+    bono: r.bono_reactivacion == null ? null : Number(r.bono_reactivacion), reserva: Boolean(r.reserva),
+    pagos: lista,
+  };
+}
+
 export async function statsMembresias(): Promise<StatsMembresias> {
   const r = await consulta(
     `select count(*)::int total,

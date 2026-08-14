@@ -21,11 +21,13 @@ Login (Supabase Auth) → `/modulos`:
 - **Afiliados (`/afiliados`)**: COMPLETO v1. Dashboard, comisiones por mes (3 meses)
   con registrar pago, perfiles de afiliados (tarjetas, editar %/tipo, clientes por
   consumo), clientes en tarjetas. Datos migrados del navegador a Supabase.
-- **Clientes / Membresías (`/membresias`)**: EN CONSTRUCCIÓN. Hecho: base + lista
-  (contadores, LTV, antigüedad, búsqueda/filtro/orden). Es la **fuente madre**
-  (extiende la tabla `clientes`; CS lee de aquí).
-  Falta: (1) ficha/creación de cliente con lógica de planes + sync CS/Afiliados;
-  (2) dashboard P&L (ingresos vs costos, tasa USD/COP diaria, GHL, nómina, bonos).
+- **Clientes / Membresías (`/membresias`)**: EN CONSTRUCCIÓN. Hecho: base + lista;
+  **ficha** (`/membresias/[id]`: plan, soporte, API, LTV, historial, link a CS) y
+  **creación** (`/membresias/nuevo` + acción `crearMembresia` con plan/soporte/API/
+  bono/reserva/agencia). Al crearse en la tabla `clientes`, queda en CS automáticamente.
+  Falta: (1) sync con **Afiliados** (¿recomendado?→afiliado) y **personas asignadas**
+  (a quién se paga comisión CS); (2) generar historial `pagos_mensuales` según el plan;
+  (3) editar cliente; (4) dashboard P&L (ingresos vs costos, tasa USD/COP diaria).
 
 ## Reglas/decisiones clave (no re-preguntar)
 - Comisión CS: base $67/$69 por fecha; hitos T1/T2/T3; elegibilidad por fecha, sin

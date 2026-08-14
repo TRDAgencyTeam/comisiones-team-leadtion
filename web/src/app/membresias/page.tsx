@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { listarMembresias, statsMembresias, PLAN_LABEL, type MembresiaRow } from "@/lib/membresias";
 
 export const dynamic = "force-dynamic";
@@ -81,7 +82,7 @@ export default async function MembresiasPage({
                 const soporte = c.soporteValor ? ` · Soporte ${usd(c.soporteValor)}` : "";
                 return (
                   <tr key={c.id}>
-                    <td>{c.nombre}</td>
+                    <td><Link href={`/membresias/${c.id}`} className="link-cliente">{c.nombre}</Link></td>
                     <td>{plan}{soporte}</td>
                     <td>{c.esAgencia ? <span className="tag-agencia">Agencia</span> : <span className="td-concepto">Estándar</span>}</td>
                     <td><span className={b.cls}>{b.txt}</span></td>
