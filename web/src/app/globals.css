@@ -500,3 +500,7 @@ a.btn-pagar { text-decoration: none; display: inline-block; }
 .cliente-meta { font-size: 0.82rem; color: var(--muted); }
 .cliente-srv { margin: 4px 0; }
 .cliente-pagado { font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px; }
+
+/* --- Módulo Membresías --- */
+.brand-mem { background: var(--brand-blue); color: #fff; }
+.modulos-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 260px)); }
