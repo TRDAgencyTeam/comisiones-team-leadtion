@@ -41,6 +41,38 @@ Login (Supabase Auth) → `/modulos`:
 Construir en `/membresias`: **ficha/creación de cliente** (planes + sync) o
 **dashboard P&L**. (El usuario elige por cuál.)
 
+## Backlog / pendientes por módulo (ideas ya discutidas — no perder)
+**Clientes/Membresías (en curso):**
+- Ficha + creación de cliente con toda la lógica: plan de entrada (AI/React/LevelUp),
+  soporte, API (activa/vendida $12), bono reactivación ($50/$100), reserva ($100,
+  14 días, inicia al pagar excedente: AI +$747 / React +$497), flag agencia (licencia
+  free vía plan de ads; puede sumar servicios con descuento), personas asignadas
+  (Andrés/Daniel/Alejandro) → **sincronizar** con Comisiones CS; ¿recomendado? →
+  sincronizar con Afiliados (agencia/partner y de quién). Estados: pausar/cancelar.
+- Dashboard P&L: cuentas activas, ingreso mes, costo mes (nómina COP→USD: Andrés
+  $4.9M×60%, Daniel $4.5M×100%, Alejandro $3.3M×100%; GoHighLevel $497; APIs incluidas
+  $10 c/u; bonos; comisiones CS+afiliados), ganancia neta, LTV, tiempo con cliente,
+  total histórico. Reselling: reporte mensual manual. API vendida gana $2 c/u.
+- Permitir override manual de la tasa USD/COP.
+
+**Afiliados (v1 hecho, pendiente pulir):**
+- Dashboard más integral (resumen, no lista completa; pagar este mes + 2 siguientes;
+  total histórico de clientes).
+- Adjuntar el ARCHIVO del comprobante de pago (requiere Supabase Storage; hoy solo
+  guarda referencia/texto).
+- Permitir varios servicios al crear un cliente (hoy uno).
+
+**Customer Success (completo, futuro):**
+- Portal del colaborador (login para CS que vean lo suyo), penalidad de churn, CHS
+  real (encuesta + aprobación admin).
+
+**Higiene / infra:**
+- Rotar la contraseña de la BD de Supabase (se compartió por chat) y actualizarla en
+  Vercel + `web/.env.local`.
+- Opcional: logos en SVG (hoy PNG) y `web/public/brand/login-bg.jpg`.
+- Cuando Membresías esté completo: apagar la app vieja de afiliados
+  (afiliadosleadtion.vercel.app).
+
 ## Cómo trabajar (ahorro de tokens)
 - Empezar cada día con **/clear** (sesión nueva) y luego **/retomar** (lee este archivo).
 - Usar **/compact** al terminar una fase dentro de una misma sesión.
