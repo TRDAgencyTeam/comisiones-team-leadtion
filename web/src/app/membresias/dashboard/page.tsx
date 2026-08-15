@@ -55,16 +55,17 @@ export default async function PnLDashboard() {
                 ))}
                 <tr><td>GoHighLevel</td><td className="num">{usd(pnl.costos.ghl)}</td></tr>
                 <tr><td>APIs incluidas ($10 c/u)</td><td className="num">{usd(pnl.costos.apisIncluidas)}</td></tr>
+                <tr><td>Comisiones CS (mes)</td><td className="num">{usd(pnl.costos.comisionesCS)}</td></tr>
                 <tr><td>Comisiones afiliados (mes)</td><td className="num">{usd(pnl.costos.comisionesAfiliados)}</td></tr>
+                <tr><td>Bonos de reactivación (mes)</td><td className="num">{usd(pnl.costos.bonos)}</td></tr>
               </tbody></table>
             </section>
           </div>
 
           <p className="foot">
             Nómina convertida con la tasa {pnl.tasa.enVivo ? "en vivo" : "de respaldo"}:
-            {" "}1 USD ≈ ${pnl.tasa.cop.toLocaleString("es-CO")} COP.
-            Pendiente de sumar al total: comisiones de CS del mes y bonos de reactivación
-            (los afinamos en la siguiente iteración).
+            {" "}1 USD ≈ ${pnl.tasa.cop.toLocaleString("es-CO")} COP. Las comisiones CS del
+            mes son las de hitos que caen en {mesLargo(pnl.mes)}.
           </p>
         </>
       )}
