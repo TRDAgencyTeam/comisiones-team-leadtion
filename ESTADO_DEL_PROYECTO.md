@@ -28,10 +28,15 @@ Login (Supabase Auth) → `/modulos`:
   **Sync HECHO**: al crear se guardan personas asignadas (`cliente_colaboradores`,
   migración 0007) y, si vino recomendado, se registra en Afiliados (`clientes_afiliados`
   ref `cl-mem-<id>`). Ficha muestra asignados + afiliado.
+  **Dashboard P&L HECHO** (`/membresias/dashboard`): ingresos (pagos del mes + API
+  vendida + reselling) vs costos (nómina COP→USD con tasa en vivo `lib/fx.ts`, GHL
+  $497, APIs incluidas $10 c/u, comisiones afiliados del mes) + ganancia neta.
+  Config en tabla `config_negocio` (migración 0008) y `reselling_mensual` (editable
+  en el dashboard). `lib/pnl.ts`.
   Falta: (1) generar historial `pagos_mensuales` según el plan (AI 847/0/157…);
-  (2) editar cliente / pausar-cancelar desde este módulo; (3) que las personas
-  asignadas realmente filtren la comisión CS (hoy CS paga por fecha a todos; decisión
-  pendiente); (4) dashboard P&L (ingresos vs costos, tasa USD/COP diaria).
+  (2) editar cliente / pausar-cancelar desde este módulo; (3) sumar al P&L las
+  comisiones de CS del mes y los bonos; (4) UI para editar nómina/GHL (hoy en BD);
+  (5) decisión: que personas asignadas filtren comisión CS (hoy paga por fecha a todos).
 
 ## Reglas/decisiones clave (no re-preguntar)
 - Comisión CS: base $67/$69 por fecha; hitos T1/T2/T3; elegibilidad por fecha, sin

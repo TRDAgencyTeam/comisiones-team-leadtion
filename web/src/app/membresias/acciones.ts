@@ -5,6 +5,21 @@ import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { getUsuario } from "@/lib/supabase/server";
 
+/** Reporta la ganancia de reselling del mes actual. */
+export async function guardarReselling(formData: FormData) {
+  if (!(await getUsuario())) redirect("/login");
+  const mes = String(formData.get("mes") ?? "").trim();
+  const monto = Number(formData.get("monto") || 0);
+  if (mes) {
+    await consulta(
+      `insert into public.reselling_mensual (mes, monto) values ($1,$2)
+       on conflict (mes) do update set monto = excluded.monto`,
+      [mes, monto],
+    );
+  }
+  revalidatePath("/membresias/dashboard");
+}
+
 const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 const mesTexto = (iso: string) => { const [y, m] = iso.split("-").map(Number); return `${MESES[(m ?? 1) - 1]} ${y}`; };
 

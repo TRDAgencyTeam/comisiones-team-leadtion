@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 const LINKS = [
   { href: "/membresias", label: "Clientes" },
-  // Próximamente: Dashboard P&L, Costos.
+  { href: "/membresias/dashboard", label: "Dashboard" },
 ];
 
 export function MembresiasNav() {

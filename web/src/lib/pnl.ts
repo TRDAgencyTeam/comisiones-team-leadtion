@@ -1,0 +1,69 @@
+import "server-only";
+import { consulta } from "@/lib/db";
+import { tasaUsdCop } from "@/lib/fx";
+import { dashboardAfiliados } from "@/lib/afiliados";
+
+/** P&L mensual del negocio Leadtion (ingresos vs costos, en USD). */
+
+const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+export interface PnL {
+  mes: string;
+  tasa: { cop: number; enVivo: boolean };
+  ingresos: { licenciasServicios: number; apiVendida: number; reselling: number; total: number };
+  costos: {
+    nomina: number; ghl: number; apisIncluidas: number; comisionesAfiliados: number; total: number;
+    nominaDetalle: { nombre: string; cop: number; pct: number; usd: number }[];
+  };
+  neto: number;
+  cuentasActivas: number;
+}
+
+export async function calcularPnL(now = new Date()): Promise<PnL> {
+  const mes = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+  const [fx, ingresoRows, apiRows, cfgRows, reselRows, activasRows, afil] = await Promise.all([
+    tasaUsdCop(),
+    consulta(`select coalesce(sum(valor),0)::float t from public.pagos_mensuales where to_char(mes,'YYYY-MM')=$1 and valor>0`, [mes]),
+    consulta(`select count(*) filter (where api_estado='vendida' and estado_actual='activo')::int vendida,
+                     count(*) filter (where api_estado='incluida' and estado_actual='activo')::int incluida
+                from public.clientes`),
+    consulta(`select clave, valor from public.config_negocio`),
+    consulta(`select monto from public.reselling_mensual where mes=$1`, [mes]),
+    consulta(`select count(*) filter (where estado_actual='activo')::int n from public.clientes`),
+    dashboardAfiliados(now),
+  ]);
+
+  const cfg: Record<string, number> = {};
+  for (const r of cfgRows) cfg[String(r.clave)] = Number(r.valor);
+  const cop = fx.cop;
+
+  const nominaDetalle = [
+    { nombre: "Andrés", cop: cfg.nomina_andres_cop ?? 0, pct: cfg.nomina_andres_pct ?? 0 },
+    { nombre: "Daniel", cop: cfg.nomina_daniel_cop ?? 0, pct: cfg.nomina_daniel_pct ?? 0 },
+    { nombre: "Alejandro", cop: cfg.nomina_alejandro_cop ?? 0, pct: cfg.nomina_alejandro_pct ?? 0 },
+  ].map((n) => ({ ...n, usd: round2((n.cop * (n.pct / 100)) / cop) }));
+  const nomina = round2(nominaDetalle.reduce((s, n) => s + n.usd, 0));
+
+  const apiVendidaCount = Number(apiRows[0]?.vendida ?? 0);
+  const apiIncluidaCount = Number(apiRows[0]?.incluida ?? 0);
+  const ghl = cfg.ghl_mensual_usd ?? 497;
+  const apisIncluidas = round2(apiIncluidaCount * 10);
+  const comisionesAfiliados = round2((afil.dash.pendienteMes ?? 0) + (afil.dash.pagadoMes ?? 0));
+
+  const licenciasServicios = round2(Number(ingresoRows[0]?.t ?? 0));
+  const apiVendida = round2(apiVendidaCount * 2);
+  const reselling = round2(Number(reselRows[0]?.monto ?? 0));
+
+  const ingresosTotal = round2(licenciasServicios + apiVendida + reselling);
+  const costosTotal = round2(nomina + ghl + apisIncluidas + comisionesAfiliados);
+
+  return {
+    mes,
+    tasa: { cop, enVivo: fx.enVivo },
+    ingresos: { licenciasServicios, apiVendida, reselling, total: ingresosTotal },
+    costos: { nomina, ghl, apisIncluidas, comisionesAfiliados, total: costosTotal, nominaDetalle },
+    neto: round2(ingresosTotal - costosTotal),
+    cuentasActivas: Number(activasRows[0]?.n ?? 0),
+  };
+}
