@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { obtenerMembresia, PLAN_LABEL, TIPO_LABEL } from "@/lib/membresias";
+import { serviciosDeCliente, SERVICIO_LABEL } from "@/lib/servicios";
 
 export const dynamic = "force-dynamic";
 
@@ -14,11 +15,17 @@ function apiTexto(estado: string | null, valor: number | null): string {
 const ESTADO: Record<string, { txt: string; cls: string }> = {
   activo: { txt: "Activo", cls: "estado-pagado" }, pausado: { txt: "Pausado", cls: "estado-pausado" }, cancelado: { txt: "Cancelado", cls: "estado-cancelado" },
 };
+const ESTADO_MES: Record<string, string> = {
+  activo: "Activo", cancelado: "Cancelado", incluido_en_marketing: "Incluido en marketing",
+  en_riesgo_o_mora: "En riesgo / mora", previo_a_activacion: "Previo a activación",
+  sin_datos: "Sin datos", garantia: "Garantía (mes 2)",
+};
 
 export default async function FichaMembresiaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const c = await obtenerMembresia(Number(id));
   if (!c) notFound();
+  const servicios = await serviciosDeCliente(c.id);
   const badge = ESTADO[c.estado] ?? { txt: c.estado, cls: "" };
 
   return (
@@ -35,7 +42,8 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Link href={`/membresias/${c.id}/editar`} className="btn-primary">Editar</Link>
+          <Link href={`/membresias/${c.id}/servicio`} className="btn-primary">+ Registrar servicio</Link>
+          <Link href={`/membresias/${c.id}/editar`} className="btn-secondary">Editar</Link>
           <Link href={`/clientes/${c.id}`} className="btn-secondary">Ver en CS →</Link>
         </div>
       </header>
@@ -60,6 +68,27 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
         <p className="foot" style={{ marginTop: 8 }}>Suma de todos los cobros mensuales registrados (licencia + servicios).</p>
       </section>
 
+      {servicios.length > 0 && (
+        <section className="card">
+          <div className="card-head"><span className="who">Servicios adquiridos</span></div>
+          <div className="table-scroll">
+            <table>
+              <thead><tr><th>Servicio</th><th>Mes de compra</th><th>Soporte (mes 3)</th><th>Nota</th></tr></thead>
+              <tbody>
+                {servicios.map((s) => (
+                  <tr key={s.id}>
+                    <td className="td-concepto">{SERVICIO_LABEL[s.tipoServicio]}</td>
+                    <td>{s.mesInicio.slice(0, 7)}</td>
+                    <td>{s.soporteValor != null ? usd(s.soporteValor) : "—"}</td>
+                    <td>{s.nota ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       <section className="card">
         <div className="card-head"><span className="who">Historial mensual</span></div>
         {c.pagos.length === 0 ? (
@@ -70,7 +99,7 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
               <thead><tr><th>Mes</th><th>Estado</th><th className="num">Valor</th></tr></thead>
               <tbody>
                 {c.pagos.map((p) => (
-                  <tr key={p.mes}><td>{p.mes.slice(0, 7)}</td><td className="td-concepto">{p.estadoMes}</td><td className="num">{p.valor != null ? usd(p.valor) : "—"}</td></tr>
+                  <tr key={p.mes}><td>{p.mes.slice(0, 7)}</td><td className="td-concepto">{ESTADO_MES[p.estadoMes] ?? p.estadoMes}</td><td className="num">{p.valor != null ? usd(p.valor) : "—"}</td></tr>
                 ))}
               </tbody>
             </table>

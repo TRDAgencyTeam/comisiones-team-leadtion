@@ -44,9 +44,19 @@ Login (Supabase Auth) → `/modulos`:
   = (tipo==='agencia'). Inicial: 12 estándar / 9 agencia / 20 servicio (activos).
   Reemplaza el viejo checkbox "es agencia" en alta/edición; se muestra en lista
   (mini-stats + columna Tipo) y ficha. `TIPO_LABEL` en `lib/membresias.ts`.
-  **API por cliente confirmada** (ago 2026): 13 activos vendida $12 ($156), 27
-  incluida $10 ($270), Miguel Solera sin API, Aura Pérez + Silvia Andión canceladas.
-  El usuario confirma mensualmente quién sigue en $12. Data del Excel + su lista.
+  **API por cliente confirmada** (ago 2026): 13 activos vendida $12 (ganancia $2 c/u
+  = $26), 26 incluida $10 (costo $260), Miguel Solera sin API, Aura Pérez + Silvia
+  Andión canceladas. El usuario confirma mensualmente quién sigue en $12.
+  **P&L corregido**: API vendida = GANANCIA (precio − $10), no ingreso bruto. Dashboard
+  muestra # de cuentas por ítem y el mes en cada KPI (Ingresos/Costos/Ganancia de <mes>).
+  **Servicios adquiridos HECHO** (migración 0010, tabla `cliente_servicios`): cuando un
+  cliente ya activo compra un servicio especial después, se registra con "+ Registrar
+  servicio" en la ficha (`/membresias/[id]/servicio`) → genera los cobros de su ventana
+  sin tocar el pasado. Dinámicas en `lib/servicios.ts`: Agente IA (847/0 garantía/soporte),
+  Reactivación (597/197/197), Level Up (497/·/soporte $87 — TENTATIVO, falta confirmar).
+  Sobrescribe solo los meses de la ventana (on conflict cliente_id,mes). No cambia
+  tipo_cliente; sí actualiza plan_tipo + soporte del cliente. Mes 4+ manual. Ficha
+  muestra "Servicios adquiridos" + estados de mes con etiquetas legibles (incl. Garantía).
   Falta: (1) generar historial `pagos_mensuales` según el plan (AI 847/0/157…);
   (2) sumar al P&L las
   comisiones de CS del mes y los bonos; (4) UI para editar nómina/GHL (hoy en BD);

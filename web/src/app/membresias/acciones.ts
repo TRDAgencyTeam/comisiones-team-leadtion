@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { getUsuario } from "@/lib/supabase/server";
+import { calendarioServicio, type TipoServicio } from "@/lib/servicios";
 
 /** Mapea la opción de API del formulario a (estado, valor). */
 function parseApi(op: string): { estado: string; valor: number | null } {
@@ -46,6 +47,68 @@ export async function actualizarMembresia(formData: FormData) {
   revalidatePath("/membresias/dashboard");
   revalidatePath("/");
   redirect(`/membresias/${id}`);
+}
+
+/** Suma `n` meses a un "YYYY-MM" y devuelve el primer día como "YYYY-MM-01". */
+function mesConDesfase(mesInicio: string, n: number): string {
+  const [y, m] = mesInicio.split("-").map(Number);
+  const d = new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1 + n, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-01`;
+}
+
+/**
+ * Registra un servicio especial que el cliente adquirió en un mes dado y genera
+ * los cobros de su ventana (mes 1/2/3) según la dinámica del servicio, sin tocar
+ * el historial anterior del cliente. Sobrescribe solo los meses de la ventana.
+ */
+export async function registrarServicio(formData: FormData) {
+  if (!(await getUsuario())) redirect("/login");
+  const clienteId = Number(formData.get("clienteId"));
+  const tipoRaw = String(formData.get("tipoServicio") ?? "").trim();
+  const tipos: TipoServicio[] = ["agente_ai", "reactivacion", "level_up"];
+  const tipoServicio = tipos.includes(tipoRaw as TipoServicio) ? (tipoRaw as TipoServicio) : null;
+  const mesInicio = String(formData.get("mesInicio") ?? "").trim(); // "YYYY-MM"
+  const soporteRaw = String(formData.get("soporteValor") ?? "").trim();
+  const soporteValor = soporteRaw === "" ? null : Number(soporteRaw);
+  const bonoRaw = String(formData.get("bono") ?? "").trim();
+  const bono = bonoRaw === "" ? null : Number(bonoRaw);
+  const nota = String(formData.get("nota") ?? "").trim() || null;
+
+  const base = `/membresias/${clienteId}/servicio`;
+  if (!clienteId || !tipoServicio || !/^\d{4}-\d{2}$/.test(mesInicio)) {
+    redirect(`${base}?error=` + encodeURIComponent("Servicio y mes de inicio son obligatorios."));
+  }
+
+  await consulta(
+    `insert into public.cliente_servicios (cliente_id, tipo_servicio, mes_inicio, soporte_valor, bono_reactivacion, nota)
+     values ($1,$2,$3,$4,$5,$6)`,
+    [clienteId, tipoServicio, `${mesInicio}-01`, soporteValor, bono, nota],
+  );
+
+  // Genera/sobrescribe los pagos de la ventana del servicio.
+  for (const m of calendarioServicio(tipoServicio!, soporteValor)) {
+    const mes = mesConDesfase(mesInicio, m.offset);
+    await consulta(
+      `insert into public.pagos_mensuales (cliente_id, mes, valor, estado_mes)
+       values ($1,$2,$3,$4)
+       on conflict (cliente_id, mes) do update set valor=excluded.valor, estado_mes=excluded.estado_mes`,
+      [clienteId, mes, m.valor, m.estado],
+    );
+  }
+
+  // Refleja el servicio actual en la ficha (sin cambiar el tipo de cliente).
+  await consulta(
+    `update public.clientes set plan_tipo=$2, soporte_valor=coalesce($3, soporte_valor),
+        bono_reactivacion=coalesce($4, bono_reactivacion), estado_actualizado_en=now()
+      where id=$1`,
+    [clienteId, tipoServicio, soporteValor, bono],
+  );
+
+  revalidatePath(`/membresias/${clienteId}`);
+  revalidatePath("/membresias");
+  revalidatePath("/membresias/dashboard");
+  revalidatePath("/");
+  redirect(`/membresias/${clienteId}`);
 }
 
 /** Reporta la ganancia de reselling del mes actual. */
