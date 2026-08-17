@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 const mesLargo = (m: string) => { const [y, mm] = m.split("-").map(Number); return `${MESES[(mm ?? 1) - 1]} ${y}`; };
+const soloMes = (m: string) => { const [, mm] = m.split("-").map(Number); return MESES[(mm ?? 1) - 1] ?? ""; };
 
 export default async function PnLDashboard() {
   let pnl = null, error: string | null = null;
@@ -24,9 +25,9 @@ export default async function PnLDashboard() {
         <>
           <div className="kpis kpis-4">
             <div className="kpi kpi-total"><span className="kpi-label">Cuentas activas</span><span className="kpi-num">{pnl.cuentasActivas}</span></div>
-            <div className="kpi kpi-pag"><span className="kpi-label">Ingresos del mes</span><span className="kpi-num">{usd(pnl.ingresos.total)}</span></div>
-            <div className="kpi kpi-pend"><span className="kpi-label">Costos del mes</span><span className="kpi-num">{usd(pnl.costos.total)}</span></div>
-            <div className={pnl.neto >= 0 ? "kpi kpi-pag" : "kpi kpi-pend"}><span className="kpi-label">Ganancia neta</span><span className="kpi-num">{usd(pnl.neto)}</span></div>
+            <div className="kpi kpi-pag"><span className="kpi-label">Ingresos de {soloMes(pnl.mes)}</span><span className="kpi-num">{usd(pnl.ingresos.total)}</span></div>
+            <div className="kpi kpi-pend"><span className="kpi-label">Costos de {soloMes(pnl.mes)}</span><span className="kpi-num">{usd(pnl.costos.total)}</span></div>
+            <div className={pnl.neto >= 0 ? "kpi kpi-pag" : "kpi kpi-pend"}><span className="kpi-label">{pnl.neto >= 0 ? "Ganancia" : "Pérdida"} de {soloMes(pnl.mes)}</span><span className="kpi-num">{usd(pnl.neto)}</span></div>
           </div>
 
           <div className="pnl-cols">
