@@ -19,7 +19,9 @@ export async function actualizarMembresia(formData: FormData) {
   const id = Number(formData.get("id"));
   const nombre = String(formData.get("nombre") ?? "").trim();
   const estado = String(formData.get("estado") ?? "activo");
-  const esAgencia = String(formData.get("esAgencia") ?? "") === "1";
+  const tipoRaw = String(formData.get("tipoCliente") ?? "estandar").trim();
+  const tipoCliente = ["estandar", "agencia", "servicio"].includes(tipoRaw) ? tipoRaw : "estandar";
+  const esAgencia = tipoCliente === "agencia";
   const planTipo = String(formData.get("planTipo") ?? "").trim() || null;
   const soporteRaw = String(formData.get("soporteValor") ?? "").trim();
   const soporteValor = soporteRaw === "" ? null : Number(soporteRaw);
@@ -35,9 +37,9 @@ export async function actualizarMembresia(formData: FormData) {
     `update public.clientes
         set nombre=$2, estado_actual=$3, incluye_crm_en_marketing=$4, plan_tipo=$5,
             soporte_valor=$6, valor_licencia_general=$7, api_estado=$8, api_valor=$9,
-            bono_reactivacion=$10, estado_actualizado_en=now()
+            bono_reactivacion=$10, tipo_cliente=$11, estado_actualizado_en=now()
       where id=$1`,
-    [id, nombre, estado, esAgencia, planTipo, soporteValor, valorLicencia, api.estado, api.valor, bono],
+    [id, nombre, estado, esAgencia, planTipo, soporteValor, valorLicencia, api.estado, api.valor, bono, tipoCliente],
   );
   revalidatePath(`/membresias/${id}`);
   revalidatePath("/membresias");
@@ -74,7 +76,9 @@ export async function crearMembresia(formData: FormData) {
 
   const nombre = String(formData.get("nombre") ?? "").trim();
   const fechaActivacion = String(formData.get("fechaActivacion") ?? "").trim();
-  const esAgencia = String(formData.get("esAgencia") ?? "") === "1";
+  const tipoRaw = String(formData.get("tipoCliente") ?? "estandar").trim();
+  const tipoCliente = ["estandar", "agencia", "servicio"].includes(tipoRaw) ? tipoRaw : "estandar";
+  const esAgencia = tipoCliente === "agencia";
   const planTipo = String(formData.get("planTipo") ?? "").trim() || null;
   const soporteRaw = String(formData.get("soporteValor") ?? "").trim();
   const soporteValor = soporteRaw === "" ? null : Number(soporteRaw);
@@ -95,11 +99,11 @@ export async function crearMembresia(formData: FormData) {
     `insert into public.clientes
        (nombre, fecha_activacion, estado_actual, incluye_crm_en_marketing, plan_tipo,
         soporte_valor, valor_licencia_general, api_estado, api_valor,
-        bono_reactivacion, reserva, fecha_inicio_real, creado_por_rol, estado_actualizado_en)
-     values ($1,$2,'activo',$3,$4,$5,$6,$7,$8,$9,$10,$11,'admin',now())
+        bono_reactivacion, reserva, fecha_inicio_real, tipo_cliente, creado_por_rol, estado_actualizado_en)
+     values ($1,$2,'activo',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'admin',now())
      returning id`,
     [nombre, fechaActivacion, esAgencia, planTipo, soporteValor, valorLicencia,
-     apiEstado, apiValor, bono, reserva, fechaInicioReal],
+     apiEstado, apiValor, bono, reserva, fechaInicioReal, tipoCliente],
   );
   const id = rows[0]!.id;
   await consulta(

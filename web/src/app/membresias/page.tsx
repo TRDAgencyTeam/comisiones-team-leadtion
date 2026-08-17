@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listarMembresias, statsMembresias, PLAN_LABEL, type MembresiaRow } from "@/lib/membresias";
+import { listarMembresias, statsMembresias, PLAN_LABEL, TIPO_LABEL, type MembresiaRow } from "@/lib/membresias";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +43,9 @@ export default async function MembresiasPage({
           <div className="mini-stat"><span className="ms-num ms-ok">{stats.activas}</span><span className="ms-lbl">Activas</span></div>
           <div className="mini-stat"><span className="ms-num ms-warn">{stats.pausadas}</span><span className="ms-lbl">Pausadas</span></div>
           <div className="mini-stat"><span className="ms-num ms-bad">{stats.canceladas}</span><span className="ms-lbl">Canceladas</span></div>
+          <div className="mini-stat"><span className="ms-num">{stats.estandar}</span><span className="ms-lbl">Estándar</span></div>
           <div className="mini-stat"><span className="ms-num">{stats.agencia}</span><span className="ms-lbl">Agencia</span></div>
+          <div className="mini-stat"><span className="ms-num">{stats.servicio}</span><span className="ms-lbl">Servicio Leadtion</span></div>
         </div>
       )}
 
@@ -84,7 +86,7 @@ export default async function MembresiasPage({
                   <tr key={c.id}>
                     <td><Link href={`/membresias/${c.id}`} className="link-cliente">{c.nombre}</Link></td>
                     <td>{plan}{soporte}</td>
-                    <td>{c.esAgencia ? <span className="tag-agencia">Agencia</span> : <span className="td-concepto">Estándar</span>}</td>
+                    <td>{c.tipoCliente === "agencia" ? <span className="tag-agencia">Agencia</span> : <span className="td-concepto">{TIPO_LABEL[c.tipoCliente ?? "estandar"] ?? "Estándar"}</span>}</td>
                     <td><span className={b.cls}>{b.txt}</span></td>
                     <td className="num">{antiguedad(c.tiempoMeses)}</td>
                     <td className="num">{c.ltv > 0 ? usd(c.ltv) : "—"}</td>

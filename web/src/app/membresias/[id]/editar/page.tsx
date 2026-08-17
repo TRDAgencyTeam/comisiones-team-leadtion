@@ -40,9 +40,13 @@ export default async function EditarMembresiaPage({
             </label>
           </div>
 
-          <label className="check-label">
-            <input type="checkbox" name="esAgencia" value="1" defaultChecked={c.esAgencia} />
-            Cliente <b>agencia</b> (licencia incluida en su plan de Ads)
+          <label>
+            Tipo de cliente
+            <select name="tipoCliente" defaultValue={c.tipoCliente ?? "estandar"}>
+              <option value="estandar">Estándar (solo licencia $69)</option>
+              <option value="agencia">Agencia (viene con plan de marketing; licencia incluida ahí)</option>
+              <option value="servicio">Servicio Leadtion (Agente IA / Reactivación / Level Up)</option>
+            </select>
           </label>
 
           <div className="form-2col">

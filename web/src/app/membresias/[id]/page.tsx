@@ -1,11 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { obtenerMembresia, PLAN_LABEL } from "@/lib/membresias";
+import { obtenerMembresia, PLAN_LABEL, TIPO_LABEL } from "@/lib/membresias";
 
 export const dynamic = "force-dynamic";
 
 const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
-const API_LABEL: Record<string, string> = { incluida: "Incluida ($10 costo)", vendida: "Vendida $12 (gana $2)", ninguna: "Sin API" };
+function apiTexto(estado: string | null, valor: number | null): string {
+  if (estado === "incluida") return "Incluida ($10 costo)";
+  if (estado === "vendida") return valor === 12 ? "Vendida $12 (gana $2)" : `Vendida $${valor ?? 10}`;
+  if (estado === "ninguna") return "Sin API";
+  return "—";
+}
 const ESTADO: Record<string, { txt: string; cls: string }> = {
   activo: { txt: "Activo", cls: "estado-pagado" }, pausado: { txt: "Pausado", cls: "estado-pausado" }, cancelado: { txt: "Cancelado", cls: "estado-cancelado" },
 };
@@ -24,7 +29,8 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
           <h1>{c.nombre}</h1>
           <p>
             <span className={badge.cls}>{badge.txt}</span>
-            {c.esAgencia ? " · " : ""}{c.esAgencia && <span className="tag-agencia">Agencia</span>}
+            {c.tipoCliente && c.tipoCliente !== "estandar" ? " · " : ""}
+            {c.tipoCliente && c.tipoCliente !== "estandar" && <span className="tag-agencia">{TIPO_LABEL[c.tipoCliente]}</span>}
             {c.reserva ? " · " : ""}{c.reserva && <span className="tag-partner">Reserva</span>}
           </p>
         </div>
@@ -38,7 +44,7 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
         <div className="datos-grid">
           <div><span className="dato-label">Plan de entrada</span>{c.planTipo ? PLAN_LABEL[c.planTipo] : "Estándar"}</div>
           <div><span className="dato-label">Soporte</span>{c.soporteValor ? usd(c.soporteValor) : "Básico (incluido)"}</div>
-          <div><span className="dato-label">API WhatsApp</span>{c.apiEstado ? API_LABEL[c.apiEstado] : "—"}</div>
+          <div><span className="dato-label">API WhatsApp</span>{apiTexto(c.apiEstado, c.apiValor)}</div>
           <div><span className="dato-label">Activación</span>{c.fechaActivacion ?? "—"}</div>
           <div><span className="dato-label">Antigüedad</span>{c.tiempoMeses} {c.tiempoMeses === 1 ? "mes" : "meses"}</div>
           <div><span className="dato-label">Licencia mostrada</span>{c.valorLicencia != null ? usd(c.valorLicencia) : "—"}</div>

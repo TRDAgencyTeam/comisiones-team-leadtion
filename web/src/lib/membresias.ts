@@ -8,6 +8,9 @@ const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 export const PLAN_LABEL: Record<string, string> = {
   agente_ai: "Agente AI", reactivacion: "Reactivación", level_up: "Level Up",
 };
+export const TIPO_LABEL: Record<string, string> = {
+  estandar: "Estándar", agencia: "Agencia", servicio: "Servicio Leadtion",
+};
 
 export type EstadoMembresia = "activo" | "cancelado" | "pausado";
 
@@ -18,6 +21,7 @@ export interface MembresiaRow {
   plan: string | null;
   soporteValor: number | null;
   esAgencia: boolean;
+  tipoCliente: string | null;
   estado: EstadoMembresia;
   fechaActivacion: string | null;
   tiempoMeses: number;
@@ -31,6 +35,8 @@ export interface StatsMembresias {
   pausadas: number;
   canceladas: number;
   agencia: number;
+  servicio: number;
+  estandar: number;
 }
 
 function toISO(v: unknown): string | null {
@@ -63,7 +69,7 @@ export async function listarMembresias(
   const [rows, ltv] = await Promise.all([
     consulta(
       `select id, nombre, plan, plan_tipo, soporte_valor, incluye_crm_en_marketing,
-              estado_actual, fecha_activacion, api_estado
+              tipo_cliente, estado_actual, fecha_activacion, api_estado
          from public.clientes`,
     ),
     ltvPorCliente(),
@@ -76,6 +82,7 @@ export async function listarMembresias(
       planTipo: (r.plan_tipo as string) ?? null, plan: (r.plan as string) ?? null,
       soporteValor: r.soporte_valor == null ? null : Number(r.soporte_valor),
       esAgencia: Boolean(r.incluye_crm_en_marketing),
+      tipoCliente: (r.tipo_cliente as string) ?? null,
       estado: r.estado_actual as EstadoMembresia,
       fechaActivacion: f, tiempoMeses: mesesDesde(f),
       ltv: ltv.get(Number(r.id)) ?? 0,
@@ -97,7 +104,7 @@ export async function listarMembresias(
 export interface PagoMes { mes: string; estadoMes: string; valor: number | null; }
 export interface FichaMembresia {
   id: number; nombre: string; planTipo: string | null; soporteValor: number | null;
-  esAgencia: boolean; estado: EstadoMembresia; fechaActivacion: string | null;
+  esAgencia: boolean; tipoCliente: string | null; estado: EstadoMembresia; fechaActivacion: string | null;
   fechaInicioReal: string | null; tiempoMeses: number; ltv: number;
   valorLicencia: number | null; apiEstado: string | null; apiValor: number | null;
   bono: number | null; reserva: boolean; pagos: PagoMes[];
@@ -121,7 +128,7 @@ export async function opcionesFormulario(): Promise<{
 
 export async function obtenerMembresia(id: number): Promise<FichaMembresia | null> {
   const rows = await consulta(
-    `select id, nombre, plan_tipo, soporte_valor, incluye_crm_en_marketing, estado_actual,
+    `select id, nombre, plan_tipo, soporte_valor, incluye_crm_en_marketing, tipo_cliente, estado_actual,
             fecha_activacion, fecha_inicio_real, valor_licencia_general, api_estado, api_valor,
             bono_reactivacion, reserva
        from public.clientes where id = $1`,
@@ -140,7 +147,8 @@ export async function obtenerMembresia(id: number): Promise<FichaMembresia | nul
   return {
     id: Number(r.id), nombre: String(r.nombre), planTipo: (r.plan_tipo as string) ?? null,
     soporteValor: r.soporte_valor == null ? null : Number(r.soporte_valor),
-    esAgencia: Boolean(r.incluye_crm_en_marketing), estado: r.estado_actual as EstadoMembresia,
+    esAgencia: Boolean(r.incluye_crm_en_marketing), tipoCliente: (r.tipo_cliente as string) ?? null,
+    estado: r.estado_actual as EstadoMembresia,
     fechaActivacion: f, fechaInicioReal: toISO(r.fecha_inicio_real), tiempoMeses: mesesDesde(f),
     ltv, valorLicencia: r.valor_licencia_general == null ? null : Number(r.valor_licencia_general),
     apiEstado: (r.api_estado as string) ?? null, apiValor: r.api_valor == null ? null : Number(r.api_valor),
@@ -157,12 +165,15 @@ export async function statsMembresias(): Promise<StatsMembresias> {
             count(*) filter (where estado_actual='activo')::int activas,
             count(*) filter (where estado_actual='pausado')::int pausadas,
             count(*) filter (where estado_actual='cancelado')::int canceladas,
-            count(*) filter (where incluye_crm_en_marketing)::int agencia
+            count(*) filter (where tipo_cliente='agencia' and estado_actual='activo')::int agencia,
+            count(*) filter (where tipo_cliente='servicio' and estado_actual='activo')::int servicio,
+            count(*) filter (where tipo_cliente='estandar' and estado_actual='activo')::int estandar
        from public.clientes`,
   );
   const c = r[0]!;
   return {
     total: Number(c.total), activas: Number(c.activas), pausadas: Number(c.pausadas),
     canceladas: Number(c.canceladas), agencia: Number(c.agencia),
+    servicio: Number(c.servicio), estandar: Number(c.estandar),
   };
 }

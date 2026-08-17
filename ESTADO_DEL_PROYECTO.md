@@ -34,10 +34,19 @@ Login (Supabase Auth) → `/modulos`:
   Config en tabla `config_negocio` (migración 0008) y `reselling_mensual` (editable
   en el dashboard). `lib/pnl.ts`.
   **Editar cliente HECHO** (`/membresias/[id]/editar`): nombre, estado (activo/
-  pausado/cancelado), agencia, plan, soporte, **API** (incluida $10 / vendida $12 /
-  vendida $10 / ninguna), bono, licencia. API por cliente editable = fuente de verdad;
-  el P&L deriva de ahí (ingreso vendida = suma api_valor; costo incluida = $10×count).
-  Data de API importada del Excel (24 incluida / 17 vendida totales; activos 20/15).
+  pausado/cancelado), **tipo de cliente**, plan, soporte, **API** (incluida $10 /
+  vendida $12 / vendida $10 / ninguna), bono, licencia. API por cliente editable =
+  fuente de verdad; el P&L deriva de ahí (ingreso vendida = suma api_valor; costo
+  incluida = $10×count).
+  **Tipo de cliente HECHO** (migración 0009): estandar / agencia (viene con plan de
+  marketing; licencia incluida ahí) / servicio (compró Agente IA, Reactivación o
+  Level Up — servicio especial, NO es agencia). Deriva `incluye_crm_en_marketing`
+  = (tipo==='agencia'). Inicial: 12 estándar / 9 agencia / 20 servicio (activos).
+  Reemplaza el viejo checkbox "es agencia" en alta/edición; se muestra en lista
+  (mini-stats + columna Tipo) y ficha. `TIPO_LABEL` en `lib/membresias.ts`.
+  **API por cliente confirmada** (ago 2026): 13 activos vendida $12 ($156), 27
+  incluida $10 ($270), Miguel Solera sin API, Aura Pérez + Silvia Andión canceladas.
+  El usuario confirma mensualmente quién sigue en $12. Data del Excel + su lista.
   Falta: (1) generar historial `pagos_mensuales` según el plan (AI 847/0/157…);
   (2) sumar al P&L las
   comisiones de CS del mes y los bonos; (4) UI para editar nómina/GHL (hoy en BD);
