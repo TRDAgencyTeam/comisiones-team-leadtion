@@ -28,7 +28,8 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
   const [fx, ingresoRows, apiRows, cfgRows, reselRows, activasRows, bonoRows, afil, cs] = await Promise.all([
     tasaUsdCop(),
     consulta(`select coalesce(sum(valor),0)::float t from public.pagos_mensuales where to_char(mes,'YYYY-MM')=$1 and valor>0`, [mes]),
-    consulta(`select count(*) filter (where api_estado='vendida' and estado_actual='activo')::int vendida,
+    consulta(`select coalesce(sum(api_valor) filter (where api_estado='vendida' and estado_actual='activo'),0)::float vendida_ingreso,
+                     count(*) filter (where api_estado='vendida' and estado_actual='activo')::int vendida_n,
                      count(*) filter (where api_estado='incluida' and estado_actual='activo')::int incluida
                 from public.clientes`),
     consulta(`select clave, valor from public.config_negocio`),
@@ -58,14 +59,14 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
   ].map((n) => ({ ...n, usd: round2((n.cop * (n.pct / 100)) / cop) }));
   const nomina = round2(nominaDetalle.reduce((s, n) => s + n.usd, 0));
 
-  const apiVendidaCount = Number(apiRows[0]?.vendida ?? 0);
+  const apiVendidaIngreso = Number(apiRows[0]?.vendida_ingreso ?? 0);
   const apiIncluidaCount = Number(apiRows[0]?.incluida ?? 0);
   const ghl = cfg.ghl_mensual_usd ?? 497;
   const apisIncluidas = round2(apiIncluidaCount * 10);
   const comisionesAfiliados = round2((afil.dash.pendienteMes ?? 0) + (afil.dash.pagadoMes ?? 0));
 
   const licenciasServicios = round2(Number(ingresoRows[0]?.t ?? 0));
-  const apiVendida = round2(apiVendidaCount * 2);
+  const apiVendida = round2(apiVendidaIngreso);
   const reselling = round2(Number(reselRows[0]?.monto ?? 0));
 
   const ingresosTotal = round2(licenciasServicios + apiVendida + reselling);

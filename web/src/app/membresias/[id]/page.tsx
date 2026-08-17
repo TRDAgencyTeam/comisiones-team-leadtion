@@ -28,7 +28,10 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
             {c.reserva ? " · " : ""}{c.reserva && <span className="tag-partner">Reserva</span>}
           </p>
         </div>
-        <Link href={`/clientes/${c.id}`} className="btn-secondary">Ver en Comisiones CS →</Link>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Link href={`/membresias/${c.id}/editar`} className="btn-primary">Editar</Link>
+          <Link href={`/clientes/${c.id}`} className="btn-secondary">Ver en CS →</Link>
+        </div>
       </header>
 
       <section className="card">

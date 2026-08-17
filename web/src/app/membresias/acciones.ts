@@ -5,6 +5,47 @@ import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { getUsuario } from "@/lib/supabase/server";
 
+/** Mapea la opción de API del formulario a (estado, valor). */
+function parseApi(op: string): { estado: string; valor: number | null } {
+  if (op === "incluida") return { estado: "incluida", valor: 10 };
+  if (op === "vendida_12") return { estado: "vendida", valor: 12 };
+  if (op === "vendida_10") return { estado: "vendida", valor: 10 };
+  return { estado: "ninguna", valor: null };
+}
+
+/** Edita un cliente del maestro (plan, soporte, API, estado, agencia, etc.). */
+export async function actualizarMembresia(formData: FormData) {
+  if (!(await getUsuario())) redirect("/login");
+  const id = Number(formData.get("id"));
+  const nombre = String(formData.get("nombre") ?? "").trim();
+  const estado = String(formData.get("estado") ?? "activo");
+  const esAgencia = String(formData.get("esAgencia") ?? "") === "1";
+  const planTipo = String(formData.get("planTipo") ?? "").trim() || null;
+  const soporteRaw = String(formData.get("soporteValor") ?? "").trim();
+  const soporteValor = soporteRaw === "" ? null : Number(soporteRaw);
+  const api = parseApi(String(formData.get("apiOpcion") ?? "ninguna"));
+  const bonoRaw = String(formData.get("bono") ?? "").trim();
+  const bono = bonoRaw === "" ? null : Number(bonoRaw);
+  const valorRaw = String(formData.get("valorLicencia") ?? "").trim();
+  const valorLicencia = valorRaw === "" ? null : Number(valorRaw);
+
+  if (!nombre) redirect(`/membresias/${id}/editar?error=` + encodeURIComponent("El nombre es obligatorio."));
+
+  await consulta(
+    `update public.clientes
+        set nombre=$2, estado_actual=$3, incluye_crm_en_marketing=$4, plan_tipo=$5,
+            soporte_valor=$6, valor_licencia_general=$7, api_estado=$8, api_valor=$9,
+            bono_reactivacion=$10, estado_actualizado_en=now()
+      where id=$1`,
+    [id, nombre, estado, esAgencia, planTipo, soporteValor, valorLicencia, api.estado, api.valor, bono],
+  );
+  revalidatePath(`/membresias/${id}`);
+  revalidatePath("/membresias");
+  revalidatePath("/membresias/dashboard");
+  revalidatePath("/");
+  redirect(`/membresias/${id}`);
+}
+
 /** Reporta la ganancia de reselling del mes actual. */
 export async function guardarReselling(formData: FormData) {
   if (!(await getUsuario())) redirect("/login");

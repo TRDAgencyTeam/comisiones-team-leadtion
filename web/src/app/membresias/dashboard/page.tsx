@@ -34,7 +34,7 @@ export default async function PnLDashboard() {
               <div className="card-head"><span className="who">Ingresos</span><span className="t-pagado"><b>{usd(pnl.ingresos.total)}</b></span></div>
               <table><tbody>
                 <tr><td>Licencias y servicios cobrados</td><td className="num">{usd(pnl.ingresos.licenciasServicios)}</td></tr>
-                <tr><td>API vendida (gana $2 c/u)</td><td className="num">{usd(pnl.ingresos.apiVendida)}</td></tr>
+                <tr><td>API vendida (ingreso $12/$10)</td><td className="num">{usd(pnl.ingresos.apiVendida)}</td></tr>
                 <tr><td>Reselling reportado</td><td className="num">{usd(pnl.ingresos.reselling)}</td></tr>
               </tbody></table>
               <form action={guardarReselling} className="reselling-form">

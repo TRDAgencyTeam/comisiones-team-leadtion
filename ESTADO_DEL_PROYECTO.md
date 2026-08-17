@@ -33,8 +33,13 @@ Login (Supabase Auth) → `/modulos`:
   $497, APIs incluidas $10 c/u, comisiones afiliados del mes) + ganancia neta.
   Config en tabla `config_negocio` (migración 0008) y `reselling_mensual` (editable
   en el dashboard). `lib/pnl.ts`.
+  **Editar cliente HECHO** (`/membresias/[id]/editar`): nombre, estado (activo/
+  pausado/cancelado), agencia, plan, soporte, **API** (incluida $10 / vendida $12 /
+  vendida $10 / ninguna), bono, licencia. API por cliente editable = fuente de verdad;
+  el P&L deriva de ahí (ingreso vendida = suma api_valor; costo incluida = $10×count).
+  Data de API importada del Excel (24 incluida / 17 vendida totales; activos 20/15).
   Falta: (1) generar historial `pagos_mensuales` según el plan (AI 847/0/157…);
-  (2) editar cliente / pausar-cancelar desde este módulo; (3) sumar al P&L las
+  (2) sumar al P&L las
   comisiones de CS del mes y los bonos; (4) UI para editar nómina/GHL (hoy en BD);
   (5) decisión: que personas asignadas filtren comisión CS (hoy paga por fecha a todos).
 
