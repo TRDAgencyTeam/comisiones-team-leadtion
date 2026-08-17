@@ -11,10 +11,14 @@ const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 export interface PnL {
   mes: string;
   tasa: { cop: number; enVivo: boolean };
-  ingresos: { licenciasServicios: number; apiVendida: number; reselling: number; total: number };
+  ingresos: {
+    licenciasServicios: number;
+    apiVendida: number; apiVendidaCuentas: number;
+    reselling: number; total: number;
+  };
   costos: {
-    nomina: number; ghl: number; apisIncluidas: number; comisionesAfiliados: number;
-    comisionesCS: number; bonos: number; total: number;
+    nomina: number; ghl: number; apisIncluidas: number; apisIncluidasCuentas: number;
+    comisionesAfiliados: number; comisionesCS: number; bonos: number; total: number;
     nominaDetalle: { nombre: string; cop: number; pct: number; usd: number }[];
   };
   neto: number;
@@ -60,13 +64,15 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
   const nomina = round2(nominaDetalle.reduce((s, n) => s + n.usd, 0));
 
   const apiVendidaIngreso = Number(apiRows[0]?.vendida_ingreso ?? 0);
+  const apiVendidaCuentas = Number(apiRows[0]?.vendida_n ?? 0);
   const apiIncluidaCount = Number(apiRows[0]?.incluida ?? 0);
   const ghl = cfg.ghl_mensual_usd ?? 497;
   const apisIncluidas = round2(apiIncluidaCount * 10);
   const comisionesAfiliados = round2((afil.dash.pendienteMes ?? 0) + (afil.dash.pagadoMes ?? 0));
 
   const licenciasServicios = round2(Number(ingresoRows[0]?.t ?? 0));
-  const apiVendida = round2(apiVendidaIngreso);
+  // Ganancia real de las APIs vendidas: precio cobrado − $10 de costo por cada una.
+  const apiVendida = round2(apiVendidaIngreso - apiVendidaCuentas * 10);
   const reselling = round2(Number(reselRows[0]?.monto ?? 0));
 
   const ingresosTotal = round2(licenciasServicios + apiVendida + reselling);
@@ -75,8 +81,8 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
   return {
     mes,
     tasa: { cop, enVivo: fx.enVivo },
-    ingresos: { licenciasServicios, apiVendida, reselling, total: ingresosTotal },
-    costos: { nomina, ghl, apisIncluidas, comisionesAfiliados, comisionesCS, bonos, total: costosTotal, nominaDetalle },
+    ingresos: { licenciasServicios, apiVendida, apiVendidaCuentas, reselling, total: ingresosTotal },
+    costos: { nomina, ghl, apisIncluidas, apisIncluidasCuentas: apiIncluidaCount, comisionesAfiliados, comisionesCS, bonos, total: costosTotal, nominaDetalle },
     neto: round2(ingresosTotal - costosTotal),
     cuentasActivas: Number(activasRows[0]?.n ?? 0),
   };

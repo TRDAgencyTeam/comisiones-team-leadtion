@@ -34,7 +34,7 @@ export default async function PnLDashboard() {
               <div className="card-head"><span className="who">Ingresos</span><span className="t-pagado"><b>{usd(pnl.ingresos.total)}</b></span></div>
               <table><tbody>
                 <tr><td>Licencias y servicios cobrados</td><td className="num">{usd(pnl.ingresos.licenciasServicios)}</td></tr>
-                <tr><td>API vendida (ingreso $12/$10)</td><td className="num">{usd(pnl.ingresos.apiVendida)}</td></tr>
+                <tr><td>API vendida · ganancia $2 c/u <span className="td-sub">({pnl.ingresos.apiVendidaCuentas} cuentas)</span></td><td className="num">{usd(pnl.ingresos.apiVendida)}</td></tr>
                 <tr><td>Reselling reportado</td><td className="num">{usd(pnl.ingresos.reselling)}</td></tr>
               </tbody></table>
               <form action={guardarReselling} className="reselling-form">
@@ -54,7 +54,7 @@ export default async function PnLDashboard() {
                   <tr key={n.nombre}><td className="td-sub">— {n.nombre} ({n.pct}%)</td><td className="num td-sub">{usd(n.usd)}</td></tr>
                 ))}
                 <tr><td>GoHighLevel</td><td className="num">{usd(pnl.costos.ghl)}</td></tr>
-                <tr><td>APIs incluidas ($10 c/u)</td><td className="num">{usd(pnl.costos.apisIncluidas)}</td></tr>
+                <tr><td>APIs incluidas · costo $10 c/u <span className="td-sub">({pnl.costos.apisIncluidasCuentas} cuentas)</span></td><td className="num">{usd(pnl.costos.apisIncluidas)}</td></tr>
                 <tr><td>Comisiones CS (mes)</td><td className="num">{usd(pnl.costos.comisionesCS)}</td></tr>
                 <tr><td>Comisiones afiliados (mes)</td><td className="num">{usd(pnl.costos.comisionesAfiliados)}</td></tr>
                 <tr><td>Bonos de reactivación (mes)</td><td className="num">{usd(pnl.costos.bonos)}</td></tr>
