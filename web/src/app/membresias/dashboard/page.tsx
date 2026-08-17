@@ -4,6 +4,7 @@ import { guardarReselling } from "../acciones";
 export const dynamic = "force-dynamic";
 
 const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 const mesLargo = (m: string) => { const [y, mm] = m.split("-").map(Number); return `${MESES[(mm ?? 1) - 1]} ${y}`; };
 const soloMes = (m: string) => { const [, mm] = m.split("-").map(Number); return MESES[(mm ?? 1) - 1] ?? ""; };
@@ -30,11 +31,28 @@ export default async function PnLDashboard() {
             <div className={pnl.neto >= 0 ? "kpi kpi-pag" : "kpi kpi-pend"}><span className="kpi-label">{pnl.neto >= 0 ? "Ganancia" : "Pérdida"} de {soloMes(pnl.mes)}</span><span className="kpi-num">{usd(pnl.neto)}</span></div>
           </div>
 
+          {(() => {
+            const costosFijos = round2(pnl.costos.nomina + pnl.costos.ghl + pnl.costos.apisIncluidas);
+            const brecha = round2(pnl.ingresos.licencias - costosFijos);
+            return (
+              <div className="kpis kpis-4">
+                <div className="kpi kpi-total"><span className="kpi-label">Licencias de {soloMes(pnl.mes)}</span><span className="kpi-num">{usd(pnl.ingresos.licencias)}</span></div>
+                <div className="kpi kpi-pend"><span className="kpi-label">Costos fijos de {soloMes(pnl.mes)}</span><span className="kpi-num">{usd(costosFijos)}</span></div>
+                <div className={brecha >= 0 ? "kpi kpi-pag" : "kpi kpi-pend"}><span className="kpi-label">{brecha >= 0 ? "Licencias cubren fijos" : "Faltan para cubrir fijos"}</span><span className="kpi-num">{usd(brecha)}</span></div>
+                <div className="kpi kpi-total"><span className="kpi-label">Servicios Leadtion de {soloMes(pnl.mes)}</span><span className="kpi-num">{usd(pnl.ingresos.servicios.total)}</span></div>
+              </div>
+            );
+          })()}
+
           <div className="pnl-cols">
             <section className="card">
               <div className="card-head"><span className="who">Ingresos</span><span className="t-pagado"><b>{usd(pnl.ingresos.total)}</b></span></div>
               <table><tbody>
-                <tr><td>Licencias y servicios cobrados</td><td className="num">{usd(pnl.ingresos.licenciasServicios)}</td></tr>
+                <tr><td><b>Licencias cobradas</b></td><td className="num"><b>{usd(pnl.ingresos.licencias)}</b></td></tr>
+                <tr><td>Servicios Leadtion (mes)</td><td className="num">{usd(pnl.ingresos.servicios.total)}</td></tr>
+                <tr><td className="td-sub">— Agente IA</td><td className="num td-sub">{usd(pnl.ingresos.servicios.agente_ai)}</td></tr>
+                <tr><td className="td-sub">— Reactivación</td><td className="num td-sub">{usd(pnl.ingresos.servicios.reactivacion)}</td></tr>
+                <tr><td className="td-sub">— Level Up</td><td className="num td-sub">{usd(pnl.ingresos.servicios.level_up)}</td></tr>
                 <tr><td>API vendida · ganancia $2 c/u <span className="td-sub">({pnl.ingresos.apiVendidaCuentas} cuentas)</span></td><td className="num">{usd(pnl.ingresos.apiVendida)}</td></tr>
                 <tr><td>Reselling reportado</td><td className="num">{usd(pnl.ingresos.reselling)}</td></tr>
               </tbody></table>
@@ -66,7 +84,9 @@ export default async function PnLDashboard() {
           <p className="foot">
             Nómina convertida con la tasa {pnl.tasa.enVivo ? "en vivo" : "de respaldo"}:
             {" "}1 USD ≈ ${pnl.tasa.cop.toLocaleString("es-CO")} COP. Las comisiones CS del
-            mes son las de hitos que caen en {mesLargo(pnl.mes)}.
+            mes son las de hitos que caen en {mesLargo(pnl.mes)}. <b>Punto de equilibrio:</b> los
+            costos fijos (nómina + GoHighLevel + APIs incluidas) idealmente se cubren solo con
+            las licencias; los servicios Leadtion y la API vendida son ganancia adicional.
           </p>
         </>
       )}

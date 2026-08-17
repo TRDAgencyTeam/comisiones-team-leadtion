@@ -57,6 +57,18 @@ Login (Supabase Auth) → `/modulos`:
   Sobrescribe solo los meses de la ventana (on conflict cliente_id,mes). No cambia
   tipo_cliente; sí actualiza plan_tipo + soporte del cliente. Mes 4+ manual. Ficha
   muestra "Servicios adquiridos" + estados de mes con etiquetas legibles (incl. Garantía).
+  **Dashboard ingresos separados HECHO**: licencias vs servicios Leadtion desglosados
+  (Agente IA / Reactivación / Level Up) — NO se suman en un solo renglón. 2ª fila de KPIs:
+  Licencias del mes · Costos fijos (nómina+GHL+APIs incluidas) · brecha (¿licencias cubren
+  fijos?) · Servicios Leadtion del mes. Objetivo del usuario: punto de equilibrio
+  licencias-vs-costos-fijos; servicios y API vendida = ganancia adicional. El ingreso por
+  servicio del mes se atribuye por la ventana del `cliente_servicios` (solo servicios
+  registrados desde ahora; los 20 viejos no tienen evento, así que cuentan como licencia).
+- **REGLA DE NEGOCIO CLAVE**: agregar un servicio a un cliente existente NO altera comisiones
+  de CS ni de afiliados. Ya se cumple por diseño: CS = base $67/$69 × hitos por fecha (no lee
+  plan_tipo/valor de pagos); afiliados = datos propios (no lee plan_tipo/pagos); registrarServicio
+  no toca clientes_afiliados ni fecha_activacion. El afiliado ya cobró sus 3 meses; de ahí en
+  adelante el servicio es 100% ganancia nuestra.
   Falta: (1) generar historial `pagos_mensuales` según el plan (AI 847/0/157…);
   (2) sumar al P&L las
   comisiones de CS del mes y los bonos; (4) UI para editar nómina/GHL (hoy en BD);
