@@ -1,35 +1,27 @@
-import { resultadoDeColaborador } from "@/lib/comisiones";
+import { resultadoDeColaborador, corteFinDeMes, corteProyeccion } from "@/lib/comisiones";
+import { ProximosPagos, HitoTag, type FilaFutura } from "@/components/ProximosPagos";
 
 /**
  * Portal del colaborador de Customer Success. Vista limitada (solo lo suyo):
  *  - Lo que aplica para su próximo pago: por cada cuenta, fecha de activación,
  *    hito (T1/T2/T3, con la matemática del %), monto y estado (pendiente/pagado).
  *  - Proyección de próximos períodos (depende de que la cuenta siga activa).
+ *
+ * Usa el MISMO corte que el panel admin (fin del mes en curso) para que los
+ * números coincidan entre lo que ve el admin y lo que ve el colaborador.
  */
 
 const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 const pct = (t: number) => `${Math.round(t * 100)}%`;
 const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-const mesLargo = (iso: string) => { const [y, m] = iso.split("-").map(Number); return `${MESES[(m ?? 1) - 1]} ${y}`; };
 const fechaCorta = (iso: string) => { const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; };
 
-/** Etiqueta y explicación de cada hito (para el tooltip). */
-const HITO_INFO: Record<string, { trim: string; meses: number }> = {
-  T1: { trim: "Trimestre 1", meses: 3 },
-  T2: { trim: "Trimestre 2", meses: 6 },
-  T3: { trim: "Trimestre 3", meses: 12 },
-};
-
-interface Fila {
+interface Fila extends FilaFutura {
   clienteId: number;
-  clienteNombre: string;
   fechaActivacion: string;
-  hito: string;
-  fechaHito: string;
   base: number;
   tasa: number;
   mesesBase: number;
-  monto: number;
   estado: string;
 }
 
@@ -41,15 +33,13 @@ export async function PortalColaborador({
   nombre: string;
 }) {
   const now = new Date();
-  const hoy = now.toISOString().slice(0, 10);
   const mesActual = MESES[now.getMonth()];
-  // Corte a 18 meses para incluir los hitos futuros (proyección).
-  const corteFuturo = new Date(now.getFullYear() + 1, now.getMonth() + 6, 0).toISOString().slice(0, 10);
+  const finMes = corteFinDeMes(now);
 
   let error: string | null = null;
   let filas: Fila[] = [];
   try {
-    const r = await resultadoDeColaborador(colaboradorId, corteFuturo);
+    const r = await resultadoDeColaborador(colaboradorId, corteProyeccion(now));
     if (r) {
       filas = r.lineas.flatMap((l) =>
         l.hitos.map((h) => ({
@@ -70,37 +60,13 @@ export async function PortalColaborador({
     error = e instanceof Error ? e.message : String(e);
   }
 
-  const alcanzados = filas.filter((f) => f.fechaHito <= hoy).sort((a, b) => b.fechaHito.localeCompare(a.fechaHito));
-  const futuros = filas.filter((f) => f.fechaHito > hoy).sort((a, b) => a.fechaHito.localeCompare(b.fechaHito));
+  // Corte compartido con el admin: "de este mes" = hitos hasta fin de mes.
+  const alcanzados = filas.filter((f) => f.fechaHito <= finMes).sort((a, b) => b.fechaHito.localeCompare(a.fechaHito));
+  const futuros = filas.filter((f) => f.fechaHito > finMes);
 
   const porCobrar = round2(alcanzados.filter((f) => f.estado === "pendiente").reduce((s, f) => s + f.monto, 0));
   const yaPagado = round2(alcanzados.filter((f) => f.estado === "pagado").reduce((s, f) => s + f.monto, 0));
   const cuentasConComision = new Set(alcanzados.map((f) => f.clienteId)).size;
-
-  const proximaFecha = futuros[0]?.fechaHito ?? null;
-  // Proyección de los próximos 3 meses, cada uno por separado.
-  const mesesProy = [1, 2, 3].map((k) => {
-    const d = new Date(now.getFullYear(), now.getMonth() + k, 1);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    const hitos = futuros.filter((f) => f.fechaHito.slice(0, 7) === key);
-    return {
-      key,
-      label: `${MESES[d.getMonth()]} ${d.getFullYear()}`,
-      hitos,
-      total: round2(hitos.reduce((s, f) => s + f.monto, 0)),
-    };
-  });
-  const proyeccion = round2(mesesProy.reduce((s, m) => s + m.total, 0));
-  const proyHitos = mesesProy.reduce((s, m) => s + m.hitos.length, 0);
-
-  const HitoTag = ({ h }: { h: string }) => {
-    const info = HITO_INFO[h];
-    return (
-      <span className="hito-tag" title={info ? `${info.trim} · se cumple a los ${info.meses} meses de la activación` : h}>
-        {h}
-      </span>
-    );
-  };
 
   return (
     <main className="wrap">
@@ -179,34 +145,7 @@ export async function PortalColaborador({
 
           <section className="card">
             <div className="card-head"><span className="who">Próximos pagos (proyección)</span></div>
-            <p style={{ margin: "0 0 14px" }}>
-              Tu próximo período con comisión es <b>{proximaFecha ? mesLargo(proximaFecha) : "—"}</b>.
-              En los próximos 3 meses se proyectan <b>{usd(proyeccion)}</b> ({proyHitos} hito{proyHitos === 1 ? "" : "s"}),
-              <b> siempre que esas cuentas sigan activas</b>. Cada cuenta reaparece cada 3 meses (T1→T2→T3).
-            </p>
-            <div className="proj-meses">
-              {mesesProy.map((m) => (
-                <div key={m.key} className="proj-mes">
-                  <div className="proj-mes-head">
-                    <span className="proj-mes-nombre">{m.label}</span>
-                    <span className="proj-mes-total">{usd(m.total)}</span>
-                  </div>
-                  {m.hitos.length === 0 ? (
-                    <p className="empty" style={{ margin: "6px 0 0" }}>Sin hitos este mes.</p>
-                  ) : (
-                    <ul className="proj-lista">
-                      {m.hitos.map((f, i) => (
-                        <li key={`${m.key}-${f.clienteId}-${f.hito}-${i}`}>
-                          <span className="proj-cli">{f.clienteNombre}</span>
-                          <HitoTag h={f.hito} />
-                          <span className="proj-monto">{usd(f.monto)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ))}
-            </div>
+            <ProximosPagos futuros={futuros} now={now} />
           </section>
 
           <p className="foot">

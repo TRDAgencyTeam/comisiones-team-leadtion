@@ -34,6 +34,19 @@ abajo). Cada módulo tiene su propia URL: `/cs`, `/afiliados`, `/membresias`.
   tiene campo email. **PENDIENTE del usuario**: crear los usuarios en Supabase Auth
   (Authentication→Users, email+contraseña para Andrés/Daniel/Alejandro) y poner ESE email
   en cada ficha de colaborador. No creo cuentas de auth desde la app (sin service key).
+  Los 3 emails ya vinculados: andres@trdagency.me (#1), dani@trdagency.me (#2),
+  alejandror@trdagency.me (#3).
+- **Portal v2 + sync + favicon (2026-08-18)**: el portal muestra por cuenta la fecha de
+  activación, hito (T1/T2/T3 con tooltip "Trimestre N"), la matemática (% × meses ×
+  licencia), monto y estado (pendiente/pagado, se sincroniza al marcar pago). Nota de
+  cuándo se paga (primeros ~5 días del mes siguiente, con el salario). Proyección de los
+  próximos 3 meses en 3 cuadros separados (bola de nieve: cada cuenta reaparece cada 3
+  meses T1→T2→T3). FIX de sincronización: admin usaba corte fijo `2026-08-05` y el portal
+  "hoy" → no cuadraban. Ahora AMBOS usan `corteFinDeMes()` (`lib/comisiones.ts`); dashboard
+  y comisiones del admin defaultean a ese corte. Componente compartido
+  `components/ProximosPagos.tsx` (proyección + `HitoTag`) usado por el portal Y por la
+  vista de comisiones del admin (ahí SOLO LECTURA). Favicon en `app/icon.png` (símbolo
+  Leadtion blanco sobre índigo, compuesto con sharp).
   Motor en `engine/` (29 pruebas). Comisiones con pagos, clientes con ficha/historial
   editable/LTV, colaboradores CRUD, dashboard con gráfico de ingresos.
 - **Afiliados (`/afiliados`)**: COMPLETO v1. Dashboard, comisiones por mes (3 meses)

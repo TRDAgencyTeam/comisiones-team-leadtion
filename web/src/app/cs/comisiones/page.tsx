@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { cargarResultados, type ResultadoVista } from "@/lib/comisiones";
+import {
+  cargarResultados,
+  resultadoDeColaborador,
+  corteFinDeMes,
+  corteProyeccion,
+  type ResultadoVista,
+} from "@/lib/comisiones";
+import { ProximosPagos, type FilaFutura } from "@/components/ProximosPagos";
 import {
   marcarCicloPagado,
   marcarHitoPagado,
@@ -8,7 +15,6 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const CORTE_POR_DEFECTO = "2026-08-05";
 const usd = (n: number) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 const fechaCorta = (iso: string | null) => (iso ? iso.slice(0, 10) : "");
@@ -19,7 +25,7 @@ export default async function ComisionesPage({
   searchParams: Promise<{ corte?: string; col?: string }>;
 }) {
   const { corte: corteParam, col } = await searchParams;
-  const corte = corteParam || CORTE_POR_DEFECTO;
+  const corte = corteParam || corteFinDeMes();
 
   let resultados: ResultadoVista[] | null = null;
   let error: string | null = null;
@@ -33,6 +39,24 @@ export default async function ComisionesPage({
   const tabs = (resultados ?? []).filter((r) => r.activo);
   const seleccionado =
     tabs.find((r) => String(r.colaboradorId) === col) ?? tabs[0] ?? resultados?.[0];
+
+  // Proyección (futuros) del colaborador seleccionado, para mostrar solo lectura.
+  let futurosSel: FilaFutura[] = [];
+  if (seleccionado) {
+    try {
+      const finMes = corteFinDeMes();
+      const rFut = await resultadoDeColaborador(seleccionado.colaboradorId, corteProyeccion());
+      if (rFut) {
+        futurosSel = rFut.lineas.flatMap((l) =>
+          l.hitos
+            .filter((h) => h.fechaHito > finMes)
+            .map((h) => ({ clienteNombre: l.clienteNombre, hito: h.hito, fechaHito: h.fechaHito, monto: h.monto })),
+        );
+      }
+    } catch {
+      // Si falla la proyección, no bloquea la vista principal.
+    }
+  }
 
   return (
     <main className="wrap">
@@ -75,13 +99,14 @@ export default async function ComisionesPage({
         </div>
       )}
 
-      {seleccionado && <ColaboradorCard r={seleccionado} corte={corte} />}
+      {seleccionado && <ColaboradorCard r={seleccionado} corte={corte} futuros={futurosSel} />}
     </main>
   );
 }
 
-function ColaboradorCard({ r, corte }: { r: ResultadoVista; corte: string }) {
+function ColaboradorCard({ r, corte, futuros }: { r: ResultadoVista; corte: string; futuros: FilaFutura[] }) {
   return (
+    <>
     <section className="card">
       <div className="card-head">
         <div>
@@ -176,5 +201,14 @@ function ColaboradorCard({ r, corte }: { r: ResultadoVista; corte: string }) {
         </>
       )}
     </section>
+
+    <section className="card">
+      <div className="card-head">
+        <span className="who">Próximos pagos de {r.colaboradorNombre} (proyección)</span>
+        <span className="cat">solo lectura</span>
+      </div>
+      <ProximosPagos futuros={futuros} />
+    </section>
+    </>
   );
 }

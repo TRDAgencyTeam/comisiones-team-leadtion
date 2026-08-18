@@ -84,6 +84,17 @@ export async function cargarResultados(corte: string): Promise<ResultadoVista[]>
     .sort((a, b) => b.totalPendiente - a.totalPendiente || b.total - a.total);
 }
 
+/** Corte por defecto = último día del mes en curso. Alinea admin y portal:
+ *  ambos cuentan como "de este mes" los hitos hasta fin de mes. */
+export function corteFinDeMes(now = new Date()): string {
+  return new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+}
+
+/** Corte lejano (18 meses) para traer también los hitos futuros (proyección). */
+export function corteProyeccion(now = new Date()): string {
+  return new Date(now.getFullYear() + 1, now.getMonth() + 6, 0).toISOString().slice(0, 10);
+}
+
 /** Resultado de un solo colaborador a una fecha de corte (para su portal). */
 export async function resultadoDeColaborador(
   colaboradorId: number,

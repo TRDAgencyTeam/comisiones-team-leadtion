@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { cargarResultados } from "@/lib/comisiones";
+import { cargarResultados, corteFinDeMes } from "@/lib/comisiones";
 import {
   estadisticasClientes,
   ingresosPorMes,
@@ -12,7 +12,6 @@ import { PortalColaborador } from "./PortalColaborador";
 
 export const dynamic = "force-dynamic";
 
-const CORTE_POR_DEFECTO = "2026-08-05";
 const usd = (n: number) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 
@@ -39,7 +38,7 @@ export default async function DashboardPage({
   }
 
   const { corte: corteParam } = await searchParams;
-  const corte = corteParam || CORTE_POR_DEFECTO;
+  const corte = corteParam || corteFinDeMes();
 
   let error: string | null = null;
   let totalMes = 0;
