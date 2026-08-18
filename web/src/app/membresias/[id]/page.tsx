@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { obtenerMembresia, PLAN_LABEL, TIPO_LABEL } from "@/lib/membresias";
 import { serviciosDeCliente, SERVICIO_LABEL } from "@/lib/servicios";
+import { BotonEliminar } from "../BotonEliminar";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,7 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
           <Link href={`/membresias/${c.id}/servicio`} className="btn-primary">+ Registrar servicio</Link>
           <Link href={`/membresias/${c.id}/editar`} className="btn-secondary">Editar</Link>
           <Link href={`/clientes/${c.id}`} className="btn-secondary">Ver en CS →</Link>
+          <BotonEliminar id={c.id} nombre={c.nombre} />
         </div>
       </header>
 

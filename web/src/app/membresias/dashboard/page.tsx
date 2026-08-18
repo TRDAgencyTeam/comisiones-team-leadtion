@@ -1,16 +1,22 @@
 import { calcularPnL } from "@/lib/pnl";
+import { ingresosPorMes, type IngresoMes } from "@/lib/clientes";
+import { BarChart } from "@/components/BarChart";
 import { guardarReselling } from "../acciones";
 
 export const dynamic = "force-dynamic";
 
 const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 const mesLargo = (m: string) => { const [y, mm] = m.split("-").map(Number); return `${MESES[(mm ?? 1) - 1]} ${y}`; };
 const soloMes = (m: string) => { const [, mm] = m.split("-").map(Number); return MESES[(mm ?? 1) - 1] ?? ""; };
 
 export default async function PnLDashboard() {
   let pnl = null, error: string | null = null;
-  try { pnl = await calcularPnL(); } catch (e) { error = e instanceof Error ? e.message : String(e); }
+  let ingresos: IngresoMes[] = [];
+  try {
+    [pnl, ingresos] = await Promise.all([calcularPnL(), ingresosPorMes(12)]);
+  } catch (e) { error = e instanceof Error ? e.message : String(e); }
 
   return (
     <main className="wrap">
@@ -34,6 +40,35 @@ export default async function PnLDashboard() {
             <div className="kpi kpi-total"><span className="kpi-label">Licencias de {soloMes(pnl.mes)}</span><span className="kpi-num">{usd(pnl.ingresos.licencias)}</span></div>
             <div className="kpi kpi-total"><span className="kpi-label">Servicios Leadtion de {soloMes(pnl.mes)}</span><span className="kpi-num">{usd(pnl.ingresos.servicios.total)}</span></div>
           </div>
+
+          {ingresos.length > 0 && (
+            <section className="card">
+              <div className="card-head">
+                <span className="who">Ingresos por mes</span>
+                <div className="leyenda">
+                  <span className="leg"><i className="sw-lic" /> Licencias</span>
+                  <span className="leg"><i className="sw-serv" /> Servicios</span>
+                </div>
+              </div>
+              <BarChart
+                data={ingresos.map((m) => ({
+                  label: `${m.mes.slice(5)}/${m.mes.slice(2, 4)}`,
+                  parts: [
+                    { value: m.licencia, color: "var(--accent)" },
+                    { value: m.servicio, color: "var(--brand-cyan)" },
+                  ],
+                }))}
+                formatValue={(n) => (n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${Math.round(n)}`)}
+                ariaLabel="Ingresos por mes (licencias + servicios)"
+              />
+              <p className="foot" style={{ marginTop: 8 }}>
+                Total del periodo:{" "}
+                <b>{usd(round2(ingresos.reduce((s, m) => s + m.licencia, 0)))}</b> en licencias y{" "}
+                <b>{usd(round2(ingresos.reduce((s, m) => s + m.servicio, 0)))}</b> en servicios
+                (membresía fija $69 = licencia; el resto = servicio). Cada barra es el ingreso real de ese mes.
+              </p>
+            </section>
+          )}
 
           <div className="pnl-cols">
             <section className="card">

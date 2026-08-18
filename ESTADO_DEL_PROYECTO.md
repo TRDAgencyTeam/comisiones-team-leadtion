@@ -65,6 +65,13 @@ Login (Supabase Auth) → `/modulos`:
   API vendida = ganancia adicional. El ingreso por
   servicio del mes se atribuye por la ventana del `cliente_servicios` (solo servicios
   registrados desde ahora; los 20 viejos no tienen evento, así que cuentan como licencia).
+  **Eliminar cliente HECHO**: icono 🗑️ con confirmación en la lista Y en la ficha
+  (acción `eliminarMembresia`, irreversible; cascada borra pagos/hitos/CHS/servicios/
+  asignados/historial; el vínculo Afiliados cl-mem-<id> se borra manual). Componente
+  `membresias/BotonEliminar.tsx` (client).
+  **Gráfico HECHO**: dashboard P&L muestra "Ingresos por mes" (barras apiladas licencia
+  vs servicio, últimos 12 meses) reusando `components/BarChart` + `ingresosPorMes` de
+  `lib/clientes.ts` (dato real de pagos_mensuales; membresía $69 = licencia, resto = servicio).
 - **REGLA DE NEGOCIO CLAVE**: agregar un servicio a un cliente existente NO altera comisiones
   de CS ni de afiliados. Ya se cumple por diseño: CS = base $67/$69 × hitos por fecha (no lee
   plan_tipo/valor de pagos); afiliados = datos propios (no lee plan_tipo/pagos); registrarServicio
