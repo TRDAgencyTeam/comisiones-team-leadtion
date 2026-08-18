@@ -2,7 +2,15 @@
 
 > **Este archivo es la "foto" del proyecto.** Léelo para retomar el trabajo sin
 > releer toda la conversación (ahorra tokens). Actualízalo al final de cada
-> sesión. Última actualización: **2026-08-14**.
+> sesión. Última actualización: **2026-08-18**.
+
+> **AUDITORÍA 2026-08-18 (el usuario empieza a usar la herramienta al 100%, deja el
+> Excel).** Comprobado con el motor real contra Supabase: sincronización, corte único
+> (fin de mes) y matemática de comisiones CUADRAN en P&L, panel CS y portales
+> ($286.80 pendiente = Andrés $133.05 + Daniel $133.05 + Alejandro $20.70; 0 pagos
+> registrados aún — se paga en el corte 1-5 sep). 66 clientes (43 activos), 0 sin fecha
+> de activación, 0 datos de prueba. Config P&L: GHL $497, Andrés 60%, Daniel 30%,
+> Alejandro 100% (nómina Leadtion ≈ $2.409/mes a tasa 3150).
 
 ## Qué es
 Plataforma web (Next.js + Supabase + Vercel) con selección de **módulos** tras el
@@ -54,9 +62,9 @@ abajo). Cada módulo tiene su propia URL: `/cs`, `/afiliados`, `/membresias`.
   "Comisiones CS (pendiente por pagar)". Las acciones de pago revalidan también
   `/membresias/dashboard` para que el P&L se actualice al instante al marcar pagos.
   Verificado E2E: crear cliente en Membresías aparece en CS (motor lee TODO
-  public.clientes) + portales + Afiliados (si tiene afiliado). PENDIENTE de decisión
-  del usuario: (a) ¿clientes con afiliado también comisionan a CS? (hoy SÍ);
-  (b) ¿"personas asignadas" filtra quién comisiona? (hoy paga por fecha a todos).
+  public.clientes) + portales + Afiliados (si tiene afiliado). Reglas CONFIRMADAS
+  (ver "Decisiones confirmadas 2026-08-18"): clientes con afiliado SÍ comisionan a CS;
+  "personas asignadas" aún NO filtra (todos comisionan por fecha).
   Motor en `engine/` (29 pruebas). Comisiones con pagos, clientes con ficha/historial
   editable/LTV, colaboradores CRUD, dashboard con gráfico de ingresos.
 - **Afiliados (`/afiliados`)**: COMPLETO v1. Dashboard, comisiones por mes (3 meses)
@@ -129,6 +137,19 @@ abajo). Cada módulo tiene su propia URL: `/cs`, `/afiliados`, `/membresias`.
   (5) decisión: que personas asignadas filtren comisión CS (hoy paga por fecha a todos).
 
 ## Reglas/decisiones clave (no re-preguntar)
+- **DECISIONES CONFIRMADAS 2026-08-18 (el usuario las validó explícitamente):**
+  1. Un cliente **con afiliado TAMBIÉN comisiona a CS** (son dos comisiones distintas:
+     el afiliado cobra por traerlo; CS cobra por gestionarlo). Hoy ya es así. NO excluir.
+  2. **"Personas asignadas" NO filtra** quién comisiona: por ahora TODO el equipo (Andrés/
+     Daniel/Alejandro) es responsable de TODAS las cuentas y comisiona por fecha. Más
+     adelante, con más gente, se asignarán personas puntuales a clientes puntuales
+     (feature futura). El campo `cliente_colaboradores` se guarda pero aún no filtra.
+  3. **CHS: NO implementar por ahora** (stop; muy pocas cuentas para gestionarlo). Queda
+     como "por implementar". El motor asume CHS cumplido (todos los hitos cuentan).
+  4. **Nómina Daniel = 30% Leadtion / 70% agencia** (era 100%; se cambió en `config_negocio`
+     el 2026-08-18). Pronto podría cambiar de nuevo. Andrés 60%, Alejandro 100%.
+  5. Pagos de comisión: se pagan del **1 al 5 del mes siguiente**, junto con el salario.
+     Aún NO se ha registrado ningún pago; el primero será el corte 1-5 sep 2026.
 - Comisión CS: base $67/$69 por fecha; hitos T1/T2/T3; elegibilidad por fecha, sin
   tabla de asignación. Pausado NO comisiona.
 - Precios: Agente AI $847 (mes2 $0 garantía, mes3 soporte); Reactivación $597+$197+$197;
@@ -139,8 +160,13 @@ abajo). Cada módulo tiene su propia URL: `/cs`, `/afiliados`, `/membresias`.
   `MODULO_CLIENTES_MEMBRESIAS.md`.
 
 ## Siguiente paso
-Construir en `/membresias`: **ficha/creación de cliente** (planes + sync) o
-**dashboard P&L**. (El usuario elige por cuál.)
+La plataforma está en USO REAL (el usuario dejó el Excel el 2026-08-18). Los 3 módulos
+funcionan y están sincronizados/verificados. Backlog priorizado (features futuras, NO bugs):
+- **CHS** (encuesta + gate de hitos) — por implementar, en pausa por decisión del usuario.
+- **Asignación persona↔cliente** que filtre comisión — futura (cuando haya más equipo).
+- **UI para editar nómina/GHL/tasa** (hoy se edita en `config_negocio` por SQL).
+- **Generar `pagos_mensuales` automático por plan** (AI 847/0/157…) al crear cliente.
+- **Afiliados**: reverificar a fondo el número de comisión del P&L (esta sesión se auditó CS).
 
 ## Backlog / pendientes por módulo (ideas ya discutidas — no perder)
 **Clientes/Membresías (en curso):**
@@ -151,7 +177,7 @@ Construir en `/membresias`: **ficha/creación de cliente** (planes + sync) o
   (Andrés/Daniel/Alejandro) → **sincronizar** con Comisiones CS; ¿recomendado? →
   sincronizar con Afiliados (agencia/partner y de quién). Estados: pausar/cancelar.
 - Dashboard P&L: cuentas activas, ingreso mes, costo mes (nómina COP→USD: Andrés
-  $4.9M×60%, Daniel $4.5M×100%, Alejandro $3.3M×100%; GoHighLevel $497; APIs incluidas
+  $4.9M×60%, Daniel $4.5M×30% (era 100%, cambió 2026-08-18), Alejandro $3.3M×100%; GoHighLevel $497; APIs incluidas
   $10 c/u; bonos; comisiones CS+afiliados), ganancia neta, LTV, tiempo con cliente,
   total histórico. Reselling: reporte mensual manual. API vendida gana $2 c/u.
 - Permitir override manual de la tasa USD/COP.
