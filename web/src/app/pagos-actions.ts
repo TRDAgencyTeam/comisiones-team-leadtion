@@ -50,6 +50,7 @@ export async function marcarHitoPagado(formData: FormData) {
 
   revalidatePath("/cs");
   revalidatePath("/cs/comisiones");
+  revalidatePath("/membresias/dashboard");
 }
 
 /** Marca TODOS los hitos pendientes de un colaborador a este corte como pagados. */
@@ -68,6 +69,7 @@ export async function marcarCicloPagado(formData: FormData) {
 
   revalidatePath("/cs");
   revalidatePath("/cs/comisiones");
+  revalidatePath("/membresias/dashboard");
 }
 
 /** Deshace el registro de pago de un hito (por si se marcó por error). */
@@ -86,4 +88,5 @@ export async function deshacerHitoPagado(formData: FormData) {
 
   revalidatePath("/cs");
   revalidatePath("/cs/comisiones");
+  revalidatePath("/membresias/dashboard");
 }

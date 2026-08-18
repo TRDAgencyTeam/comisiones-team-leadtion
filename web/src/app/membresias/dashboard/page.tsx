@@ -101,7 +101,7 @@ export default async function PnLDashboard() {
                 ))}
                 <tr><td>GoHighLevel</td><td className="num">{usd(pnl.costos.ghl)}</td></tr>
                 <tr><td>APIs incluidas · costo $10 c/u <span className="td-sub">({pnl.costos.apisIncluidasCuentas} cuentas)</span></td><td className="num">{usd(pnl.costos.apisIncluidas)}</td></tr>
-                <tr><td>Comisiones CS (mes)</td><td className="num">{usd(pnl.costos.comisionesCS)}</td></tr>
+                <tr><td>Comisiones CS (pendiente por pagar)</td><td className="num">{usd(pnl.costos.comisionesCS)}</td></tr>
                 <tr><td>Comisiones afiliados (mes)</td><td className="num">{usd(pnl.costos.comisionesAfiliados)}</td></tr>
                 <tr><td>Bonos de reactivación (mes)</td><td className="num">{usd(pnl.costos.bonos)}</td></tr>
               </tbody></table>

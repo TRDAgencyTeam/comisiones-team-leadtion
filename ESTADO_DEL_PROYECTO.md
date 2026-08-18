@@ -47,6 +47,16 @@ abajo). Cada módulo tiene su propia URL: `/cs`, `/afiliados`, `/membresias`.
   `components/ProximosPagos.tsx` (proyección + `HitoTag`) usado por el portal Y por la
   vista de comisiones del admin (ahí SOLO LECTURA). Favicon en `app/icon.png` (símbolo
   Leadtion blanco sobre índigo, compuesto con sharp).
+- **P&L Comisiones CS sincronizado (2026-08-18)**: antes el P&L sumaba solo hitos con
+  fechaHito DENTRO del mes ($62.10) — no cuadraba con lo que se paga. Ahora
+  `pnl.ts` comisionesCS = `sum(totalPendiente)` al corte fin de mes (= $286.80, igual
+  que el "Pendiente" del panel CS y el "por cobrar" de los portales). Etiqueta:
+  "Comisiones CS (pendiente por pagar)". Las acciones de pago revalidan también
+  `/membresias/dashboard` para que el P&L se actualice al instante al marcar pagos.
+  Verificado E2E: crear cliente en Membresías aparece en CS (motor lee TODO
+  public.clientes) + portales + Afiliados (si tiene afiliado). PENDIENTE de decisión
+  del usuario: (a) ¿clientes con afiliado también comisionan a CS? (hoy SÍ);
+  (b) ¿"personas asignadas" filtra quién comisiona? (hoy paga por fecha a todos).
   Motor en `engine/` (29 pruebas). Comisiones con pagos, clientes con ficha/historial
   editable/LTV, colaboradores CRUD, dashboard con gráfico de ingresos.
 - **Afiliados (`/afiliados`)**: COMPLETO v1. Dashboard, comisiones por mes (3 meses)

@@ -53,12 +53,10 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
     cargarResultados(finMes),
   ]);
 
-  // Comisiones CS que caen en el mes actual (hito con fecha en este mes).
-  let comisionesCS = 0;
-  for (const r of cs) for (const l of r.lineas) for (const h of l.hitos) {
-    if (h.fechaHito.slice(0, 7) === mes) comisionesCS += h.monto;
-  }
-  comisionesCS = round2(comisionesCS);
+  // Comisiones CS = lo PENDIENTE por pagar al equipo, al mismo corte (fin de mes)
+  // que el panel de comisiones y los portales. Así el P&L cuadra con lo que se
+  // paga realmente (no solo los hitos cuya fecha cae dentro del mes).
+  const comisionesCS = round2(cs.reduce((s, r) => s + r.totalPendiente, 0));
   const bonos = round2(Number(bonoRows[0]?.t ?? 0));
 
   const cfg: Record<string, number> = {};
