@@ -367,6 +367,11 @@ tr:last-child td { border-bottom: none; }
 /* --- Mini-estadísticas de clientes --- */
 .mini-stats { display: flex; flex-wrap: wrap; gap: 22px; margin-top: 14px; }
 .mini-stat { display: flex; flex-direction: column; }
+a.mini-stat { text-decoration: none; color: inherit; cursor: pointer;
+  padding: 8px 12px; border-radius: 10px; transition: background 0.12s, outline-color 0.12s;
+  outline: 1px solid transparent; }
+a.mini-stat:hover { background: rgba(127, 127, 127, 0.12); }
+a.mini-stat.activo { background: rgba(0, 229, 204, 0.12); outline-color: rgba(0, 229, 204, 0.5); }
 .ms-num { font-family: "Agrandir", sans-serif; font-weight: 700; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
 .ms-lbl { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
 .ms-ok { color: var(--paid); }

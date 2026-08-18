@@ -16,37 +16,50 @@ const ESTADO_BADGE: Record<string, { txt: string; cls: string }> = {
 export default async function ClientesMembresiasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; estado?: string; orden?: string }>;
+  searchParams: Promise<{ q?: string; estado?: string; orden?: string; tipo?: string }>;
 }) {
-  const { q, estado = "activo", orden = "nuevo" } = await searchParams;
+  const { q, estado = "activo", orden = "nuevo", tipo = "todos" } = await searchParams;
 
   let lista: MembresiaRow[] = [];
   let stats = null;
   let error: string | null = null;
   try {
-    [lista, stats] = await Promise.all([listarMembresias({ q, estado, orden }), statsMembresias()]);
+    [lista, stats] = await Promise.all([listarMembresias({ q, estado, orden, tipo }), statsMembresias()]);
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
+
+  // Href de un filtro rápido (mini-stat), conservando búsqueda y orden.
+  const href = (est: string, tp: string) => {
+    const p = new URLSearchParams();
+    p.set("estado", est);
+    p.set("tipo", tp);
+    if (orden) p.set("orden", orden);
+    if (q) p.set("q", q);
+    return `/membresias/clientes?${p.toString()}`;
+  };
+  const clase = (est: string, tp: string) =>
+    estado === est && tipo === tp ? "mini-stat activo" : "mini-stat";
 
   return (
     <main className="wrap">
       <header className="page">
         <h1>Clientes / Membresías</h1>
-        <p>Maestro de clientes de Leadtion. De aquí se alimentan Comisiones CS y Afiliados.</p>
+        <p>Maestro de clientes de Leadtion. De aquí se alimentan Comisiones CS y Afiliados.
+          {" "}<b>Toca un número para filtrar la lista.</b></p>
       </header>
 
       {error && <div className="card"><strong>No se pudo cargar.</strong><p className="empty">{error}</p></div>}
 
       {stats && (
         <div className="mini-stats card">
-          <div className="mini-stat"><span className="ms-num">{stats.total}</span><span className="ms-lbl">Total histórico</span></div>
-          <div className="mini-stat"><span className="ms-num ms-ok">{stats.activas}</span><span className="ms-lbl">Activas</span></div>
-          <div className="mini-stat"><span className="ms-num ms-warn">{stats.pausadas}</span><span className="ms-lbl">Pausadas</span></div>
-          <div className="mini-stat"><span className="ms-num ms-bad">{stats.canceladas}</span><span className="ms-lbl">Canceladas</span></div>
-          <div className="mini-stat"><span className="ms-num">{stats.estandar}</span><span className="ms-lbl">Estándar</span></div>
-          <div className="mini-stat"><span className="ms-num">{stats.agencia}</span><span className="ms-lbl">Agencia</span></div>
-          <div className="mini-stat"><span className="ms-num">{stats.servicio}</span><span className="ms-lbl">Servicio Leadtion</span></div>
+          <Link href={href("todos", "todos")} className={clase("todos", "todos")}><span className="ms-num">{stats.total}</span><span className="ms-lbl">Total histórico</span></Link>
+          <Link href={href("activo", "todos")} className={clase("activo", "todos")}><span className="ms-num ms-ok">{stats.activas}</span><span className="ms-lbl">Activas</span></Link>
+          <Link href={href("pausado", "todos")} className={clase("pausado", "todos")}><span className="ms-num ms-warn">{stats.pausadas}</span><span className="ms-lbl">Pausadas</span></Link>
+          <Link href={href("cancelado", "todos")} className={clase("cancelado", "todos")}><span className="ms-num ms-bad">{stats.canceladas}</span><span className="ms-lbl">Canceladas</span></Link>
+          <Link href={href("activo", "estandar")} className={clase("activo", "estandar")}><span className="ms-num">{stats.estandar}</span><span className="ms-lbl">Estándar</span></Link>
+          <Link href={href("activo", "agencia")} className={clase("activo", "agencia")}><span className="ms-num">{stats.agencia}</span><span className="ms-lbl">Agencia</span></Link>
+          <Link href={href("activo", "servicio")} className={clase("activo", "servicio")}><span className="ms-num">{stats.servicio}</span><span className="ms-lbl">Servicio Leadtion</span></Link>
         </div>
       )}
 
@@ -59,6 +72,15 @@ export default async function ClientesMembresiasPage({
             <option value="pausado">Pausados</option>
             <option value="cancelado">Cancelados</option>
             <option value="todos">Todos</option>
+          </select>
+        </label>
+        <label>
+          Tipo
+          <select name="tipo" defaultValue={tipo}>
+            <option value="todos">Todos</option>
+            <option value="estandar">Estándar</option>
+            <option value="agencia">Agencia</option>
+            <option value="servicio">Servicio Leadtion</option>
           </select>
         </label>
         <label>
