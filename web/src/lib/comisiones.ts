@@ -84,6 +84,15 @@ export async function cargarResultados(corte: string): Promise<ResultadoVista[]>
     .sort((a, b) => b.totalPendiente - a.totalPendiente || b.total - a.total);
 }
 
+/** Resultado de un solo colaborador a una fecha de corte (para su portal). */
+export async function resultadoDeColaborador(
+  colaboradorId: number,
+  corte: string,
+): Promise<ResultadoVista | null> {
+  const todos = await cargarResultados(corte);
+  return todos.find((r) => r.colaboradorId === colaboradorId) ?? null;
+}
+
 /** Mapa colaboradorId -> activo (el motor no maneja el flag `activo`). */
 async function cargarActivos(): Promise<Map<number, boolean>> {
   const rows = await consulta(`select id, activo from public.colaboradores`);

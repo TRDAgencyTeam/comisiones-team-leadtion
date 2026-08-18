@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { getUsuario } from "@/lib/supabase/server";
 import { logout } from "@/app/login/actions";
 import { MembresiasNav } from "@/components/MembresiasNav";
 import { Logo } from "@/components/Brand";
+import { soloAdmin } from "@/lib/sesion";
 
 /** Shell del módulo Clientes / Membresías (branding Leadtion). */
 export default async function MembresiasLayout({
@@ -10,7 +10,7 @@ export default async function MembresiasLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const usuario = await getUsuario();
+  const usuario = await soloAdmin();
 
   return (
     <>

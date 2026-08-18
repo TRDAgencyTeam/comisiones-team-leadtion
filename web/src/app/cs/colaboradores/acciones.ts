@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { addMonths } from "comisiones-cs-engine/dates";
 import { consulta } from "@/lib/db";
-import { getUsuario } from "@/lib/supabase/server";
+import { soloAdmin } from "@/lib/sesion";
 
 /** Normaliza los campos del formulario y calcula la fecha de fin de prueba. */
 function parseForm(formData: FormData) {
@@ -13,19 +13,20 @@ function parseForm(formData: FormData) {
   const categoriaRaw = String(formData.get("categoria") ?? "").trim();
   const categoria = categoriaRaw === "" ? null : categoriaRaw;
   const fechaIngreso = String(formData.get("fechaIngreso") ?? "").trim() || null;
+  const email = String(formData.get("email") ?? "").trim().toLowerCase() || null;
 
   // Un "nuevo" tiene 3 meses de prueba desde su ingreso; fundador no tiene.
   let finPrueba: string | null = null;
   if (categoria === "nuevo" && fechaIngreso) {
     finPrueba = addMonths(fechaIngreso, 3);
   }
-  return { nombre, rol, categoria, fechaIngreso, finPrueba };
+  return { nombre, rol, categoria, fechaIngreso, finPrueba, email };
 }
 
 /** Crea un colaborador nuevo. */
 export async function crearColaborador(formData: FormData) {
-  if (!(await getUsuario())) redirect("/login");
-  const { nombre, rol, categoria, fechaIngreso, finPrueba } = parseForm(formData);
+  await soloAdmin();
+  const { nombre, rol, categoria, fechaIngreso, finPrueba, email } = parseForm(formData);
 
   if (!nombre) {
     redirect("/cs/colaboradores/nuevo?error=" + encodeURIComponent("El nombre es obligatorio."));
@@ -33,9 +34,9 @@ export async function crearColaborador(formData: FormData) {
 
   await consulta(
     `insert into public.colaboradores
-       (nombre, rol, categoria, fecha_ingreso, fecha_fin_prueba, activo)
-     values ($1, $2, $3, $4, $5, true)`,
-    [nombre, rol, categoria, fechaIngreso, finPrueba],
+       (nombre, rol, categoria, fecha_ingreso, fecha_fin_prueba, activo, email)
+     values ($1, $2, $3, $4, $5, true, $6)`,
+    [nombre, rol, categoria, fechaIngreso, finPrueba, email],
   );
 
   revalidatePath("/cs/colaboradores");
@@ -45,9 +46,9 @@ export async function crearColaborador(formData: FormData) {
 
 /** Actualiza los datos de un colaborador. */
 export async function actualizarColaborador(formData: FormData) {
-  if (!(await getUsuario())) redirect("/login");
+  await soloAdmin();
   const id = Number(formData.get("id"));
-  const { nombre, rol, categoria, fechaIngreso, finPrueba } = parseForm(formData);
+  const { nombre, rol, categoria, fechaIngreso, finPrueba, email } = parseForm(formData);
 
   if (!nombre) {
     redirect(`/cs/colaboradores/${id}?error=` + encodeURIComponent("El nombre es obligatorio."));
@@ -55,9 +56,9 @@ export async function actualizarColaborador(formData: FormData) {
 
   await consulta(
     `update public.colaboradores
-        set nombre=$2, rol=$3, categoria=$4, fecha_ingreso=$5, fecha_fin_prueba=$6
+        set nombre=$2, rol=$3, categoria=$4, fecha_ingreso=$5, fecha_fin_prueba=$6, email=$7
       where id=$1`,
-    [id, nombre, rol, categoria, fechaIngreso, finPrueba],
+    [id, nombre, rol, categoria, fechaIngreso, finPrueba, email],
   );
 
   revalidatePath(`/cs/colaboradores/${id}`);
@@ -68,7 +69,7 @@ export async function actualizarColaborador(formData: FormData) {
 
 /** Activa o desactiva un colaborador. */
 export async function cambiarEstadoColaborador(formData: FormData) {
-  if (!(await getUsuario())) redirect("/login");
+  await soloAdmin();
   const id = Number(formData.get("id"));
   const activar = String(formData.get("activar")) === "1";
 

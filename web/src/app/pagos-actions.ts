@@ -1,11 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { calcularComision } from "comisiones-cs-engine/rules";
 import type { HitoDetalle } from "comisiones-cs-engine/types";
 import { consulta, fuente } from "@/lib/db";
-import { getUsuario } from "@/lib/supabase/server";
+import { soloAdmin } from "@/lib/sesion";
 
 /** Recalcula los hitos alcanzados por un colaborador a un corte (fuente de verdad). */
 async function hitosDeColaborador(colaboradorId: number, corte: string) {
@@ -37,7 +36,7 @@ async function insertarPago(
 
 /** Marca un hito concreto (cliente + T1/T2/T3) como pagado a un colaborador. */
 export async function marcarHitoPagado(formData: FormData) {
-  if (!(await getUsuario())) redirect("/login");
+  await soloAdmin();
 
   const colaboradorId = Number(formData.get("colaboradorId"));
   const clienteId = Number(formData.get("clienteId"));
@@ -55,7 +54,7 @@ export async function marcarHitoPagado(formData: FormData) {
 
 /** Marca TODOS los hitos pendientes de un colaborador a este corte como pagados. */
 export async function marcarCicloPagado(formData: FormData) {
-  if (!(await getUsuario())) redirect("/login");
+  await soloAdmin();
 
   const colaboradorId = Number(formData.get("colaboradorId"));
   const corte = String(formData.get("corte"));
@@ -73,7 +72,7 @@ export async function marcarCicloPagado(formData: FormData) {
 
 /** Deshace el registro de pago de un hito (por si se marcó por error). */
 export async function deshacerHitoPagado(formData: FormData) {
-  if (!(await getUsuario())) redirect("/login");
+  await soloAdmin();
 
   const colaboradorId = Number(formData.get("colaboradorId"));
   const clienteId = Number(formData.get("clienteId"));

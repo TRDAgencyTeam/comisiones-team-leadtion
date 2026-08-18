@@ -14,6 +14,7 @@ export interface Colaborador {
   fechaIngreso: string | null;
   fechaFinPrueba: string | null;
   activo: boolean;
+  email: string | null;
 }
 
 function toISO(v: unknown): string | null {
@@ -32,13 +33,14 @@ function mapRow(r: Record<string, unknown>): Colaborador {
     fechaIngreso: toISO(r.fecha_ingreso),
     fechaFinPrueba: toISO(r.fecha_fin_prueba),
     activo: Boolean(r.activo),
+    email: (r.email as string) ?? null,
   };
 }
 
 /** Lista todos los colaboradores, comisionantes primero. */
 export async function listarColaboradores(): Promise<Colaborador[]> {
   const rows = await consulta(
-    `select id, nombre, rol, categoria, fecha_ingreso, fecha_fin_prueba, activo
+    `select id, nombre, rol, categoria, fecha_ingreso, fecha_fin_prueba, activo, email
        from public.colaboradores
       order by (categoria is null), fecha_ingreso, nombre`,
   );
@@ -48,7 +50,7 @@ export async function listarColaboradores(): Promise<Colaborador[]> {
 /** Ficha de un colaborador por id. */
 export async function obtenerColaborador(id: number): Promise<Colaborador | null> {
   const rows = await consulta(
-    `select id, nombre, rol, categoria, fecha_ingreso, fecha_fin_prueba, activo
+    `select id, nombre, rol, categoria, fecha_ingreso, fecha_fin_prueba, activo, email
        from public.colaboradores where id = $1`,
     [id],
   );

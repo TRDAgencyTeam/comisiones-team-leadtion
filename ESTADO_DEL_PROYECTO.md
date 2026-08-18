@@ -20,8 +20,20 @@ abajo). Cada módulo tiene su propia URL: `/cs`, `/afiliados`, `/membresias`.
 ## Estado por módulo
 - **Customer Success (`/cs`, `/cs/comisiones`, `/cs/clientes`, `/cs/colaboradores`)**: COMPLETO.
   (Movido de la raíz a `/cs` el 2026-08-18 para URL propia por módulo. La raíz `/`
-  redirige a `/modulos`; login también va a `/modulos`. El grupo `(app)` se renombró
-  a `cs/`.)
+  redirige a `/modulos`; el admin va a `/modulos`. El grupo `(app)` se renombró a `cs/`.)
+- **Portal de colaboradores (2026-08-18)**: roles por email. `lib/sesion.ts`:
+  `sesionActual()` (admin = ADMIN_EMAIL env, default cuentas.trd@gmail.com; colaborador =
+  su email coincide con `colaboradores.email` activo; sin_acceso; anonimo). `soloAdmin()`
+  guard. Login redirige admin→/modulos, colaborador→/cs. `/cs` es role-aware: colaborador
+  ve `PortalColaborador` (su comisión del mes = total a fin de mes vía
+  `resultadoDeColaborador`, # de cuentas y lista de nombres — nada más); admin ve el
+  dashboard. `cs/layout` oculta el menú admin a colaboradores. GUARDAS soloAdmin en:
+  cs/{clientes,comisiones,colaboradores}/layout, membresias/layout, afiliados/layout,
+  modulos + modulos/equipo, y en las ACCIONES de cs/clientes, cs/colaboradores, pagos.
+  Migración 0011: `colaboradores.email` (único, case-insensitive). Form de colaborador
+  tiene campo email. **PENDIENTE del usuario**: crear los usuarios en Supabase Auth
+  (Authentication→Users, email+contraseña para Andrés/Daniel/Alejandro) y poner ESE email
+  en cada ficha de colaborador. No creo cuentas de auth desde la app (sin service key).
   Motor en `engine/` (29 pruebas). Comisiones con pagos, clientes con ficha/historial
   editable/LTV, colaboradores CRUD, dashboard con gráfico de ingresos.
 - **Afiliados (`/afiliados`)**: COMPLETO v1. Dashboard, comisiones por mes (3 meses)

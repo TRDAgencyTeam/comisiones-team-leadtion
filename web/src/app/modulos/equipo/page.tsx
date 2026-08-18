@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { Logo } from "@/components/Brand";
-import { getUsuario } from "@/lib/supabase/server";
 import { logout } from "@/app/login/actions";
+import { soloAdmin } from "@/lib/sesion";
 
 export const dynamic = "force-dynamic";
 
 export default async function ModulosEquipoPage() {
-  const usuario = await getUsuario();
+  const usuario = await soloAdmin();
 
   return (
     <main className="modulos-wrap">

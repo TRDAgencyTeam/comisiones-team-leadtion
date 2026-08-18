@@ -4,11 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { fechaPago } from "@/lib/clientes";
-import { getUsuario } from "@/lib/supabase/server";
+import { soloAdmin } from "@/lib/sesion";
 
 /** Crea un cliente nuevo para que el sistema lo tenga en cuenta en comisiones. */
 export async function crearCliente(formData: FormData) {
-  if (!(await getUsuario())) redirect("/login");
+  await soloAdmin();
 
   const nombre = String(formData.get("nombre") ?? "").trim();
   const fechaActivacion = String(formData.get("fechaActivacion") ?? "").trim();
@@ -50,7 +50,7 @@ export async function crearCliente(formData: FormData) {
  * meses existentes del cliente.
  */
 export async function guardarHistorial(formData: FormData) {
-  if (!(await getUsuario())) redirect("/login");
+  await soloAdmin();
 
   const id = Number(formData.get("id"));
   const cambios = new Map<string, { valor: number | null; estado: string | null }>();
@@ -88,7 +88,7 @@ export async function guardarHistorial(formData: FormData) {
 
 /** Actualiza los datos comerciales de un cliente (plan, soporte, marketing…). */
 export async function actualizarCliente(formData: FormData) {
-  if (!(await getUsuario())) redirect("/login");
+  await soloAdmin();
 
   const id = Number(formData.get("id"));
   const nombre = String(formData.get("nombre") ?? "").trim();
@@ -140,7 +140,7 @@ export async function actualizarCliente(formData: FormData) {
  * Registra el motivo y lo guarda en el historial para auditoría futura.
  */
 export async function cambiarEstadoCliente(formData: FormData) {
-  if (!(await getUsuario())) redirect("/login");
+  await soloAdmin();
 
   const id = Number(formData.get("id"));
   const accion = String(formData.get("accion")); // 'cancelar' | 'pausar' | 'reactivar'

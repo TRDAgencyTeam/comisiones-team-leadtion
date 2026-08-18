@@ -7,6 +7,8 @@ import {
   type IngresoMes,
 } from "@/lib/clientes";
 import { BarChart } from "@/components/BarChart";
+import { sesionActual } from "@/lib/sesion";
+import { PortalColaborador } from "./PortalColaborador";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +21,23 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ corte?: string }>;
 }) {
+  // El mismo /cs sirve a admin (dashboard completo) y a colaboradores (portal).
+  const sesion = await sesionActual();
+  if (sesion.rol === "colaborador" && sesion.colaboradorId) {
+    return <PortalColaborador colaboradorId={sesion.colaboradorId} nombre={sesion.nombre ?? "colaborador"} />;
+  }
+  if (sesion.rol === "sin_acceso") {
+    return (
+      <main className="wrap">
+        <header className="page"><h1>Sin acceso configurado</h1></header>
+        <div className="card">
+          <p>Tu cuenta <b>{sesion.email}</b> aún no está vinculada a un colaborador.
+            Pídele al administrador que registre este email en tu ficha de colaborador.</p>
+        </div>
+      </main>
+    );
+  }
+
   const { corte: corteParam } = await searchParams;
   const corte = corteParam || CORTE_POR_DEFECTO;
 

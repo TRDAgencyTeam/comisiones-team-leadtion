@@ -27,6 +27,12 @@ export function ColaboradorForm({
       </label>
 
       <label>
+        Email de acceso al portal
+        <input type="email" name="email" defaultValue={colaborador?.email ?? ""} placeholder="colaborador@correo.com" />
+        <small>Debe ser el mismo email de su usuario en Supabase Auth. Con él entra directo a su portal de CS.</small>
+      </label>
+
+      <label>
         Rol
         <select name="rol" defaultValue={colaborador?.rol ?? "cs"}>
           <option value="cs">CS (customer success)</option>

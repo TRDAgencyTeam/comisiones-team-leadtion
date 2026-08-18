@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { esAdmin } from "@/lib/sesion";
 
 /** Inicia sesión con email + contraseña vía Supabase Auth. */
 export async function login(formData: FormData) {
@@ -13,7 +14,7 @@ export async function login(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
     // Distinguir "contraseña incorrecta" de un problema de configuración, para
@@ -24,8 +25,9 @@ export async function login(formData: FormData) {
     redirect("/login?error=" + encodeURIComponent(msg));
   }
 
-  // Tras entrar, el admin elige módulo (Customer Success / Comercial).
-  redirect("/modulos");
+  // El admin elige módulo; un colaborador entra directo a su portal de CS.
+  const correo = data.user?.email ?? email;
+  redirect(esAdmin(correo) ? "/modulos" : "/cs");
 }
 
 /** Cierra la sesión. */
