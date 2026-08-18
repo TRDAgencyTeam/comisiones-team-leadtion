@@ -459,6 +459,9 @@ tr:last-child td { border-bottom: none; }
   filter: grayscale(1); transition: opacity 0.15s, background 0.15s, filter 0.15s;
 }
 .btn-borrar:hover { opacity: 1; filter: none; background: rgba(220, 38, 38, 0.14); }
+
+.bar-seg { transition: opacity 0.12s; cursor: default; }
+.bar-seg:hover { opacity: 0.82; }
 .tag-agencia { font-size: 0.68rem; padding: 1px 7px; border-radius: 5px; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
 .tag-partner { font-size: 0.68rem; padding: 1px 7px; border-radius: 5px; background: var(--paid-soft); color: var(--paid); font-weight: 700; }
 .td-concepto { font-size: 0.82rem; color: var(--muted); }

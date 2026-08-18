@@ -7,6 +7,8 @@ export interface BarPart {
   value: number;
   /** Color CSS (ej. "var(--accent)"). */
   color: string;
+  /** Nombre del segmento para el tooltip (ej. "Licencias"). */
+  name?: string;
 }
 
 export interface BarDatum {
@@ -17,12 +19,16 @@ export interface BarDatum {
 export function BarChart({
   data,
   formatValue = (n) => String(n),
+  formatTitle,
   ariaLabel = "Gráfico de barras",
 }: {
   data: BarDatum[];
   formatValue?: (n: number) => string;
+  /** Formato del número en el tooltip (por defecto usa formatValue). */
+  formatTitle?: (n: number) => string;
   ariaLabel?: string;
 }) {
+  const fmtTitle = formatTitle ?? formatValue;
   if (data.length === 0) return <p className="empty">Sin datos para graficar.</p>;
 
   const totales = data.map((d) => d.parts.reduce((s, p) => s + p.value, 0));
@@ -52,7 +58,11 @@ export function BarChart({
           const segs = d.parts.map((p, j) => {
             const h = Math.round((p.value / max) * chartH);
             yCursor -= h;
-            return <rect key={j} x={x} y={yCursor} width={bw} height={h} fill={p.color} />;
+            return (
+              <rect key={j} className="bar-seg" x={x} y={yCursor} width={bw} height={h} fill={p.color}>
+                <title>{`${d.label}${p.name ? " · " + p.name : ""}: ${fmtTitle(p.value)}`}</title>
+              </rect>
+            );
           });
           const yTop = topPad + (chartH - Math.round((total / max) * chartH));
           return (

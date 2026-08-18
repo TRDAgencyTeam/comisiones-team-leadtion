@@ -31,7 +31,7 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
 
   return (
     <main className="wrap">
-      <p className="volver"><Link href="/membresias">← Clientes</Link></p>
+      <p className="volver"><Link href="/membresias/clientes">← Clientes</Link></p>
       <header className="page page-head-row">
         <div>
           <h1>{c.nombre}</h1>

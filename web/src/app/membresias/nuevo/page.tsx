@@ -14,7 +14,7 @@ export default async function NuevaMembresiaPage({
 
   return (
     <main className="wrap">
-      <p className="volver"><Link href="/membresias">← Clientes</Link></p>
+      <p className="volver"><Link href="/membresias/clientes">← Clientes</Link></p>
       <header className="page">
         <h1>Nuevo cliente</h1>
         <p>Se crea en el maestro y queda disponible en Comisiones CS automáticamente.</p>
@@ -114,7 +114,7 @@ export default async function NuevaMembresiaPage({
 
           {error && <p className="login-error">{error}</p>}
           <div className="form-actions">
-            <Link href="/membresias" className="btn-secondary">Cancelar</Link>
+            <Link href="/membresias/clientes" className="btn-secondary">Cancelar</Link>
             <button type="submit" className="btn-primary">Guardar cliente</button>
           </div>
         </form>

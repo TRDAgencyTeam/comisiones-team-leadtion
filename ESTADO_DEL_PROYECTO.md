@@ -72,6 +72,11 @@ Login (Supabase Auth) → `/modulos`:
   **Gráfico HECHO**: dashboard P&L muestra "Ingresos por mes" (barras apiladas licencia
   vs servicio, últimos 12 meses) reusando `components/BarChart` + `ingresosPorMes` de
   `lib/clientes.ts` (dato real de pagos_mensuales; membresía $69 = licencia, resto = servicio).
+  BarChart ahora tiene tooltip (`<title>` por segmento, formatTitle exacto) + hover.
+  **Ruteo del módulo cambiado**: la home es el DASHBOARD. `/membresias` redirige a
+  `/membresias/dashboard`; la lista se movió a `/membresias/clientes`. Menú: Dashboard
+  primero, Clientes después (`MembresiasNav`). El card de /modulos entra al dashboard.
+  Ojo: redirects/revalidatePath de la lista ahora apuntan a `/membresias/clientes`.
 - **REGLA DE NEGOCIO CLAVE**: agregar un servicio a un cliente existente NO altera comisiones
   de CS ni de afiliados. Ya se cumple por diseño: CS = base $67/$69 × hitos por fecha (no lee
   plan_tipo/valor de pagos); afiliados = datos propios (no lee plan_tipo/pagos); registrarServicio

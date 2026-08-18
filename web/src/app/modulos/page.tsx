@@ -39,7 +39,7 @@ export default async function ModulosPage() {
             <span className="modulo-cta">Entrar →</span>
           </Link>
 
-          <Link href="/membresias" className="modulo-card activa">
+          <Link href="/membresias/dashboard" className="modulo-card activa">
             <span className="modulo-icono">◆</span>
             <span className="modulo-nombre">Clientes / Membresías</span>
             <span className="modulo-desc">Maestro de clientes, planes e ingresos/costos de Leadtion.</span>

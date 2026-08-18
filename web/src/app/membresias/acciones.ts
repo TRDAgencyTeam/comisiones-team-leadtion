@@ -43,7 +43,7 @@ export async function actualizarMembresia(formData: FormData) {
     [id, nombre, estado, esAgencia, planTipo, soporteValor, valorLicencia, api.estado, api.valor, bono, tipoCliente],
   );
   revalidatePath(`/membresias/${id}`);
-  revalidatePath("/membresias");
+  revalidatePath("/membresias/clientes");
   revalidatePath("/membresias/dashboard");
   revalidatePath("/");
   redirect(`/membresias/${id}`);
@@ -105,7 +105,7 @@ export async function registrarServicio(formData: FormData) {
   );
 
   revalidatePath(`/membresias/${clienteId}`);
-  revalidatePath("/membresias");
+  revalidatePath("/membresias/clientes");
   revalidatePath("/membresias/dashboard");
   revalidatePath("/");
   redirect(`/membresias/${clienteId}`);
@@ -120,16 +120,16 @@ export async function registrarServicio(formData: FormData) {
 export async function eliminarMembresia(formData: FormData) {
   if (!(await getUsuario())) redirect("/login");
   const id = Number(formData.get("id"));
-  if (!id) redirect("/membresias");
+  if (!id) redirect("/membresias/clientes");
 
   await consulta(`delete from public.clientes_afiliados where ref = $1`, [`cl-mem-${id}`]);
   await consulta(`delete from public.clientes where id = $1`, [id]);
 
-  revalidatePath("/membresias");
+  revalidatePath("/membresias/clientes");
   revalidatePath("/membresias/dashboard");
   revalidatePath("/");
   revalidatePath("/afiliados");
-  redirect("/membresias");
+  redirect("/membresias/clientes");
 }
 
 /** Reporta la ganancia de reselling del mes actual. */
@@ -216,7 +216,7 @@ export async function crearMembresia(formData: FormData) {
     );
   }
 
-  revalidatePath("/membresias");
+  revalidatePath("/membresias/clientes");
   revalidatePath("/");
   revalidatePath("/afiliados");
   redirect(`/membresias/${id}`);

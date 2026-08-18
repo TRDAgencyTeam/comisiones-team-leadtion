@@ -54,11 +54,12 @@ export default async function PnLDashboard() {
                 data={ingresos.map((m) => ({
                   label: `${m.mes.slice(5)}/${m.mes.slice(2, 4)}`,
                   parts: [
-                    { value: m.licencia, color: "var(--accent)" },
-                    { value: m.servicio, color: "var(--brand-cyan)" },
+                    { value: m.licencia, color: "var(--accent)", name: "Licencias" },
+                    { value: m.servicio, color: "var(--brand-cyan)", name: "Servicios" },
                   ],
                 }))}
                 formatValue={(n) => (n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${Math.round(n)}`)}
+                formatTitle={usd}
                 ariaLabel="Ingresos por mes (licencias + servicios)"
               />
               <p className="foot" style={{ marginTop: 8 }}>
