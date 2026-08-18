@@ -78,10 +78,20 @@ export async function PortalColaborador({
   const cuentasConComision = new Set(alcanzados.map((f) => f.clienteId)).size;
 
   const proximaFecha = futuros[0]?.fechaHito ?? null;
-  // Proyección: hitos de los próximos ~4 meses (si las cuentas siguen activas).
-  const limite4m = new Date(now.getFullYear(), now.getMonth() + 4, 0).toISOString().slice(0, 10);
-  const proximos = futuros.filter((f) => f.fechaHito <= limite4m);
-  const proyeccion = round2(proximos.reduce((s, f) => s + f.monto, 0));
+  // Proyección de los próximos 3 meses, cada uno por separado.
+  const mesesProy = [1, 2, 3].map((k) => {
+    const d = new Date(now.getFullYear(), now.getMonth() + k, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const hitos = futuros.filter((f) => f.fechaHito.slice(0, 7) === key);
+    return {
+      key,
+      label: `${MESES[d.getMonth()]} ${d.getFullYear()}`,
+      hitos,
+      total: round2(hitos.reduce((s, f) => s + f.monto, 0)),
+    };
+  });
+  const proyeccion = round2(mesesProy.reduce((s, m) => s + m.total, 0));
+  const proyHitos = mesesProy.reduce((s, m) => s + m.hitos.length, 0);
 
   const HitoTag = ({ h }: { h: string }) => {
     const info = HITO_INFO[h];
@@ -116,6 +126,12 @@ export async function PortalColaborador({
               <span className="kpi-label">Cuentas con comisión</span>
               <span className="kpi-num">{cuentasConComision}</span>
             </div>
+          </div>
+
+          <div className="callout-pago">
+            <b>¿Cuándo se paga?</b> Las comisiones de cada mes se pagan dentro de los primeros ~5 días
+            del mes siguiente, junto con el pago normal de tu salario. (Ejemplo: lo de {mesActual} se
+            paga a inicios del mes siguiente.)
           </div>
 
           <section className="card">
@@ -163,34 +179,34 @@ export async function PortalColaborador({
 
           <section className="card">
             <div className="card-head"><span className="who">Próximos pagos (proyección)</span></div>
-            {futuros.length === 0 ? (
-              <p className="empty">No tienes hitos próximos programados por ahora.</p>
-            ) : (
-              <>
-                <p style={{ margin: "0 0 12px" }}>
-                  Tu próximo período con comisión es <b>{proximaFecha ? mesLargo(proximaFecha) : "—"}</b>.
-                  En los próximos meses se proyectan <b>{usd(proyeccion)}</b> ({proximos.length} hito{proximos.length === 1 ? "" : "s"}),
-                  <b> siempre que esas cuentas sigan activas</b>.
-                </p>
-                <div className="table-scroll">
-                  <table>
-                    <thead>
-                      <tr><th>Cliente</th><th>Fecha estimada</th><th>Hito</th><th className="num">Monto estimado</th></tr>
-                    </thead>
-                    <tbody>
-                      {futuros.slice(0, 12).map((f, i) => (
-                        <tr key={`fut-${f.clienteId}-${f.hito}-${i}`}>
-                          <td>{f.clienteNombre}</td>
-                          <td>{mesLargo(f.fechaHito)}</td>
-                          <td><HitoTag h={f.hito} /></td>
-                          <td className="num">{usd(f.monto)}</td>
-                        </tr>
+            <p style={{ margin: "0 0 14px" }}>
+              Tu próximo período con comisión es <b>{proximaFecha ? mesLargo(proximaFecha) : "—"}</b>.
+              En los próximos 3 meses se proyectan <b>{usd(proyeccion)}</b> ({proyHitos} hito{proyHitos === 1 ? "" : "s"}),
+              <b> siempre que esas cuentas sigan activas</b>. Cada cuenta reaparece cada 3 meses (T1→T2→T3).
+            </p>
+            <div className="proj-meses">
+              {mesesProy.map((m) => (
+                <div key={m.key} className="proj-mes">
+                  <div className="proj-mes-head">
+                    <span className="proj-mes-nombre">{m.label}</span>
+                    <span className="proj-mes-total">{usd(m.total)}</span>
+                  </div>
+                  {m.hitos.length === 0 ? (
+                    <p className="empty" style={{ margin: "6px 0 0" }}>Sin hitos este mes.</p>
+                  ) : (
+                    <ul className="proj-lista">
+                      {m.hitos.map((f, i) => (
+                        <li key={`${m.key}-${f.clienteId}-${f.hito}-${i}`}>
+                          <span className="proj-cli">{f.clienteNombre}</span>
+                          <HitoTag h={f.hito} />
+                          <span className="proj-monto">{usd(f.monto)}</span>
+                        </li>
                       ))}
-                    </tbody>
-                  </table>
+                    </ul>
+                  )}
                 </div>
-              </>
-            )}
+              ))}
+            </div>
           </section>
 
           <p className="foot">

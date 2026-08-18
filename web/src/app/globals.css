@@ -467,6 +467,21 @@ tr:last-child td { border-bottom: none; }
 .hito-tag { display: inline-block; font-weight: 700; font-size: 0.82rem; padding: 2px 8px;
   border-radius: 999px; background: var(--brand-blue); color: #fff; cursor: help;
   border-bottom: 1px dotted rgba(255,255,255,0.5); }
+
+.callout-pago { background: rgba(0, 229, 204, 0.08); border: 1px solid rgba(0, 229, 204, 0.32);
+  border-radius: 10px; padding: 10px 14px; font-size: 0.9rem; margin: 4px 0 2px; }
+
+.proj-meses { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+@media (max-width: 760px) { .proj-meses { grid-template-columns: 1fr; } }
+.proj-mes { border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: var(--panel); }
+.proj-mes-head { display: flex; justify-content: space-between; align-items: baseline;
+  border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 8px; }
+.proj-mes-nombre { font-family: "Agrandir", sans-serif; font-weight: 700; text-transform: capitalize; }
+.proj-mes-total { font-weight: 700; color: var(--accent); }
+.proj-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.proj-lista li { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; }
+.proj-cli { flex: 1; }
+.proj-monto { font-variant-numeric: tabular-nums; color: var(--muted); }
 .tag-agencia { font-size: 0.68rem; padding: 1px 7px; border-radius: 5px; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
 .tag-partner { font-size: 0.68rem; padding: 1px 7px; border-radius: 5px; background: var(--paid-soft); color: var(--paid); font-weight: 700; }
 .td-concepto { font-size: 0.82rem; color: var(--muted); }
