@@ -107,6 +107,15 @@ abajo). Cada módulo tiene su propia URL: `/cs`, `/afiliados`, `/membresias`.
   Sobrescribe solo los meses de la ventana (on conflict cliente_id,mes). No cambia
   tipo_cliente; sí actualiza plan_tipo + soporte del cliente. Mes 4+ manual. Ficha
   muestra "Servicios adquiridos" + estados de mes con etiquetas legibles (incl. Garantía).
+  **MULTI-SERVICIO + precio editable (2026-08-18, migración 0012 `precio_mes1`)**: el form
+  de "Registrar servicio" ahora permite agregar VARIOS servicios a la vez (componente
+  client `ServiciosForm.tsx`, botón "+ Agregar otro servicio") y ajustar el precio del
+  mes 1 (descuento; vacío = estándar $847/$597/$497 vía `PRECIO_MES1_ESTANDAR`). Si dos
+  servicios caen en el mismo mes, los cobros se SUMAN: `registrarServicio` inserta cada
+  `cliente_servicios` y luego `recomputarPagosDeServicios()` recalcula cada mes sumando
+  TODOS los servicios del cliente (robusto a registros separados). Verificado (Maylet:
+  React+AI en julio con $600 c/u → jul $1200, ago $197, sep $316). Ficha muestra "Precio
+  mes 1" por servicio.
   **Dashboard ingresos separados HECHO**: licencias vs servicios Leadtion desglosados
   (Agente IA / Reactivación / Level Up) — NO se suman en un solo renglón. 2ª fila de KPIs:
   Licencias del mes · Servicios Leadtion del mes (el usuario pidió quitar los KPIs de

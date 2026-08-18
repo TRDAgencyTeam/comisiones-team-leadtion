@@ -57,51 +57,100 @@ function mesConDesfase(mesInicio: string, n: number): string {
 }
 
 /**
- * Registra un servicio especial que el cliente adquirió en un mes dado y genera
- * los cobros de su ventana (mes 1/2/3) según la dinámica del servicio, sin tocar
- * el historial anterior del cliente. Sobrescribe solo los meses de la ventana.
+ * Recalcula los pagos de TODOS los meses cubiertos por servicios del cliente,
+ * SUMANDO los cobros cuando dos servicios caen en el mismo mes. Se ejecuta tras
+ * insertar servicios: así, aunque un cliente tenga varios servicios (a la vez o
+ * en momentos distintos), cada mes refleja la suma correcta.
  */
-export async function registrarServicio(formData: FormData) {
-  if (!(await getUsuario())) redirect("/login");
-  const clienteId = Number(formData.get("clienteId"));
-  const tipoRaw = String(formData.get("tipoServicio") ?? "").trim();
-  const tipos: TipoServicio[] = ["agente_ai", "reactivacion", "level_up"];
-  const tipoServicio = tipos.includes(tipoRaw as TipoServicio) ? (tipoRaw as TipoServicio) : null;
-  const mesInicio = String(formData.get("mesInicio") ?? "").trim(); // "YYYY-MM"
-  const soporteRaw = String(formData.get("soporteValor") ?? "").trim();
-  const soporteValor = soporteRaw === "" ? null : Number(soporteRaw);
-  const bonoRaw = String(formData.get("bono") ?? "").trim();
-  const bono = bonoRaw === "" ? null : Number(bonoRaw);
-  const nota = String(formData.get("nota") ?? "").trim() || null;
-
-  const base = `/membresias/${clienteId}/servicio`;
-  if (!clienteId || !tipoServicio || !/^\d{4}-\d{2}$/.test(mesInicio)) {
-    redirect(`${base}?error=` + encodeURIComponent("Servicio y mes de inicio son obligatorios."));
-  }
-
-  await consulta(
-    `insert into public.cliente_servicios (cliente_id, tipo_servicio, mes_inicio, soporte_valor, bono_reactivacion, nota)
-     values ($1,$2,$3,$4,$5,$6)`,
-    [clienteId, tipoServicio, `${mesInicio}-01`, soporteValor, bono, nota],
+async function recomputarPagosDeServicios(clienteId: number) {
+  const servicios = await consulta(
+    `select tipo_servicio, mes_inicio, soporte_valor, precio_mes1
+       from public.cliente_servicios where cliente_id=$1`,
+    [clienteId],
   );
-
-  // Genera/sobrescribe los pagos de la ventana del servicio.
-  for (const m of calendarioServicio(tipoServicio!, soporteValor)) {
-    const mes = mesConDesfase(mesInicio, m.offset);
+  const porMes = new Map<string, number>();
+  for (const s of servicios) {
+    const mesInicio = (s.mes_inicio instanceof Date ? s.mes_inicio.toISOString() : String(s.mes_inicio)).slice(0, 7);
+    const cal = calendarioServicio(
+      s.tipo_servicio as TipoServicio,
+      s.soporte_valor == null ? null : Number(s.soporte_valor),
+      s.precio_mes1 == null ? null : Number(s.precio_mes1),
+    );
+    for (const m of cal) {
+      const mes = mesConDesfase(mesInicio, m.offset);
+      porMes.set(mes, (porMes.get(mes) ?? 0) + m.valor);
+    }
+  }
+  for (const [mes, valor] of porMes) {
+    const estado = valor > 0 ? "activo" : "garantia";
     await consulta(
       `insert into public.pagos_mensuales (cliente_id, mes, valor, estado_mes)
        values ($1,$2,$3,$4)
        on conflict (cliente_id, mes) do update set valor=excluded.valor, estado_mes=excluded.estado_mes`,
-      [clienteId, mes, m.valor, m.estado],
+      [clienteId, mes, valor, estado],
     );
   }
+}
 
-  // Refleja el servicio actual en la ficha (sin cambiar el tipo de cliente).
+/**
+ * Registra UNO O VARIOS servicios que el cliente adquirió (Agente IA / Reactivación
+ * / Level Up), cada uno con su mes de compra y, opcionalmente, un precio de mes 1
+ * negociado. Genera los cobros de sus ventanas SUMANDO cuando coinciden en el mes,
+ * sin tocar el historial anterior.
+ */
+export async function registrarServicio(formData: FormData) {
+  if (!(await getUsuario())) redirect("/login");
+  const clienteId = Number(formData.get("clienteId"));
+  const base = `/membresias/${clienteId}/servicio`;
+
+  const tipos = formData.getAll("tipoServicio").map((v) => String(v).trim());
+  const meses = formData.getAll("mesInicio").map((v) => String(v).trim());
+  const precios = formData.getAll("precioMes1").map((v) => String(v).trim());
+  const soportes = formData.getAll("soporteValor").map((v) => String(v).trim());
+  const bonos = formData.getAll("bono").map((v) => String(v).trim());
+  const notas = formData.getAll("nota").map((v) => String(v).trim());
+
+  const validos: TipoServicio[] = ["agente_ai", "reactivacion", "level_up"];
+  let insertados = 0;
+  let ultimoTipo: string | null = null;
+  let ultimoSoporte: number | null = null;
+  let ultimoBono: number | null = null;
+
+  for (let i = 0; i < tipos.length; i++) {
+    const tipo = tipos[i];
+    const mes = meses[i] ?? "";
+    if (!validos.includes(tipo as TipoServicio) || !/^\d{4}-\d{2}$/.test(mes)) continue; // fila incompleta: se ignora
+    const precioMes1 = precios[i] && precios[i] !== "" ? Number(precios[i]) : null;
+    const soporteValor = soportes[i] && soportes[i] !== "" ? Number(soportes[i]) : null;
+    const bono = bonos[i] && bonos[i] !== "" ? Number(bonos[i]) : null;
+    const nota = notas[i] && notas[i] !== "" ? notas[i]! : null;
+
+    await consulta(
+      `insert into public.cliente_servicios
+         (cliente_id, tipo_servicio, mes_inicio, soporte_valor, precio_mes1, bono_reactivacion, nota)
+       values ($1,$2,$3,$4,$5,$6,$7)`,
+      [clienteId, tipo, `${mes}-01`, soporteValor, precioMes1, bono, nota],
+    );
+    insertados++;
+    ultimoTipo = tipo;
+    if (soporteValor != null) ultimoSoporte = soporteValor;
+    if (bono != null) ultimoBono = bono;
+  }
+
+  if (!clienteId || insertados === 0) {
+    redirect(`${base}?error=` + encodeURIComponent("Agrega al menos un servicio con su mes de compra."));
+  }
+
+  // Recalcula los pagos (suma los servicios que coincidan en un mismo mes).
+  await recomputarPagosDeServicios(clienteId);
+
+  // Refleja en la ficha el último servicio registrado (la lista completa se ve
+  // en "Servicios adquiridos"). No cambia el tipo de cliente.
   await consulta(
     `update public.clientes set plan_tipo=$2, soporte_valor=coalesce($3, soporte_valor),
         bono_reactivacion=coalesce($4, bono_reactivacion), estado_actualizado_en=now()
       where id=$1`,
-    [clienteId, tipoServicio, soporteValor, bono],
+    [clienteId, ultimoTipo, ultimoSoporte, ultimoBono],
   );
 
   revalidatePath(`/membresias/${clienteId}`);

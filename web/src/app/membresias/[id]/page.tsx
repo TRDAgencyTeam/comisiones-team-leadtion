@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { obtenerMembresia, PLAN_LABEL, TIPO_LABEL } from "@/lib/membresias";
-import { serviciosDeCliente, SERVICIO_LABEL } from "@/lib/servicios";
+import { serviciosDeCliente, SERVICIO_LABEL, PRECIO_MES1_ESTANDAR } from "@/lib/servicios";
 import { BotonEliminar } from "../BotonEliminar";
 
 export const dynamic = "force-dynamic";
@@ -75,12 +75,13 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
           <div className="card-head"><span className="who">Servicios adquiridos</span></div>
           <div className="table-scroll">
             <table>
-              <thead><tr><th>Servicio</th><th>Mes de compra</th><th>Soporte (mes 3)</th><th>Nota</th></tr></thead>
+              <thead><tr><th>Servicio</th><th>Mes de compra</th><th className="num">Precio mes 1</th><th>Soporte (mes 3)</th><th>Nota</th></tr></thead>
               <tbody>
                 {servicios.map((s) => (
                   <tr key={s.id}>
                     <td className="td-concepto">{SERVICIO_LABEL[s.tipoServicio]}</td>
                     <td>{s.mesInicio.slice(0, 7)}</td>
+                    <td className="num">{s.precioMes1 != null ? usd(s.precioMes1) : `Estándar ${usd(PRECIO_MES1_ESTANDAR[s.tipoServicio])}`}</td>
                     <td>{s.soporteValor != null ? usd(s.soporteValor) : "—"}</td>
                     <td>{s.nota ?? "—"}</td>
                   </tr>

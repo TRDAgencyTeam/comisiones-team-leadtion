@@ -372,6 +372,14 @@ a.mini-stat { text-decoration: none; color: inherit; cursor: pointer;
   outline: 1px solid transparent; }
 a.mini-stat:hover { background: rgba(127, 127, 127, 0.12); }
 a.mini-stat.activo { background: rgba(0, 229, 204, 0.12); outline-color: rgba(0, 229, 204, 0.5); }
+
+.servicio-fila { border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;
+  margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.servicio-fila-head { display: flex; justify-content: space-between; align-items: center; }
+.servicio-fila-num { font-family: "Agrandir", sans-serif; font-weight: 700; font-size: 0.92rem; color: var(--brand-cyan); }
+.btn-quitar { background: transparent; border: 1px solid rgba(220,38,38,0.4); color: #dc2626;
+  padding: 3px 10px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; }
+.btn-quitar:hover { background: rgba(220,38,38,0.12); }
 .ms-num { font-family: "Agrandir", sans-serif; font-weight: 700; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
 .ms-lbl { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
 .ms-ok { color: var(--paid); }

@@ -24,29 +24,42 @@ export const SERVICIO_LABEL: Record<TipoServicio, string> = {
   level_up: "Level Up",
 };
 
+/** Precio estándar (mes 1) de cada servicio, si no se personaliza. */
+export const PRECIO_MES1_ESTANDAR: Record<TipoServicio, number> = {
+  agente_ai: 847,
+  reactivacion: 597,
+  level_up: 497,
+};
+
 /**
  * Devuelve el calendario de cobros del servicio.
  * @param soporteValor  valor del soporte del mes 3 (Agente IA: 119 o 157).
+ * @param precioMes1    precio del mes 1 negociado (override); NULL = estándar.
  */
-export function calendarioServicio(tipo: TipoServicio, soporteValor: number | null): MesServicio[] {
+export function calendarioServicio(
+  tipo: TipoServicio,
+  soporteValor: number | null,
+  precioMes1?: number | null,
+): MesServicio[] {
+  const m1 = precioMes1 != null ? precioMes1 : PRECIO_MES1_ESTANDAR[tipo];
   switch (tipo) {
     case "agente_ai":
       return [
-        { offset: 0, valor: 847, estado: "activo", concepto: "Agente IA — mes 1" },
+        { offset: 0, valor: m1, estado: "activo", concepto: "Agente IA — mes 1" },
         { offset: 1, valor: 0, estado: "garantia", concepto: "Garantía (sin licencia; API la asume Leadtion)" },
         { offset: 2, valor: soporteValor ?? 119, estado: "activo", concepto: "Soporte (mes 3)" },
       ];
     case "reactivacion":
       return [
-        { offset: 0, valor: 597, estado: "activo", concepto: "Reactivación — mes 1" },
+        { offset: 0, valor: m1, estado: "activo", concepto: "Reactivación — mes 1" },
         { offset: 1, valor: 197, estado: "activo", concepto: "Reactivación — mes 2" },
         { offset: 2, valor: 197, estado: "activo", concepto: "Reactivación — mes 3" },
       ];
     case "level_up":
-      // Mes 1 $497. Del mes 2 en adelante el cliente elige soporte (cualquiera) o
-      // se queda sin soporte; eso se registra manualmente, no se autogenera.
+      // Mes 1 $497 (o el precio negociado). Del mes 2 en adelante el cliente elige
+      // soporte (cualquiera) o se queda sin soporte; se registra manualmente.
       return [
-        { offset: 0, valor: 497, estado: "activo", concepto: "Level Up — mes 1" },
+        { offset: 0, valor: m1, estado: "activo", concepto: "Level Up — mes 1" },
       ];
     default:
       return [];
@@ -58,6 +71,7 @@ export interface ServicioRow {
   tipoServicio: TipoServicio;
   mesInicio: string;
   soporteValor: number | null;
+  precioMes1: number | null;
   bono: number | null;
   nota: string | null;
 }
@@ -65,7 +79,7 @@ export interface ServicioRow {
 /** Servicios registrados de un cliente (línea de tiempo). */
 export async function serviciosDeCliente(clienteId: number): Promise<ServicioRow[]> {
   const rows = await consulta(
-    `select id, tipo_servicio, mes_inicio, soporte_valor, bono_reactivacion, nota
+    `select id, tipo_servicio, mes_inicio, soporte_valor, precio_mes1, bono_reactivacion, nota
        from public.cliente_servicios where cliente_id=$1 order by mes_inicio`,
     [clienteId],
   );
@@ -74,6 +88,7 @@ export async function serviciosDeCliente(clienteId: number): Promise<ServicioRow
     tipoServicio: r.tipo_servicio as TipoServicio,
     mesInicio: (r.mes_inicio instanceof Date ? r.mes_inicio.toISOString() : String(r.mes_inicio)).slice(0, 10),
     soporteValor: r.soporte_valor == null ? null : Number(r.soporte_valor),
+    precioMes1: r.precio_mes1 == null ? null : Number(r.precio_mes1),
     bono: r.bono_reactivacion == null ? null : Number(r.bono_reactivacion),
     nota: (r.nota as string) ?? null,
   }));
