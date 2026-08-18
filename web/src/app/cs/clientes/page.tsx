@@ -48,7 +48,7 @@ export default async function ClientesPage({
           <h1>Clientes</h1>
           <p>Cuentas de la base y lo que representan para el equipo.</p>
         </div>
-        <Link href="/clientes/nuevo" className="btn-primary">+ Agregar cliente</Link>
+        <Link href="/cs/clientes/nuevo" className="btn-primary">+ Agregar cliente</Link>
       </header>
 
       {error && (
@@ -95,7 +95,7 @@ export default async function ClientesPage({
                   const b = ESTADO_BADGE[c.estado] ?? { txt: c.estado, cls: "" };
                   return (
                     <tr key={c.id}>
-                      <td><Link href={`/clientes/${c.id}`} className="link-cliente">{c.nombre}</Link></td>
+                      <td><Link href={`/cs/clientes/${c.id}`} className="link-cliente">{c.nombre}</Link></td>
                       <td>{c.fechaActivacion ?? "—"}</td>
                       <td><span className={b.cls}>{b.txt}</span></td>
                       <td className="num">{c.comisionEquipo > 0 ? usd(c.comisionEquipo) : "—"}</td>

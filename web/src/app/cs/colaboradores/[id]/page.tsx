@@ -22,7 +22,7 @@ export default async function FichaColaboradorPage({
   return (
     <main className="wrap">
       <p className="volver">
-        <Link href="/colaboradores">← Colaboradores</Link>
+        <Link href="/cs/colaboradores">← Colaboradores</Link>
       </p>
 
       <header className="page page-head-row">

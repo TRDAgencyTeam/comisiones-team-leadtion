@@ -39,7 +39,7 @@ export default async function FichaClientePage({
 
   return (
     <main className="wrap">
-      <p className="volver"><Link href="/clientes">← Clientes</Link></p>
+      <p className="volver"><Link href="/cs/clientes">← Clientes</Link></p>
 
       <header className="page page-head-row">
         <div>
@@ -50,7 +50,7 @@ export default async function FichaClientePage({
             {c.motivoEstado && c.estado !== "activo" ? ` · ${c.motivoEstado}` : ""}
           </p>
         </div>
-        <Link href={`/clientes/${c.id}/editar`} className="btn-secondary">
+        <Link href={`/cs/clientes/${c.id}/editar`} className="btn-secondary">
           Editar datos
         </Link>
       </header>
@@ -180,7 +180,7 @@ export default async function FichaClientePage({
       <section className="card">
         <div className="card-head">
           <span className="who">Historial mensual</span>
-          <Link href={`/clientes/${c.id}/historial`} className="btn-secondary">Editar historial</Link>
+          <Link href={`/cs/clientes/${c.id}/historial`} className="btn-secondary">Editar historial</Link>
         </div>
         {c.pagos.length === 0 ? (
           <p className="empty">Sin historial mensual registrado.</p>

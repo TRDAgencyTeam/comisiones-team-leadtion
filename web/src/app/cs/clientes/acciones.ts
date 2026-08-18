@@ -21,7 +21,7 @@ export async function crearCliente(formData: FormData) {
   const marketing = String(formData.get("marketing") ?? "") === "1";
 
   if (!nombre || !fechaActivacion) {
-    redirect("/clientes/nuevo?error=" + encodeURIComponent("Nombre y fecha de activación son obligatorios."));
+    redirect("/cs/clientes/nuevo?error=" + encodeURIComponent("Nombre y fecha de activación son obligatorios."));
   }
 
   const rows = await consulta(
@@ -39,9 +39,9 @@ export async function crearCliente(formData: FormData) {
     [id],
   );
 
-  revalidatePath("/clientes");
-  revalidatePath("/");
-  redirect(`/clientes/${id}`);
+  revalidatePath("/cs/clientes");
+  revalidatePath("/cs");
+  redirect(`/cs/clientes/${id}`);
 }
 
 /**
@@ -80,10 +80,10 @@ export async function guardarHistorial(formData: FormData) {
     );
   }
 
-  revalidatePath(`/clientes/${id}`);
-  revalidatePath("/clientes");
-  revalidatePath("/");
-  redirect(`/clientes/${id}`);
+  revalidatePath(`/cs/clientes/${id}`);
+  revalidatePath("/cs/clientes");
+  revalidatePath("/cs");
+  redirect(`/cs/clientes/${id}`);
 }
 
 /** Actualiza los datos comerciales de un cliente (plan, soporte, marketing…). */
@@ -102,7 +102,7 @@ export async function actualizarCliente(formData: FormData) {
   const marketing = String(formData.get("marketing") ?? "") === "1";
 
   if (!nombre || !fechaActivacion) {
-    redirect(`/clientes/${id}/editar?error=` + encodeURIComponent("Nombre y fecha de activación son obligatorios."));
+    redirect(`/cs/clientes/${id}/editar?error=` + encodeURIComponent("Nombre y fecha de activación son obligatorios."));
   }
 
   await consulta(
@@ -129,10 +129,10 @@ export async function actualizarCliente(formData: FormData) {
     }
   }
 
-  revalidatePath(`/clientes/${id}`);
-  revalidatePath("/clientes");
-  revalidatePath("/");
-  redirect(`/clientes/${id}`);
+  revalidatePath(`/cs/clientes/${id}`);
+  revalidatePath("/cs/clientes");
+  revalidatePath("/cs");
+  redirect(`/cs/clientes/${id}`);
 }
 
 /**
@@ -181,7 +181,7 @@ export async function cambiarEstadoCliente(formData: FormData) {
     [id, nuevoEstado, motivo],
   );
 
-  revalidatePath(`/clientes/${id}`);
-  revalidatePath("/clientes");
-  revalidatePath("/");
+  revalidatePath(`/cs/clientes/${id}`);
+  revalidatePath("/cs/clientes");
+  revalidatePath("/cs");
 }

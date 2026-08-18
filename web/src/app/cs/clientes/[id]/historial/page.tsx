@@ -28,7 +28,7 @@ export default async function EditarHistorialPage({
   return (
     <main className="wrap">
       <p className="volver">
-        <Link href={`/clientes/${c.id}`}>← {c.nombre}</Link>
+        <Link href={`/cs/clientes/${c.id}`}>← {c.nombre}</Link>
       </p>
       <header className="page">
         <h1>Editar historial mensual</h1>
@@ -88,7 +88,7 @@ export default async function EditarHistorialPage({
         </section>
 
         <div className="form-actions" style={{ marginTop: 18 }}>
-          <Link href={`/clientes/${c.id}`} className="btn-secondary">Cancelar</Link>
+          <Link href={`/cs/clientes/${c.id}`} className="btn-secondary">Cancelar</Link>
           <button type="submit" className="btn-primary">Guardar cambios</button>
         </div>
       </form>

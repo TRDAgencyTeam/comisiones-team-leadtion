@@ -137,7 +137,7 @@ export default async function DashboardPage({
           <section className="card">
             <div className="card-head">
               <span className="who">Por colaborador</span>
-              <Link href={`/comisiones?corte=${corte}`} className="link-ver">
+              <Link href={`/cs/comisiones?corte=${corte}`} className="link-ver">
                 Ver detalle y pagar →
               </Link>
             </div>
@@ -178,7 +178,7 @@ export default async function DashboardPage({
             <section className="card">
               <div className="card-head">
                 <span className="who">Clientes</span>
-                <Link href="/clientes" className="link-ver">Ver todos →</Link>
+                <Link href="/cs/clientes" className="link-ver">Ver todos →</Link>
               </div>
               <div className="mini-stats">
                 <div className="mini-stat"><span className="ms-num">{stats.total}</span><span className="ms-lbl">Total</span></div>
@@ -196,7 +196,7 @@ export default async function DashboardPage({
                   <tbody>
                     {stats.masAntiguos.map((c) => (
                       <tr key={c.id}>
-                        <td><Link href={`/clientes/${c.id}`} className="link-cliente">{c.nombre}</Link></td>
+                        <td><Link href={`/cs/clientes/${c.id}`} className="link-cliente">{c.nombre}</Link></td>
                         <td>{c.fechaActivacion}</td>
                         <td className="num">{c.mesesActivo} {c.mesesActivo === 1 ? "mes" : "meses"}</td>
                       </tr>
@@ -211,7 +211,7 @@ export default async function DashboardPage({
             Corte <code>{corte}</code>. El total del mes es la comisión generada a
             esa fecha; se reparte en <b>pendiente</b> (falta pagar) y{" "}
             <b>pagado</b> (ya registrado). Para marcar pagos, entra a{" "}
-            <Link href={`/comisiones?corte=${corte}`}>Comisiones</Link>.
+            <Link href={`/cs/comisiones?corte=${corte}`}>Comisiones</Link>.
           </p>
         </>
       )}

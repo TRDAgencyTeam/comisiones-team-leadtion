@@ -28,7 +28,7 @@ export async function crearColaborador(formData: FormData) {
   const { nombre, rol, categoria, fechaIngreso, finPrueba } = parseForm(formData);
 
   if (!nombre) {
-    redirect("/colaboradores/nuevo?error=" + encodeURIComponent("El nombre es obligatorio."));
+    redirect("/cs/colaboradores/nuevo?error=" + encodeURIComponent("El nombre es obligatorio."));
   }
 
   await consulta(
@@ -38,9 +38,9 @@ export async function crearColaborador(formData: FormData) {
     [nombre, rol, categoria, fechaIngreso, finPrueba],
   );
 
-  revalidatePath("/colaboradores");
-  revalidatePath("/");
-  redirect("/colaboradores");
+  revalidatePath("/cs/colaboradores");
+  revalidatePath("/cs");
+  redirect("/cs/colaboradores");
 }
 
 /** Actualiza los datos de un colaborador. */
@@ -50,7 +50,7 @@ export async function actualizarColaborador(formData: FormData) {
   const { nombre, rol, categoria, fechaIngreso, finPrueba } = parseForm(formData);
 
   if (!nombre) {
-    redirect(`/colaboradores/${id}?error=` + encodeURIComponent("El nombre es obligatorio."));
+    redirect(`/cs/colaboradores/${id}?error=` + encodeURIComponent("El nombre es obligatorio."));
   }
 
   await consulta(
@@ -60,10 +60,10 @@ export async function actualizarColaborador(formData: FormData) {
     [id, nombre, rol, categoria, fechaIngreso, finPrueba],
   );
 
-  revalidatePath(`/colaboradores/${id}`);
-  revalidatePath("/colaboradores");
-  revalidatePath("/");
-  redirect("/colaboradores");
+  revalidatePath(`/cs/colaboradores/${id}`);
+  revalidatePath("/cs/colaboradores");
+  revalidatePath("/cs");
+  redirect("/cs/colaboradores");
 }
 
 /** Activa o desactiva un colaborador. */
@@ -74,7 +74,7 @@ export async function cambiarEstadoColaborador(formData: FormData) {
 
   await consulta(`update public.colaboradores set activo=$2 where id=$1`, [id, activar]);
 
-  revalidatePath(`/colaboradores/${id}`);
-  revalidatePath("/colaboradores");
-  revalidatePath("/");
+  revalidatePath(`/cs/colaboradores/${id}`);
+  revalidatePath("/cs/colaboradores");
+  revalidatePath("/cs");
 }

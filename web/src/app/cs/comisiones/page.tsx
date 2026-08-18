@@ -64,7 +64,7 @@ export default async function ComisionesPage({
             return (
               <Link
                 key={r.colaboradorId}
-                href={`/comisiones?corte=${corte}&col=${r.colaboradorId}`}
+                href={`/cs/comisiones?corte=${corte}&col=${r.colaboradorId}`}
                 className={activa ? "col-tab activa" : "col-tab"}
               >
                 <span className="col-tab-nombre">{r.colaboradorNombre}</span>
@@ -129,7 +129,7 @@ function ColaboradorCard({ r, corte }: { r: ResultadoVista; corte: string }) {
                   l.hitos.map((h) => (
                     <tr key={`${l.clienteId}-${h.hito}`}>
                       <td>
-                        <Link href={`/clientes/${l.clienteId}`} className="link-cliente">
+                        <Link href={`/cs/clientes/${l.clienteId}`} className="link-cliente">
                           {l.clienteNombre}
                         </Link>
                       </td>

@@ -28,7 +28,7 @@ export default async function ModulosEquipoPage() {
         <p className="sub">¿Con qué equipo vas a trabajar?</p>
 
         <div className="modulos-grid">
-          <Link href="/" className="modulo-card activa">
+          <Link href="/cs" className="modulo-card activa">
             <span className="modulo-icono">◆</span>
             <span className="modulo-nombre">Customer Success</span>
             <span className="modulo-desc">Comisiones y gestión de cuentas del equipo CS.</span>

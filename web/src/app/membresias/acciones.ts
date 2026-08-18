@@ -45,7 +45,7 @@ export async function actualizarMembresia(formData: FormData) {
   revalidatePath(`/membresias/${id}`);
   revalidatePath("/membresias/clientes");
   revalidatePath("/membresias/dashboard");
-  revalidatePath("/");
+  revalidatePath("/cs");
   redirect(`/membresias/${id}`);
 }
 
@@ -107,7 +107,7 @@ export async function registrarServicio(formData: FormData) {
   revalidatePath(`/membresias/${clienteId}`);
   revalidatePath("/membresias/clientes");
   revalidatePath("/membresias/dashboard");
-  revalidatePath("/");
+  revalidatePath("/cs");
   redirect(`/membresias/${clienteId}`);
 }
 
@@ -127,7 +127,7 @@ export async function eliminarMembresia(formData: FormData) {
 
   revalidatePath("/membresias/clientes");
   revalidatePath("/membresias/dashboard");
-  revalidatePath("/");
+  revalidatePath("/cs");
   revalidatePath("/afiliados");
   redirect("/membresias/clientes");
 }
@@ -217,7 +217,7 @@ export async function crearMembresia(formData: FormData) {
   }
 
   revalidatePath("/membresias/clientes");
-  revalidatePath("/");
+  revalidatePath("/cs");
   revalidatePath("/afiliados");
   redirect(`/membresias/${id}`);
 }

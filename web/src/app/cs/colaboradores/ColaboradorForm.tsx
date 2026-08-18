@@ -54,7 +54,7 @@ export function ColaboradorForm({
       {error && <p className="login-error">{error}</p>}
 
       <div className="form-actions">
-        <Link href="/colaboradores" className="btn-secondary">Cancelar</Link>
+        <Link href="/cs/colaboradores" className="btn-secondary">Cancelar</Link>
         <button type="submit" className="btn-primary">{textoBoton}</button>
       </div>
     </form>

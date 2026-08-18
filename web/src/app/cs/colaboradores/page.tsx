@@ -21,7 +21,7 @@ export default async function ColaboradoresPage() {
           <h1>Colaboradores</h1>
           <p>Equipo de Customer Success y roles del sistema.</p>
         </div>
-        <Link href="/colaboradores/nuevo" className="btn-primary">
+        <Link href="/cs/colaboradores/nuevo" className="btn-primary">
           + Agregar colaborador
         </Link>
       </header>
@@ -51,7 +51,7 @@ export default async function ColaboradoresPage() {
                 {colaboradores.map((c) => (
                   <tr key={c.id}>
                     <td>
-                      <Link href={`/colaboradores/${c.id}`} className="link-cliente">
+                      <Link href={`/cs/colaboradores/${c.id}`} className="link-cliente">
                         {c.nombre}
                       </Link>
                     </td>

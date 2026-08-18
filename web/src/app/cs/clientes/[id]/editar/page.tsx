@@ -22,7 +22,7 @@ export default async function EditarClientePage({
   return (
     <main className="wrap">
       <p className="volver">
-        <Link href={`/clientes/${c.id}`}>← {c.nombre}</Link>
+        <Link href={`/cs/clientes/${c.id}`}>← {c.nombre}</Link>
       </p>
       <header className="page">
         <h1>Editar cliente</h1>

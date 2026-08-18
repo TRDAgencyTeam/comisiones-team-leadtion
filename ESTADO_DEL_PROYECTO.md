@@ -10,12 +10,18 @@ login. En vivo: **https://leadtionteam.vercel.app**. Repo:
 `TRDAgencyTeam/comisiones-team-leadtion`. Supabase ref `ugrrmolthrysefqaqmse`.
 
 Login (Supabase Auth) → `/modulos`:
-1. **Comisiones Equipo Interno** (`/modulos/equipo` → Customer Success `/` · Comercial próx.)
+1. **Comisiones Equipo Interno** (`/modulos/equipo` → Customer Success `/cs` · Comercial próx.)
 2. **Comisiones Afiliados** (`/afiliados`)
-3. **Clientes / Membresías** (`/membresias`)
+3. **Clientes / Membresías** (`/membresias` → dashboard)
+
+Los módulos en `/modulos` se muestran en grid horizontal (auto-fit, envuelven hacia
+abajo). Cada módulo tiene su propia URL: `/cs`, `/afiliados`, `/membresias`.
 
 ## Estado por módulo
-- **Customer Success (`/`, `/comisiones`, `/clientes`, `/colaboradores`)**: COMPLETO.
+- **Customer Success (`/cs`, `/cs/comisiones`, `/cs/clientes`, `/cs/colaboradores`)**: COMPLETO.
+  (Movido de la raíz a `/cs` el 2026-08-18 para URL propia por módulo. La raíz `/`
+  redirige a `/modulos`; login también va a `/modulos`. El grupo `(app)` se renombró
+  a `cs/`.)
   Motor en `engine/` (29 pruebas). Comisiones con pagos, clientes con ficha/historial
   editable/LTV, colaboradores CRUD, dashboard con gráfico de ingresos.
 - **Afiliados (`/afiliados`)**: COMPLETO v1. Dashboard, comisiones por mes (3 meses)

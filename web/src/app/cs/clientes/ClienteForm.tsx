@@ -71,7 +71,7 @@ export function ClienteForm({
       {error && <p className="login-error">{error}</p>}
 
       <div className="form-actions">
-        <Link href={cliente ? `/clientes/${cliente.id}` : "/clientes"} className="btn-secondary">
+        <Link href={cliente ? `/cs/clientes/${cliente.id}` : "/cs/clientes"} className="btn-secondary">
           Cancelar
         </Link>
         <button type="submit" className="btn-primary">{textoBoton}</button>
