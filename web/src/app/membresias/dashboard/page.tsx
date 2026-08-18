@@ -4,7 +4,6 @@ import { guardarReselling } from "../acciones";
 export const dynamic = "force-dynamic";
 
 const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
-const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 const mesLargo = (m: string) => { const [y, mm] = m.split("-").map(Number); return `${MESES[(mm ?? 1) - 1]} ${y}`; };
 const soloMes = (m: string) => { const [, mm] = m.split("-").map(Number); return MESES[(mm ?? 1) - 1] ?? ""; };
@@ -31,18 +30,10 @@ export default async function PnLDashboard() {
             <div className={pnl.neto >= 0 ? "kpi kpi-pag" : "kpi kpi-pend"}><span className="kpi-label">{pnl.neto >= 0 ? "Ganancia" : "Pérdida"} de {soloMes(pnl.mes)}</span><span className="kpi-num">{usd(pnl.neto)}</span></div>
           </div>
 
-          {(() => {
-            const costosFijos = round2(pnl.costos.nomina + pnl.costos.ghl + pnl.costos.apisIncluidas);
-            const brecha = round2(pnl.ingresos.licencias - costosFijos);
-            return (
-              <div className="kpis kpis-4">
-                <div className="kpi kpi-total"><span className="kpi-label">Licencias de {soloMes(pnl.mes)}</span><span className="kpi-num">{usd(pnl.ingresos.licencias)}</span></div>
-                <div className="kpi kpi-pend"><span className="kpi-label">Costos fijos de {soloMes(pnl.mes)}</span><span className="kpi-num">{usd(costosFijos)}</span></div>
-                <div className={brecha >= 0 ? "kpi kpi-pag" : "kpi kpi-pend"}><span className="kpi-label">{brecha >= 0 ? "Licencias cubren fijos" : "Faltan para cubrir fijos"}</span><span className="kpi-num">{usd(brecha)}</span></div>
-                <div className="kpi kpi-total"><span className="kpi-label">Servicios Leadtion de {soloMes(pnl.mes)}</span><span className="kpi-num">{usd(pnl.ingresos.servicios.total)}</span></div>
-              </div>
-            );
-          })()}
+          <div className="kpis kpis-2">
+            <div className="kpi kpi-total"><span className="kpi-label">Licencias de {soloMes(pnl.mes)}</span><span className="kpi-num">{usd(pnl.ingresos.licencias)}</span></div>
+            <div className="kpi kpi-total"><span className="kpi-label">Servicios Leadtion de {soloMes(pnl.mes)}</span><span className="kpi-num">{usd(pnl.ingresos.servicios.total)}</span></div>
+          </div>
 
           <div className="pnl-cols">
             <section className="card">
@@ -84,9 +75,8 @@ export default async function PnLDashboard() {
           <p className="foot">
             Nómina convertida con la tasa {pnl.tasa.enVivo ? "en vivo" : "de respaldo"}:
             {" "}1 USD ≈ ${pnl.tasa.cop.toLocaleString("es-CO")} COP. Las comisiones CS del
-            mes son las de hitos que caen en {mesLargo(pnl.mes)}. <b>Punto de equilibrio:</b> los
-            costos fijos (nómina + GoHighLevel + APIs incluidas) idealmente se cubren solo con
-            las licencias; los servicios Leadtion y la API vendida son ganancia adicional.
+            mes son las de hitos que caen en {mesLargo(pnl.mes)}. Las <b>licencias</b> son la base
+            recurrente; los <b>servicios Leadtion</b> y la <b>API vendida</b> son ganancia adicional.
           </p>
         </>
       )}

@@ -52,16 +52,17 @@ Login (Supabase Auth) → `/modulos`:
   **Servicios adquiridos HECHO** (migración 0010, tabla `cliente_servicios`): cuando un
   cliente ya activo compra un servicio especial después, se registra con "+ Registrar
   servicio" en la ficha (`/membresias/[id]/servicio`) → genera los cobros de su ventana
-  sin tocar el pasado. Dinámicas en `lib/servicios.ts`: Agente IA (847/0 garantía/soporte),
-  Reactivación (597/197/197), Level Up (497/·/soporte $87 — TENTATIVO, falta confirmar).
+  sin tocar el pasado. Dinámicas en `lib/servicios.ts`: Agente IA (847/0 garantía/soporte
+  $119|$157), Reactivación (597/197/197), Level Up (solo mes 1 $497; el soporte lo elige
+  el cliente después, se registra manual — no se autogenera mes 2/3).
   Sobrescribe solo los meses de la ventana (on conflict cliente_id,mes). No cambia
   tipo_cliente; sí actualiza plan_tipo + soporte del cliente. Mes 4+ manual. Ficha
   muestra "Servicios adquiridos" + estados de mes con etiquetas legibles (incl. Garantía).
   **Dashboard ingresos separados HECHO**: licencias vs servicios Leadtion desglosados
   (Agente IA / Reactivación / Level Up) — NO se suman en un solo renglón. 2ª fila de KPIs:
-  Licencias del mes · Costos fijos (nómina+GHL+APIs incluidas) · brecha (¿licencias cubren
-  fijos?) · Servicios Leadtion del mes. Objetivo del usuario: punto de equilibrio
-  licencias-vs-costos-fijos; servicios y API vendida = ganancia adicional. El ingreso por
+  Licencias del mes · Servicios Leadtion del mes (el usuario pidió quitar los KPIs de
+  "Costos fijos" y "Faltan para cubrir fijos"). Licencias = base recurrente; servicios y
+  API vendida = ganancia adicional. El ingreso por
   servicio del mes se atribuye por la ventana del `cliente_servicios` (solo servicios
   registrados desde ahora; los 20 viejos no tienen evento, así que cuentan como licencia).
 - **REGLA DE NEGOCIO CLAVE**: agregar un servicio a un cliente existente NO altera comisiones

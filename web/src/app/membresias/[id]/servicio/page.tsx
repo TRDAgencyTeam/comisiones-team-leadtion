@@ -39,7 +39,7 @@ export default async function RegistrarServicioPage({
               <select name="tipoServicio" defaultValue="agente_ai" required>
                 <option value="agente_ai">Agente IA ($847 · $0 garantía · soporte)</option>
                 <option value="reactivacion">Reactivación ($597 · $197 · $197)</option>
-                <option value="level_up">Level Up ($497 · soporte)</option>
+                <option value="level_up">Level Up ($497 · luego el cliente elige soporte)</option>
               </select>
             </label>
             <label>Mes de compra *<input type="month" name="mesInicio" defaultValue={hoyMes()} required /></label>

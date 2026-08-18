@@ -449,6 +449,8 @@ tr:last-child td { border-bottom: none; }
   background: var(--brand-cyan); padding: 2px 8px; border-radius: 999px; font-weight: 700; }
 .kpis-4 { grid-template-columns: repeat(4, 1fr); }
 @media (max-width: 760px) { .kpis-4 { grid-template-columns: repeat(2, 1fr); } }
+.kpis-2 { grid-template-columns: repeat(2, 1fr); }
+@media (max-width: 640px) { .kpis-2 { grid-template-columns: 1fr; } }
 .tag-agencia { font-size: 0.68rem; padding: 1px 7px; border-radius: 5px; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
 .tag-partner { font-size: 0.68rem; padding: 1px 7px; border-radius: 5px; background: var(--paid-soft); color: var(--paid); font-weight: 700; }
 .td-concepto { font-size: 0.82rem; color: var(--muted); }

@@ -43,10 +43,10 @@ export function calendarioServicio(tipo: TipoServicio, soporteValor: number | nu
         { offset: 2, valor: 197, estado: "activo", concepto: "Reactivación — mes 3" },
       ];
     case "level_up":
-      // TENTATIVO: pendiente confirmar la dinámica exacta de Level Up con el usuario.
+      // Mes 1 $497. Del mes 2 en adelante el cliente elige soporte (cualquiera) o
+      // se queda sin soporte; eso se registra manualmente, no se autogenera.
       return [
         { offset: 0, valor: 497, estado: "activo", concepto: "Level Up — mes 1" },
-        { offset: 2, valor: soporteValor ?? 87, estado: "activo", concepto: "Soporte (mes 3)" },
       ];
     default:
       return [];
