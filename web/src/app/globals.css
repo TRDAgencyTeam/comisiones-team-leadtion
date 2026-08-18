@@ -451,6 +451,14 @@ tr:last-child td { border-bottom: none; }
 @media (max-width: 760px) { .kpis-4 { grid-template-columns: repeat(2, 1fr); } }
 .kpis-2 { grid-template-columns: repeat(2, 1fr); }
 @media (max-width: 640px) { .kpis-2 { grid-template-columns: 1fr; } }
+
+.col-accion { text-align: right; width: 1%; white-space: nowrap; }
+.btn-borrar {
+  background: transparent; border: none; cursor: pointer; padding: 4px 6px;
+  border-radius: 6px; font-size: 15px; line-height: 1; opacity: 0.55;
+  filter: grayscale(1); transition: opacity 0.15s, background 0.15s, filter 0.15s;
+}
+.btn-borrar:hover { opacity: 1; filter: none; background: rgba(220, 38, 38, 0.14); }
 .tag-agencia { font-size: 0.68rem; padding: 1px 7px; border-radius: 5px; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
 .tag-partner { font-size: 0.68rem; padding: 1px 7px; border-radius: 5px; background: var(--paid-soft); color: var(--paid); font-weight: 700; }
 .td-concepto { font-size: 0.82rem; color: var(--muted); }

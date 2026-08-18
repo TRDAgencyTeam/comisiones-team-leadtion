@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { listarMembresias, statsMembresias, PLAN_LABEL, TIPO_LABEL, type MembresiaRow } from "@/lib/membresias";
+import { BotonEliminar } from "./BotonEliminar";
 
 export const dynamic = "force-dynamic";
 
@@ -75,7 +76,7 @@ export default async function MembresiasPage({
         <div className="table-scroll">
           <table>
             <thead>
-              <tr><th>Cliente</th><th>Plan</th><th>Tipo</th><th>Estado</th><th className="num">Antigüedad</th><th className="num">LTV</th></tr>
+              <tr><th>Cliente</th><th>Plan</th><th>Tipo</th><th>Estado</th><th className="num">Antigüedad</th><th className="num">LTV</th><th></th></tr>
             </thead>
             <tbody>
               {lista.map((c) => {
@@ -90,10 +91,11 @@ export default async function MembresiasPage({
                     <td><span className={b.cls}>{b.txt}</span></td>
                     <td className="num">{antiguedad(c.tiempoMeses)}</td>
                     <td className="num">{c.ltv > 0 ? usd(c.ltv) : "—"}</td>
+                    <td className="col-accion"><BotonEliminar id={c.id} nombre={c.nombre} /></td>
                   </tr>
                 );
               })}
-              {lista.length === 0 && <tr><td colSpan={6} className="empty">Sin clientes que coincidan.</td></tr>}
+              {lista.length === 0 && <tr><td colSpan={7} className="empty">Sin clientes que coincidan.</td></tr>}
             </tbody>
           </table>
         </div>

@@ -111,6 +111,27 @@ export async function registrarServicio(formData: FormData) {
   redirect(`/membresias/${clienteId}`);
 }
 
+/**
+ * Elimina por completo un cliente ingresado por error. Las tablas hijas
+ * (pagos, hitos, evaluaciones, servicios, personas asignadas, historial) se
+ * borran en cascada; el vínculo con Afiliados se borra manualmente.
+ * Acción IRREVERSIBLE.
+ */
+export async function eliminarMembresia(formData: FormData) {
+  if (!(await getUsuario())) redirect("/login");
+  const id = Number(formData.get("id"));
+  if (!id) redirect("/membresias");
+
+  await consulta(`delete from public.clientes_afiliados where ref = $1`, [`cl-mem-${id}`]);
+  await consulta(`delete from public.clientes where id = $1`, [id]);
+
+  revalidatePath("/membresias");
+  revalidatePath("/membresias/dashboard");
+  revalidatePath("/");
+  revalidatePath("/afiliados");
+  redirect("/membresias");
+}
+
 /** Reporta la ganancia de reselling del mes actual. */
 export async function guardarReselling(formData: FormData) {
   if (!(await getUsuario())) redirect("/login");
