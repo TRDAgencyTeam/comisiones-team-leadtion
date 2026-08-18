@@ -463,6 +463,10 @@ tr:last-child td { border-bottom: none; }
 
 .bar-seg { transition: opacity 0.12s; cursor: default; }
 .bar-seg:hover { opacity: 0.82; }
+
+.hito-tag { display: inline-block; font-weight: 700; font-size: 0.82rem; padding: 2px 8px;
+  border-radius: 999px; background: var(--brand-blue); color: #fff; cursor: help;
+  border-bottom: 1px dotted rgba(255,255,255,0.5); }
 .tag-agencia { font-size: 0.68rem; padding: 1px 7px; border-radius: 5px; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
 .tag-partner { font-size: 0.68rem; padding: 1px 7px; border-radius: 5px; background: var(--paid-soft); color: var(--paid); font-weight: 700; }
 .td-concepto { font-size: 0.82rem; color: var(--muted); }
