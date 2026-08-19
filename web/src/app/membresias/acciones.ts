@@ -63,6 +63,10 @@ function mesConDesfase(mesInicio: string, n: number): string {
  * en momentos distintos), cada mes refleja la suma correcta.
  */
 async function recomputarPagosDeServicios(clienteId: number) {
+  // Limpia los meses de servicios anteriores (así, si un servicio cambia de mes,
+  // los meses que dejó de ocupar se borran). Los meses manuales/licencia no se tocan.
+  await consulta(`delete from public.pagos_mensuales where cliente_id=$1 and origen='servicio'`, [clienteId]);
+
   const servicios = await consulta(
     `select tipo_servicio, mes_inicio, soporte_valor, precio_mes1
        from public.cliente_servicios where cliente_id=$1`,
@@ -84,9 +88,9 @@ async function recomputarPagosDeServicios(clienteId: number) {
   for (const [mes, valor] of porMes) {
     const estado = valor > 0 ? "activo" : "garantia";
     await consulta(
-      `insert into public.pagos_mensuales (cliente_id, mes, valor, estado_mes)
-       values ($1,$2,$3,$4)
-       on conflict (cliente_id, mes) do update set valor=excluded.valor, estado_mes=excluded.estado_mes`,
+      `insert into public.pagos_mensuales (cliente_id, mes, valor, estado_mes, origen)
+       values ($1,$2,$3,$4,'servicio')
+       on conflict (cliente_id, mes) do update set valor=excluded.valor, estado_mes=excluded.estado_mes, origen='servicio'`,
       [clienteId, mes, valor, estado],
     );
   }
@@ -157,6 +161,57 @@ export async function registrarServicio(formData: FormData) {
   revalidatePath("/membresias/clientes");
   revalidatePath("/membresias/dashboard");
   revalidatePath("/cs");
+  redirect(`/membresias/${clienteId}`);
+}
+
+function revalidarServicio(clienteId: number) {
+  revalidatePath(`/membresias/${clienteId}`);
+  revalidatePath("/membresias/clientes");
+  revalidatePath("/membresias/dashboard");
+  revalidatePath("/cs");
+}
+
+/** Edita un servicio adquirido (corrige mes, precio, soporte…) y recalcula el historial. */
+export async function editarServicio(formData: FormData) {
+  if (!(await getUsuario())) redirect("/login");
+  const servicioId = Number(formData.get("servicioId"));
+  const clienteId = Number(formData.get("clienteId"));
+  const base = `/membresias/${clienteId}/servicio/${servicioId}/editar`;
+
+  const tipoRaw = String(formData.get("tipoServicio") ?? "").trim();
+  const validos: TipoServicio[] = ["agente_ai", "reactivacion", "level_up"];
+  const tipo = validos.includes(tipoRaw as TipoServicio) ? (tipoRaw as TipoServicio) : null;
+  const mes = String(formData.get("mesInicio") ?? "").trim();
+  if (!servicioId || !clienteId || !tipo || !/^\d{4}-\d{2}$/.test(mes)) {
+    redirect(`${base}?error=` + encodeURIComponent("Servicio y mes de compra son obligatorios."));
+  }
+  const precioMes1 = (formData.get("precioMes1") ?? "") !== "" ? Number(formData.get("precioMes1")) : null;
+  const soporteValor = (formData.get("soporteValor") ?? "") !== "" ? Number(formData.get("soporteValor")) : null;
+  const bono = (formData.get("bono") ?? "") !== "" ? Number(formData.get("bono")) : null;
+  const nota = String(formData.get("nota") ?? "").trim() || null;
+
+  await consulta(
+    `update public.cliente_servicios
+        set tipo_servicio=$3, mes_inicio=$4, soporte_valor=$5, precio_mes1=$6, bono_reactivacion=$7, nota=$8
+      where id=$1 and cliente_id=$2`,
+    [servicioId, clienteId, tipo, `${mes}-01`, soporteValor, precioMes1, bono, nota],
+  );
+
+  await recomputarPagosDeServicios(clienteId);
+  revalidarServicio(clienteId);
+  redirect(`/membresias/${clienteId}`);
+}
+
+/** Elimina un servicio adquirido y recalcula el historial (limpia sus meses). */
+export async function eliminarServicio(formData: FormData) {
+  if (!(await getUsuario())) redirect("/login");
+  const servicioId = Number(formData.get("servicioId"));
+  const clienteId = Number(formData.get("clienteId"));
+  if (!servicioId || !clienteId) redirect(`/membresias/${clienteId}`);
+
+  await consulta(`delete from public.cliente_servicios where id=$1 and cliente_id=$2`, [servicioId, clienteId]);
+  await recomputarPagosDeServicios(clienteId);
+  revalidarServicio(clienteId);
   redirect(`/membresias/${clienteId}`);
 }
 

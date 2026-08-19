@@ -116,6 +116,12 @@ abajo). Cada módulo tiene su propia URL: `/cs`, `/afiliados`, `/membresias`.
   TODOS los servicios del cliente (robusto a registros separados). Verificado (Maylet:
   React+AI en julio con $600 c/u → jul $1200, ago $197, sep $316). Ficha muestra "Precio
   mes 1" por servicio.
+  **EDITAR/ELIMINAR servicios (2026-08-18, migración 0013 `pagos_mensuales.origen`)**: en
+  "Servicios adquiridos" cada servicio tiene Editar (`/servicio/[sid]/editar`,
+  `editarServicio`) y 🗑️ (`eliminarServicio`, `BotonEliminarServicio`). Al editar/borrar,
+  `recomputarPagosDeServicios` BORRA los pagos `origen='servicio'` y regenera → los meses
+  que un servicio deja de ocupar se limpian solos (verificado: mover ago→jul limpia oct).
+  Backfill marcó los meses de servicios existentes como origen='servicio'.
   **Dashboard ingresos separados HECHO**: licencias vs servicios Leadtion desglosados
   (Agente IA / Reactivación / Level Up) — NO se suman en un solo renglón. 2ª fila de KPIs:
   Licencias del mes · Servicios Leadtion del mes (el usuario pidió quitar los KPIs de
