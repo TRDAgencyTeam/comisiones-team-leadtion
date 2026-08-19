@@ -5,7 +5,7 @@ import Link from "next/link";
 
 /** Precios estándar del mes 1 (placeholder; el usuario puede sobrescribir). */
 const ESTANDAR: Record<string, number> = { agente_ai: 847, reactivacion: 597, level_up: 497 };
-const hoyMes = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
+const hoyDia = () => new Date().toISOString().slice(0, 10);
 
 let uid = 0;
 type Fila = { key: number; tipo: string };
@@ -53,7 +53,7 @@ export function ServiciosForm({
                 <option value="level_up">Level Up</option>
               </select>
             </label>
-            <label>Mes de compra *<input type="month" name="mesInicio" defaultValue={hoyMes()} required /></label>
+            <label>Fecha de compra *<input type="date" name="fechaCompra" defaultValue={hoyDia()} required /></label>
           </div>
 
           <div className="form-2col">

@@ -41,7 +41,7 @@ export default async function EditarServicioPage({
                 <option value="level_up">Level Up</option>
               </select>
             </label>
-            <label>Mes de compra *<input type="month" name="mesInicio" defaultValue={s.mesInicio.slice(0, 7)} required /></label>
+            <label>Fecha de compra *<input type="date" name="fechaCompra" defaultValue={(s.fechaCompra ?? s.mesInicio).slice(0, 10)} required /></label>
           </div>
 
           <div className="form-2col">
@@ -71,7 +71,7 @@ export default async function EditarServicioPage({
             <Link href={`/membresias/${id}`} className="btn-secondary">Cancelar</Link>
           </div>
         </form>
-        <p className="foot" style={{ marginTop: 4 }}>Servicio actual: <b>{SERVICIO_LABEL[s.tipoServicio]}</b>, compra {s.mesInicio.slice(0, 7)}.</p>
+        <p className="foot" style={{ marginTop: 4 }}>Servicio actual: <b>{SERVICIO_LABEL[s.tipoServicio]}</b>, compra {(s.fechaCompra ?? s.mesInicio).slice(0, 10)}. El mes de esa fecha define la ventana de cobros.</p>
       </section>
     </main>
   );

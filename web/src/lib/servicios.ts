@@ -70,16 +70,20 @@ export interface ServicioRow {
   id: number;
   tipoServicio: TipoServicio;
   mesInicio: string;
+  fechaCompra: string | null;
   soporteValor: number | null;
   precioMes1: number | null;
   bono: number | null;
   nota: string | null;
 }
 
+const isoDia = (v: unknown): string | null =>
+  v == null ? null : (v instanceof Date ? v.toISOString() : String(v)).slice(0, 10);
+
 /** Un servicio por id (para editarlo). */
 export async function obtenerServicio(id: number): Promise<(ServicioRow & { clienteId: number }) | null> {
   const rows = await consulta(
-    `select id, cliente_id, tipo_servicio, mes_inicio, soporte_valor, precio_mes1, bono_reactivacion, nota
+    `select id, cliente_id, tipo_servicio, mes_inicio, fecha_compra, soporte_valor, precio_mes1, bono_reactivacion, nota
        from public.cliente_servicios where id=$1`,
     [id],
   );
@@ -89,7 +93,8 @@ export async function obtenerServicio(id: number): Promise<(ServicioRow & { clie
     id: Number(r.id),
     clienteId: Number(r.cliente_id),
     tipoServicio: r.tipo_servicio as TipoServicio,
-    mesInicio: (r.mes_inicio instanceof Date ? r.mes_inicio.toISOString() : String(r.mes_inicio)).slice(0, 10),
+    mesInicio: isoDia(r.mes_inicio)!,
+    fechaCompra: isoDia(r.fecha_compra),
     soporteValor: r.soporte_valor == null ? null : Number(r.soporte_valor),
     precioMes1: r.precio_mes1 == null ? null : Number(r.precio_mes1),
     bono: r.bono_reactivacion == null ? null : Number(r.bono_reactivacion),
@@ -100,14 +105,15 @@ export async function obtenerServicio(id: number): Promise<(ServicioRow & { clie
 /** Servicios registrados de un cliente (línea de tiempo). */
 export async function serviciosDeCliente(clienteId: number): Promise<ServicioRow[]> {
   const rows = await consulta(
-    `select id, tipo_servicio, mes_inicio, soporte_valor, precio_mes1, bono_reactivacion, nota
-       from public.cliente_servicios where cliente_id=$1 order by mes_inicio`,
+    `select id, tipo_servicio, mes_inicio, fecha_compra, soporte_valor, precio_mes1, bono_reactivacion, nota
+       from public.cliente_servicios where cliente_id=$1 order by coalesce(fecha_compra, mes_inicio)`,
     [clienteId],
   );
   return rows.map((r) => ({
     id: Number(r.id),
     tipoServicio: r.tipo_servicio as TipoServicio,
-    mesInicio: (r.mes_inicio instanceof Date ? r.mes_inicio.toISOString() : String(r.mes_inicio)).slice(0, 10),
+    mesInicio: isoDia(r.mes_inicio)!,
+    fechaCompra: isoDia(r.fecha_compra),
     soporteValor: r.soporte_valor == null ? null : Number(r.soporte_valor),
     precioMes1: r.precio_mes1 == null ? null : Number(r.precio_mes1),
     bono: r.bono_reactivacion == null ? null : Number(r.bono_reactivacion),

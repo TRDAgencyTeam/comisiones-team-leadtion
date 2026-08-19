@@ -30,6 +30,14 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
   const servicios = await serviciosDeCliente(c.id);
   const badge = ESTADO[c.estado] ?? { txt: c.estado, cls: "" };
 
+  // Tipo del cliente por mes (para el historial): desde el mes en que compró un
+  // servicio se muestra "Servicio Leadtion"; antes, su tipo base (agencia si vino
+  // con marketing, si no estándar; o su tipo actual si nunca compró un servicio).
+  const primerServicio = servicios.map((s) => (s.fechaCompra ?? s.mesInicio).slice(0, 7)).sort()[0] ?? null;
+  const tipoBase = servicios.length > 0 ? (c.esAgencia ? "agencia" : "estandar") : (c.tipoCliente ?? "estandar");
+  const tipoEnMes = (mes: string) =>
+    primerServicio && mes.slice(0, 7) >= primerServicio ? "servicio" : tipoBase;
+
   return (
     <main className="wrap">
       <p className="volver"><Link href="/membresias/clientes">← Clientes</Link></p>
@@ -76,12 +84,12 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
           <div className="card-head"><span className="who">Servicios adquiridos</span></div>
           <div className="table-scroll">
             <table>
-              <thead><tr><th>Servicio</th><th>Mes de compra</th><th className="num">Precio mes 1</th><th>Soporte (mes 3)</th><th>Nota</th><th></th></tr></thead>
+              <thead><tr><th>Servicio</th><th>Fecha de compra</th><th className="num">Precio mes 1</th><th>Soporte (mes 3)</th><th>Nota</th><th></th></tr></thead>
               <tbody>
                 {servicios.map((s) => (
                   <tr key={s.id}>
                     <td className="td-concepto">{SERVICIO_LABEL[s.tipoServicio]}</td>
-                    <td>{s.mesInicio.slice(0, 7)}</td>
+                    <td>{(s.fechaCompra ?? s.mesInicio).slice(0, 10)}</td>
                     <td className="num">{s.precioMes1 != null ? usd(s.precioMes1) : `Estándar ${usd(PRECIO_MES1_ESTANDAR[s.tipoServicio])}`}</td>
                     <td>{s.soporteValor != null ? usd(s.soporteValor) : "—"}</td>
                     <td>{s.nota ?? "—"}</td>
@@ -106,10 +114,15 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
         ) : (
           <div className="table-scroll">
             <table>
-              <thead><tr><th>Mes</th><th>Estado</th><th className="num">Valor</th></tr></thead>
+              <thead><tr><th>Mes</th><th>Tipo de cliente</th><th>Estado</th><th className="num">Valor</th></tr></thead>
               <tbody>
                 {c.pagos.map((p) => (
-                  <tr key={p.mes}><td>{p.mes.slice(0, 7)}</td><td className="td-concepto">{ESTADO_MES[p.estadoMes] ?? p.estadoMes}</td><td className="num">{p.valor != null ? usd(p.valor) : "—"}</td></tr>
+                  <tr key={p.mes}>
+                    <td>{p.mes.slice(0, 7)}</td>
+                    <td className="td-concepto">{TIPO_LABEL[tipoEnMes(p.mes)] ?? "Estándar"}</td>
+                    <td className="td-concepto">{ESTADO_MES[p.estadoMes] ?? p.estadoMes}</td>
+                    <td className="num">{p.valor != null ? usd(p.valor) : "—"}</td>
+                  </tr>
                 ))}
               </tbody>
             </table>

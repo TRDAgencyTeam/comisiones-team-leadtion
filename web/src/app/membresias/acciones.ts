@@ -108,7 +108,7 @@ export async function registrarServicio(formData: FormData) {
   const base = `/membresias/${clienteId}/servicio`;
 
   const tipos = formData.getAll("tipoServicio").map((v) => String(v).trim());
-  const meses = formData.getAll("mesInicio").map((v) => String(v).trim());
+  const fechas = formData.getAll("fechaCompra").map((v) => String(v).trim());
   const precios = formData.getAll("precioMes1").map((v) => String(v).trim());
   const soportes = formData.getAll("soporteValor").map((v) => String(v).trim());
   const bonos = formData.getAll("bono").map((v) => String(v).trim());
@@ -122,8 +122,9 @@ export async function registrarServicio(formData: FormData) {
 
   for (let i = 0; i < tipos.length; i++) {
     const tipo = tipos[i];
-    const mes = meses[i] ?? "";
-    if (!validos.includes(tipo as TipoServicio) || !/^\d{4}-\d{2}$/.test(mes)) continue; // fila incompleta: se ignora
+    const fecha = fechas[i] ?? "";
+    if (!validos.includes(tipo as TipoServicio) || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) continue; // fila incompleta
+    const mes = fecha.slice(0, 7); // el mes de la fecha define la ventana de cobros
     const precioMes1 = precios[i] && precios[i] !== "" ? Number(precios[i]) : null;
     const soporteValor = soportes[i] && soportes[i] !== "" ? Number(soportes[i]) : null;
     const bono = bonos[i] && bonos[i] !== "" ? Number(bonos[i]) : null;
@@ -131,9 +132,9 @@ export async function registrarServicio(formData: FormData) {
 
     await consulta(
       `insert into public.cliente_servicios
-         (cliente_id, tipo_servicio, mes_inicio, soporte_valor, precio_mes1, bono_reactivacion, nota)
-       values ($1,$2,$3,$4,$5,$6,$7)`,
-      [clienteId, tipo, `${mes}-01`, soporteValor, precioMes1, bono, nota],
+         (cliente_id, tipo_servicio, mes_inicio, fecha_compra, soporte_valor, precio_mes1, bono_reactivacion, nota)
+       values ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [clienteId, tipo, `${mes}-01`, fecha, soporteValor, precioMes1, bono, nota],
     );
     insertados++;
     ultimoTipo = tipo;
@@ -181,10 +182,11 @@ export async function editarServicio(formData: FormData) {
   const tipoRaw = String(formData.get("tipoServicio") ?? "").trim();
   const validos: TipoServicio[] = ["agente_ai", "reactivacion", "level_up"];
   const tipo = validos.includes(tipoRaw as TipoServicio) ? (tipoRaw as TipoServicio) : null;
-  const mes = String(formData.get("mesInicio") ?? "").trim();
-  if (!servicioId || !clienteId || !tipo || !/^\d{4}-\d{2}$/.test(mes)) {
-    redirect(`${base}?error=` + encodeURIComponent("Servicio y mes de compra son obligatorios."));
+  const fecha = String(formData.get("fechaCompra") ?? "").trim();
+  if (!servicioId || !clienteId || !tipo || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+    redirect(`${base}?error=` + encodeURIComponent("Servicio y fecha de compra son obligatorios."));
   }
+  const mes = fecha.slice(0, 7);
   const precioMes1 = (formData.get("precioMes1") ?? "") !== "" ? Number(formData.get("precioMes1")) : null;
   const soporteValor = (formData.get("soporteValor") ?? "") !== "" ? Number(formData.get("soporteValor")) : null;
   const bono = (formData.get("bono") ?? "") !== "" ? Number(formData.get("bono")) : null;
@@ -192,9 +194,9 @@ export async function editarServicio(formData: FormData) {
 
   await consulta(
     `update public.cliente_servicios
-        set tipo_servicio=$3, mes_inicio=$4, soporte_valor=$5, precio_mes1=$6, bono_reactivacion=$7, nota=$8
+        set tipo_servicio=$3, mes_inicio=$4, fecha_compra=$5, soporte_valor=$6, precio_mes1=$7, bono_reactivacion=$8, nota=$9
       where id=$1 and cliente_id=$2`,
-    [servicioId, clienteId, tipo, `${mes}-01`, soporteValor, precioMes1, bono, nota],
+    [servicioId, clienteId, tipo, `${mes}-01`, fecha, soporteValor, precioMes1, bono, nota],
   );
 
   await recomputarPagosDeServicios(clienteId);

@@ -122,6 +122,13 @@ abajo). Cada módulo tiene su propia URL: `/cs`, `/afiliados`, `/membresias`.
   `recomputarPagosDeServicios` BORRA los pagos `origen='servicio'` y regenera → los meses
   que un servicio deja de ocupar se limpian solos (verificado: mover ago→jul limpia oct).
   Backfill marcó los meses de servicios existentes como origen='servicio'.
+  **Fecha exacta de compra + tipo por mes (2026-08-18, migración 0014 `fecha_compra`)**:
+  el form de servicio ahora pide la FECHA exacta (día) de compra, no solo el mes; el mes de
+  esa fecha define la ventana de cobros (`mes_inicio`). Ficha muestra "Fecha de compra". En
+  el historial mensual se agregó columna "Tipo de cliente": DERIVADA por mes — desde el mes
+  del primer servicio comprado se muestra "Servicio Leadtion"; antes, el tipo base (agencia
+  si viene con marketing, si no estándar; o el tipo actual si nunca compró servicio). Muestra
+  cómo entró el cliente y cuándo pasó a servicio. (No hay historial de cambios estándar↔agencia.)
   **Dashboard ingresos separados HECHO**: licencias vs servicios Leadtion desglosados
   (Agente IA / Reactivación / Level Up) — NO se suman en un solo renglón. 2ª fila de KPIs:
   Licencias del mes · Servicios Leadtion del mes (el usuario pidió quitar los KPIs de
