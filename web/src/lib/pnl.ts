@@ -3,10 +3,18 @@ import { consulta } from "@/lib/db";
 import { tasaUsdCop } from "@/lib/fx";
 import { dashboardAfiliados } from "@/lib/afiliados";
 import { cargarResultados } from "@/lib/comisiones";
+import { calendarioServicio } from "@/lib/servicios";
 
 /** P&L mensual del negocio Leadtion (ingresos vs costos, en USD). */
 
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+/** Devuelve el 'YYYY-MM' de sumar `n` meses a un 'YYYY-MM'. */
+function mesConDesfaseMes(mesInicio: string, n: number): string {
+  const [y, m] = mesInicio.split("-").map(Number);
+  const d = new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1 + n, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
 
 export interface PnL {
   mes: string;
@@ -33,14 +41,9 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
   const [fx, ingresoRows, servicioRows, apiRows, cfgRows, reselRows, activasRows, bonoRows, afil, cs] = await Promise.all([
     tasaUsdCop(),
     consulta(`select coalesce(sum(valor),0)::float t from public.pagos_mensuales where to_char(mes,'YYYY-MM')=$1 and valor>0`, [mes]),
-    // Ingreso por servicios Leadtion del mes: pagos que caen dentro de la ventana
-    // de un servicio registrado (mes 1/2/3), atribuidos a su tipo.
-    consulta(`select cs.tipo_servicio tipo, coalesce(sum(pm.valor),0)::float t
-                from public.cliente_servicios cs
-                join public.pagos_mensuales pm on pm.cliente_id=cs.cliente_id
-                 and pm.mes >= cs.mes_inicio and pm.mes < (cs.mes_inicio + interval '3 months')
-               where to_char(pm.mes,'YYYY-MM')=$1 and pm.valor>0
-               group by cs.tipo_servicio`, [mes]),
+    // Servicios registrados (para atribuir el ingreso por tipo desde su calendario,
+    // sin doble conteo cuando un cliente tiene varios servicios).
+    consulta(`select tipo_servicio, mes_inicio, soporte_valor, precio_mes1 from public.cliente_servicios`),
     consulta(`select coalesce(sum(api_valor) filter (where api_estado='vendida' and estado_actual='activo'),0)::float vendida_ingreso,
                      count(*) filter (where api_estado='vendida' and estado_actual='activo')::int vendida_n,
                      count(*) filter (where api_estado='incluida' and estado_actual='activo')::int incluida
@@ -78,12 +81,25 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
   const comisionesAfiliados = round2((afil.dash.pendienteMes ?? 0) + (afil.dash.pagadoMes ?? 0));
 
   const totalPagosMes = round2(Number(ingresoRows[0]?.t ?? 0));
-  // Ingreso por servicios Leadtion del mes, por tipo.
+  // Ingreso por servicios Leadtion del mes, por tipo, desde el CALENDARIO de cada
+  // servicio (así un cliente con varios servicios no se cuenta doble).
   const serv = { agente_ai: 0, reactivacion: 0, level_up: 0 };
   for (const r of servicioRows) {
-    const t = String(r.tipo) as keyof typeof serv;
-    if (t in serv) serv[t] = round2(Number(r.t ?? 0));
+    const t = String(r.tipo_servicio) as keyof typeof serv;
+    if (!(t in serv)) continue;
+    const mesInicio = (r.mes_inicio instanceof Date ? r.mes_inicio.toISOString() : String(r.mes_inicio)).slice(0, 7);
+    const cal = calendarioServicio(
+      t,
+      r.soporte_valor == null ? null : Number(r.soporte_valor),
+      r.precio_mes1 == null ? null : Number(r.precio_mes1),
+    );
+    for (const m of cal) {
+      if (mesConDesfaseMes(mesInicio, m.offset) === mes) serv[t] += m.valor;
+    }
   }
+  serv.agente_ai = round2(serv.agente_ai);
+  serv.reactivacion = round2(serv.reactivacion);
+  serv.level_up = round2(serv.level_up);
   const serviciosTotal = round2(serv.agente_ai + serv.reactivacion + serv.level_up);
   // Licencias = todo lo cobrado del mes que no es un servicio Leadtion.
   const licencias = round2(totalPagosMes - serviciosTotal);
