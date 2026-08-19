@@ -380,6 +380,12 @@ a.mini-stat.activo { background: rgba(0, 229, 204, 0.12); outline-color: rgba(0,
 .btn-quitar { background: transparent; border: 1px solid rgba(220,38,38,0.4); color: #dc2626;
   padding: 3px 10px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; }
 .btn-quitar:hover { background: rgba(220,38,38,0.12); }
+
+.segmented { display: inline-flex; gap: 4px; padding: 4px; border-radius: 12px;
+  background: rgba(127,127,127,0.12); margin-bottom: 16px; }
+.segmented .seg { background: transparent; border: none; color: var(--muted); cursor: pointer;
+  padding: 8px 16px; border-radius: 9px; font-size: 0.9rem; font-weight: 600; transition: background 0.12s, color 0.12s; }
+.segmented .seg.activo { background: var(--brand-cyan); color: #08131a; }
 .ms-num { font-family: "Agrandir", sans-serif; font-weight: 700; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
 .ms-lbl { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
 .ms-ok { color: var(--paid); }

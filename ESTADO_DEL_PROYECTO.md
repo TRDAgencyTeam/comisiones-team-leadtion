@@ -129,6 +129,16 @@ abajo). Cada módulo tiene su propia URL: `/cs`, `/afiliados`, `/membresias`.
   del primer servicio comprado se muestra "Servicio Leadtion"; antes, el tipo base (agencia
   si viene con marketing, si no estándar; o el tipo actual si nunca compró servicio). Muestra
   cómo entró el cliente y cuándo pasó a servicio. (No hay historial de cambios estándar↔agencia.)
+  **PERÍODOS DE SOPORTE (2026-08-18, migración 0015 `cliente_soportes`)**: en "Registrar
+  servicio" hay un selector "Servicio de entrada / Período de soporte" (`RegistrarForm`,
+  `SoporteForm`). Un período de soporte = nivel ($87/$119/$157) + desde + hasta (o
+  INDEFINIDO = hasta el mes en curso, se extiende). Pone esos meses con ese valor; los de
+  fuera vuelven SOLOS a su valor normal (verificado: $119 solo agosto → sep vuelve a $69).
+  `recomputarPagosDeServicios` se unificó en `recomputarPagosDeCliente` (maneja servicios
+  Y soportes; el servicio gana si coinciden en un mes; origen 'servicio'/'soporte'). Ficha:
+  sección "Períodos de soporte" (editar/eliminar) + el "Soporte" del datos-grid muestra el
+  efectivo del mes en curso. CAVEAT: borrar un período que sobrescribió un mes manual deja
+  ese mes vacío (mejor editar el rango; el flujo normal de auto-reversión sí es correcto).
   **Dashboard ingresos separados HECHO**: licencias vs servicios Leadtion desglosados
   (Agente IA / Reactivación / Level Up) — NO se suman en un solo renglón. 2ª fila de KPIs:
   Licencias del mes · Servicios Leadtion del mes (el usuario pidió quitar los KPIs de

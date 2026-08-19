@@ -2,8 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { obtenerMembresia, PLAN_LABEL, TIPO_LABEL } from "@/lib/membresias";
 import { serviciosDeCliente, SERVICIO_LABEL, PRECIO_MES1_ESTANDAR } from "@/lib/servicios";
+import { soportesDeCliente, soporteEnMes } from "@/lib/soportes";
 import { BotonEliminar } from "../BotonEliminar";
 import { BotonEliminarServicio } from "../BotonEliminarServicio";
+import { BotonEliminarSoporte } from "../BotonEliminarSoporte";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +30,13 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
   const c = await obtenerMembresia(Number(id));
   if (!c) notFound();
   const servicios = await serviciosDeCliente(c.id);
+  const soportes = await soportesDeCliente(c.id);
   const badge = ESTADO[c.estado] ?? { txt: c.estado, cls: "" };
+
+  const hoyMes = new Date().toISOString().slice(0, 7);
+  // Soporte efectivo hoy: período activo si lo hay; si no, el soporte base del cliente.
+  const soporteActual = soporteEnMes(soportes, hoyMes, hoyMes) ?? c.soporteValor;
+  const soporteEsPeriodo = soporteEnMes(soportes, hoyMes, hoyMes) != null;
 
   // Tipo del cliente por mes (para el historial): desde el mes en que compró un
   // servicio se muestra "Servicio Leadtion"; antes, su tipo base (agencia si vino
@@ -62,7 +70,7 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
       <section className="card">
         <div className="datos-grid">
           <div><span className="dato-label">Plan de entrada</span>{c.planTipo ? PLAN_LABEL[c.planTipo] : "Estándar"}</div>
-          <div><span className="dato-label">Soporte</span>{c.soporteValor ? usd(c.soporteValor) : "Básico (incluido)"}</div>
+          <div><span className="dato-label">Soporte {soporteEsPeriodo ? "(activo este mes)" : ""}</span>{soporteActual ? usd(soporteActual) : "Básico (incluido)"}</div>
           <div><span className="dato-label">API WhatsApp</span>{apiTexto(c.apiEstado, c.apiValor)}</div>
           <div><span className="dato-label">Activación</span>{c.fechaActivacion ?? "—"}</div>
           <div><span className="dato-label">Antigüedad</span>{c.tiempoMeses} {c.tiempoMeses === 1 ? "mes" : "meses"}</div>
@@ -97,6 +105,33 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
                       <div style={{ display: "flex", gap: 6, alignItems: "center", justifyContent: "flex-end" }}>
                         <Link href={`/membresias/${c.id}/servicio/${s.id}/editar`} className="link-ver">Editar</Link>
                         <BotonEliminarServicio servicioId={s.id} clienteId={c.id} etiqueta={SERVICIO_LABEL[s.tipoServicio]} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {soportes.length > 0 && (
+        <section className="card">
+          <div className="card-head"><span className="who">Períodos de soporte</span></div>
+          <div className="table-scroll">
+            <table>
+              <thead><tr><th>Nivel</th><th>Desde</th><th>Hasta</th><th>Nota</th><th></th></tr></thead>
+              <tbody>
+                {soportes.map((s) => (
+                  <tr key={s.id}>
+                    <td className="num">{usd(s.valor)}</td>
+                    <td>{s.desde.slice(0, 10)}</td>
+                    <td>{s.hasta ? s.hasta.slice(0, 10) : <span className="tag-partner">Indefinido</span>}</td>
+                    <td>{s.nota ?? "—"}</td>
+                    <td className="col-accion">
+                      <div style={{ display: "flex", gap: 6, alignItems: "center", justifyContent: "flex-end" }}>
+                        <Link href={`/membresias/${c.id}/soporte/${s.id}/editar`} className="link-ver">Editar</Link>
+                        <BotonEliminarSoporte soporteId={s.id} clienteId={c.id} />
                       </div>
                     </td>
                   </tr>

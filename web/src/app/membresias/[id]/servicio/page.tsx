@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { obtenerMembresia } from "@/lib/membresias";
-import { registrarServicio } from "../../acciones";
-import { ServiciosForm } from "./ServiciosForm";
+import { registrarServicio, registrarSoporte } from "../../acciones";
+import { RegistrarForm } from "./RegistrarForm";
 
 export const dynamic = "force-dynamic";
 
@@ -21,16 +21,17 @@ export default async function RegistrarServicioPage({
     <main className="wrap">
       <p className="volver"><Link href={`/membresias/${c.id}`}>← {c.nombre}</Link></p>
       <header className="page">
-        <h1>Registrar servicio</h1>
-        <p>Cuando un cliente compra uno o varios servicios especiales después de estar activo.
-          Puedes agregar varios a la vez (ej. Agente IA + Reactivación) y ajustar el precio si
-          hubo descuento. Genera los cobros automáticamente sin tocar el historial anterior.</p>
+        <h1>Registrar servicio o soporte</h1>
+        <p><b>Servicio de entrada</b>: cuando compran Agente IA / Reactivación / Level Up (puedes
+          agregar varios a la vez y ajustar el precio). <b>Período de soporte</b>: cuando activan un
+          plan de soporte ($87/$119/$157) por un tiempo y luego vuelven a lo normal. Todo se genera
+          en el historial automáticamente.</p>
       </header>
 
       {error && <div className="card error-box">{error}</div>}
 
       <section className="card">
-        <ServiciosForm clienteId={c.id} action={registrarServicio} />
+        <RegistrarForm clienteId={c.id} accionServicio={registrarServicio} accionSoporte={registrarSoporte} />
       </section>
     </main>
   );

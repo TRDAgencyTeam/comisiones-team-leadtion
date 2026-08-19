@@ -62,17 +62,46 @@ function mesConDesfase(mesInicio: string, n: number): string {
  * insertar servicios: así, aunque un cliente tenga varios servicios (a la vez o
  * en momentos distintos), cada mes refleja la suma correcta.
  */
-async function recomputarPagosDeServicios(clienteId: number) {
-  // Limpia los meses de servicios anteriores (así, si un servicio cambia de mes,
-  // los meses que dejó de ocupar se borran). Los meses manuales/licencia no se tocan.
-  await consulta(`delete from public.pagos_mensuales where cliente_id=$1 and origen='servicio'`, [clienteId]);
+/** Itera los meses 'YYYY-MM-01' entre dos 'YYYY-MM' (inclusive). */
+function mesesEntre(desdeYYYYMM: string, hastaYYYYMM: string): string[] {
+  const out: string[] = [];
+  let [y, m] = desdeYYYYMM.split("-").map(Number);
+  const [hy, hm] = hastaYYYYMM.split("-").map(Number);
+  let guard = 0;
+  while ((y! < hy!) || (y === hy && m! <= hm!)) {
+    out.push(`${y}-${String(m).padStart(2, "0")}-01`);
+    m!++; if (m! > 12) { m = 1; y!++; }
+    if (++guard > 240) break; // seguridad
+  }
+  return out;
+}
 
+/**
+ * Recalcula los pagos generados por servicios Y períodos de soporte del cliente.
+ * Borra los de origen 'servicio'/'soporte' y los regenera; los meses manuales
+ * (licencia/importados) no se tocan. Si un mes tiene servicio y soporte, gana el
+ * SERVICIO (su ventana ya define ese mes). Así todo se mantiene consistente.
+ */
+async function recomputarPagosDeCliente(clienteId: number) {
+  await consulta(`delete from public.pagos_mensuales where cliente_id=$1 and origen in ('servicio','soporte')`, [clienteId]);
+
+  const hoyMes = new Date().toISOString().slice(0, 7);
+  const porMes = new Map<string, { valor: number; origen: string }>();
+
+  // 1) Períodos de soporte (nivel mensual por rango; indefinido = hasta hoy).
+  const soportes = await consulta(`select valor, desde, hasta from public.cliente_soportes where cliente_id=$1`, [clienteId]);
+  for (const s of soportes) {
+    const desde = (s.desde instanceof Date ? s.desde.toISOString() : String(s.desde)).slice(0, 7);
+    const hasta = s.hasta ? (s.hasta instanceof Date ? s.hasta.toISOString() : String(s.hasta)).slice(0, 7) : hoyMes;
+    for (const mes of mesesEntre(desde, hasta)) porMes.set(mes, { valor: Number(s.valor), origen: "soporte" });
+  }
+
+  // 2) Servicios (suman en su ventana; sobrescriben el soporte si coinciden).
   const servicios = await consulta(
-    `select tipo_servicio, mes_inicio, soporte_valor, precio_mes1
-       from public.cliente_servicios where cliente_id=$1`,
+    `select tipo_servicio, mes_inicio, soporte_valor, precio_mes1 from public.cliente_servicios where cliente_id=$1`,
     [clienteId],
   );
-  const porMes = new Map<string, number>();
+  const servMes = new Map<string, number>();
   for (const s of servicios) {
     const mesInicio = (s.mes_inicio instanceof Date ? s.mes_inicio.toISOString() : String(s.mes_inicio)).slice(0, 7);
     const cal = calendarioServicio(
@@ -82,16 +111,18 @@ async function recomputarPagosDeServicios(clienteId: number) {
     );
     for (const m of cal) {
       const mes = mesConDesfase(mesInicio, m.offset);
-      porMes.set(mes, (porMes.get(mes) ?? 0) + m.valor);
+      servMes.set(mes, (servMes.get(mes) ?? 0) + m.valor);
     }
   }
-  for (const [mes, valor] of porMes) {
+  for (const [mes, valor] of servMes) porMes.set(mes, { valor, origen: "servicio" });
+
+  for (const [mes, { valor, origen }] of porMes) {
     const estado = valor > 0 ? "activo" : "garantia";
     await consulta(
       `insert into public.pagos_mensuales (cliente_id, mes, valor, estado_mes, origen)
-       values ($1,$2,$3,$4,'servicio')
-       on conflict (cliente_id, mes) do update set valor=excluded.valor, estado_mes=excluded.estado_mes, origen='servicio'`,
-      [clienteId, mes, valor, estado],
+       values ($1,$2,$3,$4,$5)
+       on conflict (cliente_id, mes) do update set valor=excluded.valor, estado_mes=excluded.estado_mes, origen=excluded.origen`,
+      [clienteId, mes, valor, estado, origen],
     );
   }
 }
@@ -147,7 +178,7 @@ export async function registrarServicio(formData: FormData) {
   }
 
   // Recalcula los pagos (suma los servicios que coincidan en un mismo mes).
-  await recomputarPagosDeServicios(clienteId);
+  await recomputarPagosDeCliente(clienteId);
 
   // Refleja en la ficha el último servicio registrado (la lista completa se ve
   // en "Servicios adquiridos"). No cambia el tipo de cliente.
@@ -199,7 +230,7 @@ export async function editarServicio(formData: FormData) {
     [servicioId, clienteId, tipo, `${mes}-01`, fecha, soporteValor, precioMes1, bono, nota],
   );
 
-  await recomputarPagosDeServicios(clienteId);
+  await recomputarPagosDeCliente(clienteId);
   revalidarServicio(clienteId);
   redirect(`/membresias/${clienteId}`);
 }
@@ -212,7 +243,68 @@ export async function eliminarServicio(formData: FormData) {
   if (!servicioId || !clienteId) redirect(`/membresias/${clienteId}`);
 
   await consulta(`delete from public.cliente_servicios where id=$1 and cliente_id=$2`, [servicioId, clienteId]);
-  await recomputarPagosDeServicios(clienteId);
+  await recomputarPagosDeCliente(clienteId);
+  revalidarServicio(clienteId);
+  redirect(`/membresias/${clienteId}`);
+}
+
+/** Lee los campos de un período de soporte del formulario. */
+function parseSoporte(formData: FormData) {
+  const valor = Number(formData.get("valor"));
+  const desde = String(formData.get("desde") ?? "").trim();
+  const indefinido = String(formData.get("indefinido") ?? "") === "1";
+  const hastaRaw = String(formData.get("hasta") ?? "").trim();
+  const hasta = indefinido ? null : (/^\d{4}-\d{2}-\d{2}$/.test(hastaRaw) ? hastaRaw : null);
+  const nota = String(formData.get("nota") ?? "").trim() || null;
+  const ok = valor > 0 && /^\d{4}-\d{2}-\d{2}$/.test(desde) && (indefinido || hasta !== null);
+  return { valor, desde, hasta, nota, ok };
+}
+
+/** Registra un período de soporte (nivel activo por un rango; se revierte solo). */
+export async function registrarSoporte(formData: FormData) {
+  if (!(await getUsuario())) redirect("/login");
+  const clienteId = Number(formData.get("clienteId"));
+  const base = `/membresias/${clienteId}/servicio`;
+  const { valor, desde, hasta, nota, ok } = parseSoporte(formData);
+  if (!clienteId || !ok) {
+    redirect(`${base}?error=` + encodeURIComponent("Indica el nivel de soporte, la fecha de inicio y hasta cuándo (o marca indefinido)."));
+  }
+  await consulta(
+    `insert into public.cliente_soportes (cliente_id, valor, desde, hasta, nota) values ($1,$2,$3,$4,$5)`,
+    [clienteId, valor, desde, hasta, nota],
+  );
+  await recomputarPagosDeCliente(clienteId);
+  revalidarServicio(clienteId);
+  redirect(`/membresias/${clienteId}`);
+}
+
+/** Edita un período de soporte y recalcula el historial. */
+export async function editarSoporte(formData: FormData) {
+  if (!(await getUsuario())) redirect("/login");
+  const soporteId = Number(formData.get("soporteId"));
+  const clienteId = Number(formData.get("clienteId"));
+  const base = `/membresias/${clienteId}/soporte/${soporteId}/editar`;
+  const { valor, desde, hasta, nota, ok } = parseSoporte(formData);
+  if (!soporteId || !clienteId || !ok) {
+    redirect(`${base}?error=` + encodeURIComponent("Revisa el nivel, la fecha de inicio y el fin (o indefinido)."));
+  }
+  await consulta(
+    `update public.cliente_soportes set valor=$3, desde=$4, hasta=$5, nota=$6 where id=$1 and cliente_id=$2`,
+    [soporteId, clienteId, valor, desde, hasta, nota],
+  );
+  await recomputarPagosDeCliente(clienteId);
+  revalidarServicio(clienteId);
+  redirect(`/membresias/${clienteId}`);
+}
+
+/** Elimina un período de soporte y recalcula el historial (revierte esos meses). */
+export async function eliminarSoporte(formData: FormData) {
+  if (!(await getUsuario())) redirect("/login");
+  const soporteId = Number(formData.get("soporteId"));
+  const clienteId = Number(formData.get("clienteId"));
+  if (!soporteId || !clienteId) redirect(`/membresias/${clienteId}`);
+  await consulta(`delete from public.cliente_soportes where id=$1 and cliente_id=$2`, [soporteId, clienteId]);
+  await recomputarPagosDeCliente(clienteId);
   revalidarServicio(clienteId);
   redirect(`/membresias/${clienteId}`);
 }
