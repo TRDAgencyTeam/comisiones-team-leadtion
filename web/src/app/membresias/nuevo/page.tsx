@@ -47,7 +47,7 @@ export default async function NuevaMembresiaPage({
               </select>
             </label>
             <label>
-              Soporte
+              Soporte (mes 3, si es servicio)
               <select name="soporteValor" defaultValue="">
                 <option value="">Básico (incluido en $69)</option>
                 <option value="87">Estándar $87 (solo Level Up)</option>
@@ -56,6 +56,13 @@ export default async function NuevaMembresiaPage({
               </select>
             </label>
           </div>
+
+          <label>
+            Precio del mes 1 del servicio ($)
+            <input type="number" name="precioMes1" step="0.01" placeholder="Vacío = estándar (847 / 597 / 497)" />
+            <small>Solo si el plan de entrada es un servicio. Si hubo descuento o reserva, escribe lo que pagó el mes 1.
+              Al crear el cliente con un servicio, se generan solos los cobros del mes 1, 2 y 3.</small>
+          </label>
 
           <div className="form-2col">
             <label>

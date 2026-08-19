@@ -168,6 +168,19 @@ abajo). Cada módulo tiene su propia URL: `/cs`, `/afiliados`, `/membresias`.
   comisiones de CS del mes y los bonos; (4) UI para editar nómina/GHL (hoy en BD);
   (5) decisión: que personas asignadas filtren comisión CS (hoy paga por fecha a todos).
 
+## Servicios: fuente única de verdad (2026-08-19)
+- **Crear cliente con plan de servicio AUTO-GENERA el servicio** (`crearMembresia`): si
+  `plan_tipo` es agente_ai/reactivacion/level_up, inserta `cliente_servicios` (fecha_compra
+  = fecha_activacion, precio_mes1 del nuevo campo del form) y llama `recomputarPagosDeCliente`
+  → el historial mes 1/2/3 se genera solo (no más mes 1 vacío ni doble paso). El form de
+  alta tiene campo "Precio del mes 1".
+- **Una sola fuente de verdad**: `editarServicio` sincroniza `clientes.soporte_valor` y
+  `plan_tipo` con el servicio → la ficha nunca diverge (si cambias soporte $157→$119 editando
+  el servicio, la ficha refleja $119). "Registrar servicio" queda para servicios ADICIONALES.
+- **P&L servicios sin doble conteo (2026-08-19)**: se calcula por el CALENDARIO de cada
+  servicio (no por join a pagos), así un cliente con 2 servicios no cuenta doble
+  (agosto pasó de $1394 erróneo a $697 correcto). Ver `pnl.ts`.
+
 ## Reglas/decisiones clave (no re-preguntar)
 - **DECISIONES CONFIRMADAS 2026-08-18 (el usuario las validó explícitamente):**
   1. Un cliente **con afiliado TAMBIÉN comisiona a CS** (son dos comisiones distintas:

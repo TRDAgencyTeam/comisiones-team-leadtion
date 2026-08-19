@@ -230,6 +230,12 @@ export async function editarServicio(formData: FormData) {
     [servicioId, clienteId, tipo, `${mes}-01`, fecha, soporteValor, precioMes1, bono, nota],
   );
 
+  // Mantener la ficha en sync con el servicio (soporte + plan), una sola fuente de verdad.
+  await consulta(
+    `update public.clientes set plan_tipo=$2, soporte_valor=$3, estado_actualizado_en=now() where id=$1`,
+    [clienteId, tipo, soporteValor],
+  );
+
   await recomputarPagosDeCliente(clienteId);
   revalidarServicio(clienteId);
   redirect(`/membresias/${clienteId}`);
@@ -368,6 +374,8 @@ export async function crearMembresia(formData: FormData) {
   const apiValor = apiEstado === "vendida" ? 12 : apiEstado === "incluida" ? 10 : null;
   const bonoRaw = String(formData.get("bono") ?? "").trim();
   const bono = bonoRaw === "" ? null : Number(bonoRaw);
+  const precioRaw = String(formData.get("precioMes1") ?? "").trim();
+  const precioMes1 = precioRaw === "" ? null : Number(precioRaw);
   const reserva = String(formData.get("reserva") ?? "") === "1";
   const fechaInicioReal = String(formData.get("fechaInicioReal") ?? "").trim() || null;
   const valorRaw = String(formData.get("valorLicencia") ?? "").trim();
@@ -414,7 +422,23 @@ export async function crearMembresia(formData: FormData) {
     );
   }
 
+  // Si el plan de entrada es un servicio Leadtion, registra el servicio y genera
+  // sus cobros de una vez (mes 1/2/3). Una sola fuente de verdad: el servicio.
+  const serviciosValidos = ["agente_ai", "reactivacion", "level_up"];
+  if (planTipo && serviciosValidos.includes(planTipo)) {
+    const mes = fechaActivacion.slice(0, 7);
+    await consulta(
+      `insert into public.cliente_servicios
+         (cliente_id, tipo_servicio, mes_inicio, fecha_compra, soporte_valor, precio_mes1, bono_reactivacion)
+       values ($1,$2,$3,$4,$5,$6,$7)`,
+      [id, planTipo, `${mes}-01`, fechaActivacion, soporteValor, precioMes1, bono],
+    );
+    await recomputarPagosDeCliente(id);
+  }
+
   revalidatePath("/membresias/clientes");
+  revalidatePath("/membresias/dashboard");
+  revalidatePath(`/membresias/${id}`);
   revalidatePath("/cs");
   revalidatePath("/afiliados");
   redirect(`/membresias/${id}`);
