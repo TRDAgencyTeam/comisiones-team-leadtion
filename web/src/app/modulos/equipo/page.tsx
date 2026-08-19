@@ -3,6 +3,7 @@ import { Logo } from "@/components/Brand";
 import { logout } from "@/app/login/actions";
 import { soloAdmin } from "@/lib/sesion";
 
+export const metadata = { title: "Equipo Interno" };
 export const dynamic = "force-dynamic";
 
 export default async function ModulosEquipoPage() {

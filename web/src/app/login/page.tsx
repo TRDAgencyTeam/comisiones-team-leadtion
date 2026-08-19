@@ -1,6 +1,7 @@
 import { Logo } from "@/components/Brand";
 import { LoginForm } from "./LoginForm";
 
+export const metadata = { title: "Portal Colaboradores" };
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage({

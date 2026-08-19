@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Comisiones CS — LEADTION",
-  description: "Cálculo de comisiones del equipo de Customer Success (TRD Agency).",
+  title: { template: "%s · Leadtion", default: "Leadtion" },
+  description: "Plataforma Leadtion (TRD Agency): membresías, comisiones CS y afiliados.",
 };
 
 export default function RootLayout({

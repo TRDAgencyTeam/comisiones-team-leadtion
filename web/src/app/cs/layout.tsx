@@ -4,6 +4,8 @@ import { NavLinks } from "@/components/NavLinks";
 import { Logo } from "@/components/Brand";
 import { sesionActual } from "@/lib/sesion";
 
+export const metadata = { title: "Customer Success" };
+
 /**
  * Shell de Customer Success. El admin ve el menú completo y el enlace a Módulos;
  * un colaborador ve una barra mínima (su nombre + Salir) y NINGÚN menú de admin.

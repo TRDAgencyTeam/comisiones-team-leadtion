@@ -4,6 +4,8 @@ import { AfiliadosNav } from "@/components/AfiliadosNav";
 import { Logo } from "@/components/Brand";
 import { soloAdmin } from "@/lib/sesion";
 
+export const metadata = { title: "Afiliados" };
+
 /** Shell del módulo Comisiones Afiliados (mismo branding que el equipo interno). */
 export default async function AfiliadosLayout({
   children,

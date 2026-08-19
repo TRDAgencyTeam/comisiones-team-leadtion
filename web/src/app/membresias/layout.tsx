@@ -4,6 +4,8 @@ import { MembresiasNav } from "@/components/MembresiasNav";
 import { Logo } from "@/components/Brand";
 import { soloAdmin } from "@/lib/sesion";
 
+export const metadata = { title: "Membresías" };
+
 /** Shell del módulo Clientes / Membresías (branding Leadtion). */
 export default async function MembresiasLayout({
   children,
