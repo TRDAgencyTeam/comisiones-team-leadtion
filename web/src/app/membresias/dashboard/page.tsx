@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { calcularPnL } from "@/lib/pnl";
 import { ingresosPorMes, type IngresoMes } from "@/lib/clientes";
+import { SERVICIO_LABEL } from "@/lib/servicios";
 import { BarChart } from "@/components/BarChart";
 import { guardarReselling } from "../acciones";
 
@@ -38,7 +40,33 @@ export default async function PnLDashboard() {
 
           <div className="kpis kpis-2">
             <div className="kpi kpi-total"><span className="kpi-label">Licencias de {soloMes(pnl.mes)}</span><span className="kpi-num">{usd(pnl.ingresos.licencias)}</span></div>
-            <div className="kpi kpi-total"><span className="kpi-label">Servicios Leadtion de {soloMes(pnl.mes)}</span><span className="kpi-num">{usd(pnl.ingresos.servicios.total)}</span></div>
+            <div className="kpi kpi-total pop-wrap">
+              <span className="kpi-label">Servicios Leadtion de {soloMes(pnl.mes)} <span className="pop-hint">ⓘ</span></span>
+              <span className="kpi-num">{usd(pnl.ingresos.servicios.total)}</span>
+              <div className="pop">
+                <div className="pop-card">
+                  <div className="pop-title">Clientes con servicio en {soloMes(pnl.mes)} ({pnl.ingresos.servicios.detalle.length})</div>
+                  {pnl.ingresos.servicios.detalle.length === 0 ? (
+                    <p className="empty" style={{ margin: 0 }}>Ninguno este mes.</p>
+                  ) : (
+                    <ul className="pop-lista">
+                      {pnl.ingresos.servicios.detalle.slice(0, 5).map((d, i) => (
+                        <li key={`${d.nombre}-${d.tipo}-${i}`}>
+                          <span className="pop-cli">{d.nombre}</span>
+                          <span className="pop-serv">{SERVICIO_LABEL[d.tipo as keyof typeof SERVICIO_LABEL] ?? d.tipo}</span>
+                          <span className="pop-monto">{usd(d.monto)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {pnl.ingresos.servicios.detalle.length > 5 && (
+                    <Link href="/membresias/dashboard/servicios" className="pop-vertodos">
+                      Ver todos ({pnl.ingresos.servicios.detalle.length}) →
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           {ingresos.length > 0 && (
@@ -76,7 +104,7 @@ export default async function PnLDashboard() {
               <div className="card-head"><span className="who">Ingresos</span><span className="t-pagado"><b>{usd(pnl.ingresos.total)}</b></span></div>
               <table><tbody>
                 <tr><td><b>Licencias cobradas</b></td><td className="num"><b>{usd(pnl.ingresos.licencias)}</b></td></tr>
-                <tr><td>Servicios Leadtion (mes)</td><td className="num">{usd(pnl.ingresos.servicios.total)}</td></tr>
+                <tr><td>Servicios Leadtion (mes) <Link href="/membresias/dashboard/servicios" className="link-ver">ver clientes →</Link></td><td className="num">{usd(pnl.ingresos.servicios.total)}</td></tr>
                 <tr><td className="td-sub">— Agente IA</td><td className="num td-sub">{usd(pnl.ingresos.servicios.agente_ai)}</td></tr>
                 <tr><td className="td-sub">— Reactivación</td><td className="num td-sub">{usd(pnl.ingresos.servicios.reactivacion)}</td></tr>
                 <tr><td className="td-sub">— Level Up</td><td className="num td-sub">{usd(pnl.ingresos.servicios.level_up)}</td></tr>

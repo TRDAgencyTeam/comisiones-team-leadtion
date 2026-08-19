@@ -386,6 +386,24 @@ a.mini-stat.activo { background: rgba(0, 229, 204, 0.12); outline-color: rgba(0,
 .segmented .seg { background: transparent; border: none; color: var(--muted); cursor: pointer;
   padding: 8px 16px; border-radius: 9px; font-size: 0.9rem; font-weight: 600; transition: background 0.12s, color 0.12s; }
 .segmented .seg.activo { background: var(--brand-cyan); color: #08131a; }
+
+/* Popover al pasar el cursor (ej. clientes con servicio del mes) */
+.pop-wrap { position: relative; cursor: help; }
+.pop-hint { font-size: 0.7rem; opacity: 0.55; vertical-align: super; }
+.pop { position: absolute; top: 100%; left: 0; z-index: 60; display: none; padding-top: 8px; min-width: 300px; max-width: 360px; }
+.pop-wrap:hover .pop { display: block; }
+.pop-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.4); padding: 12px 14px; }
+.pop-title { font-family: "Agrandir", sans-serif; font-weight: 700; font-size: 0.8rem; margin-bottom: 8px; }
+.pop-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.pop-lista li { display: flex; align-items: baseline; gap: 8px; font-size: 0.85rem; }
+.pop-cli { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pop-serv { color: var(--muted); font-size: 0.74rem; white-space: nowrap; }
+.pop-monto { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pop-vertodos { display: inline-block; margin-top: 10px; color: var(--brand-cyan); font-weight: 700;
+  font-size: 0.82rem; text-decoration: none; }
+.pop-vertodos:hover { text-decoration: underline; }
+@media (max-width: 620px) { .pop { left: auto; right: 0; min-width: 240px; } }
 .ms-num { font-family: "Agrandir", sans-serif; font-weight: 700; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
 .ms-lbl { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
 .ms-ok { color: var(--paid); }

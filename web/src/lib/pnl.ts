@@ -21,7 +21,10 @@ export interface PnL {
   tasa: { cop: number; enVivo: boolean };
   ingresos: {
     licencias: number;
-    servicios: { agente_ai: number; reactivacion: number; level_up: number; total: number };
+    servicios: {
+      agente_ai: number; reactivacion: number; level_up: number; total: number;
+      detalle: { nombre: string; tipo: string; monto: number }[];
+    };
     apiVendida: number; apiVendidaCuentas: number;
     reselling: number; total: number;
   };
@@ -43,7 +46,8 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
     consulta(`select coalesce(sum(valor),0)::float t from public.pagos_mensuales where to_char(mes,'YYYY-MM')=$1 and valor>0`, [mes]),
     // Servicios registrados (para atribuir el ingreso por tipo desde su calendario,
     // sin doble conteo cuando un cliente tiene varios servicios).
-    consulta(`select tipo_servicio, mes_inicio, soporte_valor, precio_mes1 from public.cliente_servicios`),
+    consulta(`select cs.tipo_servicio, cs.mes_inicio, cs.soporte_valor, cs.precio_mes1, cl.nombre
+                from public.cliente_servicios cs join public.clientes cl on cl.id=cs.cliente_id`),
     consulta(`select coalesce(sum(api_valor) filter (where api_estado='vendida' and estado_actual='activo'),0)::float vendida_ingreso,
                      count(*) filter (where api_estado='vendida' and estado_actual='activo')::int vendida_n,
                      count(*) filter (where api_estado='incluida' and estado_actual='activo')::int incluida
@@ -84,6 +88,7 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
   // Ingreso por servicios Leadtion del mes, por tipo, desde el CALENDARIO de cada
   // servicio (así un cliente con varios servicios no se cuenta doble).
   const serv = { agente_ai: 0, reactivacion: 0, level_up: 0 };
+  const serviciosDetalle: { nombre: string; tipo: string; monto: number }[] = [];
   for (const r of servicioRows) {
     const t = String(r.tipo_servicio) as keyof typeof serv;
     if (!(t in serv)) continue;
@@ -93,10 +98,14 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
       r.soporte_valor == null ? null : Number(r.soporte_valor),
       r.precio_mes1 == null ? null : Number(r.precio_mes1),
     );
-    for (const m of cal) {
-      if (mesConDesfaseMes(mesInicio, m.offset) === mes) serv[t] += m.valor;
+    let aporte = 0;
+    for (const m of cal) if (mesConDesfaseMes(mesInicio, m.offset) === mes) aporte += m.valor;
+    if (aporte > 0) {
+      serv[t] += aporte;
+      serviciosDetalle.push({ nombre: String(r.nombre), tipo: t, monto: round2(aporte) });
     }
   }
+  serviciosDetalle.sort((a, b) => b.monto - a.monto);
   serv.agente_ai = round2(serv.agente_ai);
   serv.reactivacion = round2(serv.reactivacion);
   serv.level_up = round2(serv.level_up);
@@ -115,7 +124,7 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
     tasa: { cop, enVivo: fx.enVivo },
     ingresos: {
       licencias,
-      servicios: { ...serv, total: serviciosTotal },
+      servicios: { ...serv, total: serviciosTotal, detalle: serviciosDetalle },
       apiVendida, apiVendidaCuentas, reselling, total: ingresosTotal,
     },
     costos: { nomina, ghl, apisIncluidas, apisIncluidasCuentas: apiIncluidaCount, comisionesAfiliados, comisionesCS, bonos, total: costosTotal, nominaDetalle },
