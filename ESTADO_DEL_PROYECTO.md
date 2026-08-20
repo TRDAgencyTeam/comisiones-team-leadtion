@@ -12,6 +12,16 @@
 > de activación, 0 datos de prueba. Config P&L: GHL $497, Andrés 60%, Daniel 30%,
 > Alejandro 100% (nómina Leadtion ≈ $2.409/mes a tasa 3150).
 
+## ⭐ TRABAJO ACTUAL — FASE 3: plataforma madre TRD Investment (EN ANÁLISIS)
+Desde 2026-08-19 el foco cambió: Leadtion queda en pausa (funciona) y arrancamos la
+**plataforma madre TRD Investment LLC** que consolidará TRD Agency + Leadtion. **Estamos
+en ANÁLISIS del Excel `INGRESOS - EGRESOS TRD AGENCY AGOSTO 2026.xlsx`, NADA construido.**
+Todo el análisis (organigrama, pestañas 2026 y Gastos Fijos ya repasadas, reglas clave como
+el egreso "afecta utilidad sí/no", diezmo 10%, nómina fuente única, doble moneda, crédito
+Bancolombia, etc.) está en **`ANALISIS_TRD_INVESTMENT.md`** — LÉELO al retomar esta fase.
+Pendiente: repasar pestañas Precios, Caja LLC, Caja Col, REG, Cloud TRD, Mantenimiento web,
+luego acordar arquitectura. (Lo de abajo es la fase 1-2 de Leadtion, ya terminada.)
+
 ## Qué es
 Plataforma web (Next.js + Supabase + Vercel) con selección de **módulos** tras el
 login. En vivo: **https://leadtionteam.vercel.app**. Repo:
