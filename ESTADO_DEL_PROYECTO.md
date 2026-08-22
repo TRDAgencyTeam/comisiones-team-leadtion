@@ -12,15 +12,45 @@
 > de activación, 0 datos de prueba. Config P&L: GHL $497, Andrés 60%, Daniel 30%,
 > Alejandro 100% (nómina Leadtion ≈ $2.409/mes a tasa 3150).
 
-## ⭐ TRABAJO ACTUAL — FASE 3: plataforma madre TRD Investment (EN ANÁLISIS)
+## ⭐ TRABAJO ACTUAL — FASE 3: plataforma madre TRD Investment (ANÁLISIS COMPLETO)
 Desde 2026-08-19 el foco cambió: Leadtion queda en pausa (funciona) y arrancamos la
-**plataforma madre TRD Investment LLC** que consolidará TRD Agency + Leadtion. **Estamos
-en ANÁLISIS del Excel `INGRESOS - EGRESOS TRD AGENCY AGOSTO 2026.xlsx`, NADA construido.**
-Todo el análisis (organigrama, pestañas 2026 y Gastos Fijos ya repasadas, reglas clave como
-el egreso "afecta utilidad sí/no", diezmo 10%, nómina fuente única, doble moneda, crédito
-Bancolombia, etc.) está en **`ANALISIS_TRD_INVESTMENT.md`** — LÉELO al retomar esta fase.
-Pendiente: repasar pestañas Precios, Caja LLC, Caja Col, REG, Cloud TRD, Mantenimiento web,
-luego acordar arquitectura. (Lo de abajo es la fase 1-2 de Leadtion, ya terminada.)
+**plataforma madre TRD Investment LLC** que consolidará TRD Agency + Leadtion. **REPASO DEL
+EXCEL `INGRESOS - EGRESOS TRD AGENCY AGOSTO 2026.xlsx` COMPLETO (2026-08-21); NADA construido aún.**
+Todo el análisis está en **`ANALISIS_TRD_INVESTMENT.md`** — LÉELO al retomar esta fase.
+Pestañas repasadas: 2026, Gastos Fijos, Caja LLC, Caja Col, Precios (+3 contratos de cliente),
+REG, Cloud TRD, Mantenimiento web. Reglas clave: egreso "afecta utilidad sí/no", diezmo 10%,
+nómina fuente única, doble moneda, crédito Bancolombia, contrato cuatrimestral (alertas),
+calculadora de retenciones ICA/renta (fórmulas confirmadas y verificadas), renovaciones
+hosting/dominio + mantenimiento web, motor de recordatorios (dolor #1: se olvida cobrar),
+y el PRINCIPIO RECTOR: una sola BD, cliente = nodo central, la madre crea en cascada a Leadtion.
+**ARQUITECTURA v1 YA REDACTADA** en `ARQUITECTURA_TRD_INVESTMENT.md` (+ artefacto visual con el grafo:
+https://claude.ai/code/artifact/ab7ab800-bd1c-4354-91fc-d951c5c35e3b). Decisión: se EXTIENDE la app actual
+(misma Supabase). **EN CONSTRUCCIÓN: módulo REG (registro contable), primer módulo de la madre.** Ya escrito y
+con typecheck en verde (falta aplicar migración + verificación visual). Archivos:
+`supabase/migrations/0016_reg_registro_contable.sql` (reg_uvt, reg_tarifa_ica, reg_pago +
+colaboradores.identificacion/actividad_ciiu/tarifa_ica_mil); `web/src/lib/retenciones.ts`
+(cálculo puro, VERIFICADO contra el Excel en 4 casos); `web/src/lib/reg.ts`; sección nueva
+`/trd/*` con shell/branding propio (`web/src/app/trd/layout.tsx`, `TrdLogo` en Brand.tsx,
+carpeta `web/public/brand/trd/` con README para logos/fondo); página `/trd/reg` (page + acciones.ts
++ componentes `RegFila`/`RegFreelance`); tarjeta TRD en `/modulos`; estilos en globals.css.
+Notificaciones = dentro de la app (push al celular vía PWA queda como capa posterior).
+**MIGRACIÓN 0016 YA APLICADA en Supabase (2026-08-21)** y `/trd/reg` **VERIFICADO en local**: renderiza,
+calcula ICA/renta/girar en vivo (usa la UVT del año del mes: ago-2026 → UVT $52.374), guarda (upsert OK) y
+el checklist funciona. **Infra decidida = Opción A** (un dominio madre TRD; Leadtion por ruta; un solo login;
+mismo Supabase). En código: identidad de plataforma = TRD Investment (login co-branded "Casa de Leadtion",
+hub `/modulos` con logo/fondo TRD, tarjeta madre primero). Login role-aware ya existente: admin→/modulos,
+colaborador→/cs. **Logos/fondo TRD subidos y conectados** (`web/public/brand/trd/`: trd-logo-black/white.png,
+trd-symbol-*.png, trd-bg.png) — `TrdLogo`/`TrdSymbol` en Brand.tsx.
+**Correo automático (2026-08-21)**: construido con **Resend** (elegido por el usuario) vía API REST, sin SDK.
+`web/src/lib/email.ts` (`enviarEmail` + `plantillaCorreoPago`); acción `enviarCorreoPago` en `trd/reg/acciones.ts`
+(carga pago+email del colaborador, envía y marca `ck_correo`); celda "Correo" en `RegFila` = botón ✉ que envía
+(si no hay email en la ficha, avisa; si Resend no está configurado, muestra error claro). Falta que el usuario
+configure env `RESEND_API_KEY` y `RESEND_FROM` (remitente de dominio verificado) en local y Vercel → luego probar envío real.
+Pago de prueba de Andrés YA eliminado (reg_pago limpio).
+**Pendientes**: (1) Vercel: agregar dominio TRD como producción + redirect del viejo; (2) configurar Resend
+(API key + FROM) y probar envío; (3) cargar CIIU+tarifa reales de cada colaborador; (4) notificaciones in-app
+(motor de recordatorios) + PWA push al celular.
+(Lo de abajo es la fase 1-2 de Leadtion, ya terminada.)
 
 ## Qué es
 Plataforma web (Next.js + Supabase + Vercel) con selección de **módulos** tras el

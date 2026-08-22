@@ -31,6 +31,41 @@ export function LeadtionSymbol({
   );
 }
 
+/**
+ * Marca TRD (plataforma madre). Usa los archivos oficiales en /brand/trd/.
+ * variant "auto" cambia negro/blanco según el tema; "light" fuerza blanco
+ * (fondos oscuros); "dark" fuerza negro.
+ */
+const RATIO_TRD = 2.0; // ancho/alto del imagotipo TRD (2158×1080)
+
+export function TrdLogo({
+  height = 28,
+  variant = "auto",
+}: {
+  height?: number;
+  variant?: "auto" | "light" | "dark";
+}) {
+  const style = { height, width: height * RATIO_TRD, objectFit: "contain" as const };
+  if (variant === "light") {
+    return <img src="/brand/trd/trd-logo-white.png" alt="TRD Investment" style={style} />;
+  }
+  if (variant === "dark") {
+    return <img src="/brand/trd/trd-logo-black.png" alt="TRD Investment" style={style} />;
+  }
+  return (
+    <span className="brand-logo-auto" style={{ display: "inline-flex", height }}>
+      <img className="for-light" src="/brand/trd/trd-logo-black.png" alt="TRD Investment" style={style} />
+      <img className="for-dark" src="/brand/trd/trd-logo-white.png" alt="TRD Investment" style={style} />
+    </span>
+  );
+}
+
+/** Símbolo TRD (isotipo cuadrado). */
+export function TrdSymbol({ size = 40, color = "black" }: { size?: number; color?: "white" | "black" }) {
+  const src = color === "white" ? "/brand/trd/trd-symbol-white.png" : "/brand/trd/trd-symbol-black.png";
+  return <img src={src} alt="TRD Investment" width={size} height={size} style={{ width: size, height: size, objectFit: "contain" }} />;
+}
+
 export function Logo({
   height = 30,
   variant = "auto",

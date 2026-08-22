@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Logo } from "@/components/Brand";
+import { TrdLogo } from "@/components/Brand";
 import { logout } from "@/app/login/actions";
 import { soloAdmin } from "@/lib/sesion";
 
@@ -12,7 +12,7 @@ export default async function ModulosPage() {
   return (
     <main className="modulos-wrap">
       <div className="modulos-top">
-        <Logo height={30} variant="light" />
+        <TrdLogo height={32} variant="light" />
         <div className="topbar-right">
           {usuario && <span className="user-email">{usuario.email}</span>}
           <form action={logout}>
@@ -22,10 +22,17 @@ export default async function ModulosPage() {
       </div>
 
       <div className="modulos-centro">
-        <h1>¿Qué quieres hacer en Leadtion?</h1>
+        <h1>Plataforma TRD Investment</h1>
         <p className="sub">Elige el área con la que vas a trabajar.</p>
 
         <div className="modulos-grid">
+          <Link href="/trd/reg" className="modulo-card activa modulo-trd">
+            <span className="modulo-icono">▲</span>
+            <span className="modulo-nombre">TRD Investment (madre)</span>
+            <span className="modulo-desc">Finanzas de la matriz. Ahora: Registro contable (retenciones y pagos).</span>
+            <span className="modulo-cta">Entrar →</span>
+          </Link>
+
           <Link href="/modulos/equipo" className="modulo-card activa">
             <span className="modulo-icono">◆</span>
             <span className="modulo-nombre">Comisiones Equipo Interno</span>
