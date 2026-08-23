@@ -64,7 +64,10 @@ export default async function RegPage({
             <tr>
               <th>Colaborador</th>
               <th className="right">Mes anterior</th>
-              <th className="right">Cuenta de cobro</th>
+              <th className="right">Pago fijo</th>
+              <th>Adicional</th>
+              <th className="right">Comisión</th>
+              <th className="right">Total</th>
               <th className="right">ReteICA</th>
               <th className="right">ReteRenta</th>
               <th className="right">A girar</th>
@@ -80,10 +83,24 @@ export default async function RegPage({
               <RegFila key={`${r.colaboradorId ?? "f"}-${r.pagoId ?? "new"}-${r.nombre}`} r={r} mes={mes} uvt={uvt} />
             ))}
             {renglones.length === 0 && (
-              <tr><td colSpan={11} className="vacio">No hay colaboradores activos. Créalos en Customer Success → Colaboradores.</td></tr>
+              <tr><td colSpan={14} className="vacio">No hay personas activas. Créalas en Gastos Fijos → Nómina.</td></tr>
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="reg-costos">
+        <h2>Costos de la empresa (solo pagos ya marcados como pagados)</h2>
+        <div className="reg-costos-grid">
+          <div className="kpi"><span className="kpi-lbl">4×1000 (GMF)</span><span className="kpi-num neg">{cop(totales.gmf)}</span></div>
+          <div className="kpi"><span className="kpi-lbl">Costo transferencia</span><span className="kpi-num neg">{cop(totales.costoTransferencia)}</span></div>
+          <div className="kpi"><span className="kpi-lbl">IVA transferencia</span><span className="kpi-num neg">{cop(totales.ivaTransferencia)}</span></div>
+          <div className="kpi destacado"><span className="kpi-lbl">Total costos banco</span><span className="kpi-num neg">{cop(totales.gmf + totales.costoTransferencia + totales.ivaTransferencia)}</span></div>
+        </div>
+        <p className="reg-nota" style={{ marginTop: 8 }}>
+          Estos costos los asume Ebenezer (no se le descuentan al colaborador). Bancolombia y Nequi no tienen costo de
+          transferencia; otros bancos $7.590 + IVA 19%. El 4×1000 es 0,4% del valor girado.
+        </p>
       </div>
 
       <FreelanceForm mes={mes} />

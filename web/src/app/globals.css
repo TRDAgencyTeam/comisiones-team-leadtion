@@ -715,3 +715,14 @@ button.ck:hover { border-color: var(--muted); }
 /* Selects del formulario de persona */
 .pf-grid select { padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px;
   background: var(--bg); color: var(--text); font-size: 0.95rem; }
+
+/* REG: adicional (concepto) + costos de empresa */
+.in-desc { display: block; margin-top: 4px; width: 120px; font-size: 0.78rem !important; }
+.reg-costos { margin-top: 22px; }
+.reg-costos h2 { font-size: 1.05rem; margin-bottom: 10px; }
+.reg-costos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.reg-costos-grid .kpi { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.reg-costos-grid .kpi.destacado { border-color: var(--pending); }
+.ciclo-nota { background: var(--accent-soft); color: var(--text); border-radius: 8px; padding: 10px 14px;
+  font-size: 0.9rem; margin: 10px 0; }

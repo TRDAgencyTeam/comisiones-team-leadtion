@@ -60,9 +60,20 @@ identificación, correo, fecha nacimiento, fecha inicio, duración en meses y **
 nómina; activar/desactivar; etiqueta de contrato (vigente/vence pronto/vencido). Migración 0018 (campos de
 contrato en colaboradores). Las personas se crean con **categoría vacía → NO comisionan CS** (motor filtra por
 fundador/nuevo, verificado). `lib/nomina.ts`, `PersonaForm.tsx`. Nav TRD: "Gastos Fijos · Nómina" + "Registro contable".
-**Pendiente REG (fases siguientes)**: (3) adjuntar/ver hoja de vida + contratos vigente/anteriores (Supabase
-Storage); (4) dashboard con historial de pagos por mes (ICA/renta/nómina); resto de Gastos Fijos (herramientas,
-servicios públicos, reparto). Migraciones 0017 y 0018 YA aplicadas en Supabase.
+**Correo + formulario nómina (2026-08-22)**: correo mejorado (saludo personalizado, desglose, cierre "Equipo TRD",
+logo TRD vía env `EMAIL_LOGO_URL`, contacto + responder-a `contable@turincondigital.com` vía env `REPLY_TO_EMAIL`).
+Nómina: banco (desplegable, migración 0019), área desplegable con significado, cédula/valor con puntos de miles,
+duración vacía = indefinido. Catálogos en `lib/catalogos.ts` (BANCOS, AREAS, GMF 0.4%, IVA 19%, COSTO_TRANSFERENCIA_OTRO=7590).
+Facts verificados: 4x1000=0,4%, IVA=19%; costo transferencia otros bancos ≈ $7.590 (a confirmar por el usuario),
+Bancolombia/Nequi=$0. **Comisión CS: DECIDIDO que entra al total con retención.**
+**PENDIENTE (batch C — REG reestructura)**: renombrar "cuenta de cobro" → "Pago fijo"; columnas Adicional(+desc) y
+Comisión (sincronizada con comisiones Leadtion, solo lectura) → Total = fijo+adicional+comisión → ICA/renta sobre el
+total; sección de Costos de empresa (4x1000 + costo transferencia + IVA) contados SOLO cuando ck_pagado; correo debe
+incluir adicional/comisión (la plantilla ya lo soporta). Histórico por mes YA resuelto (reg_pago por mes; editar un mes
+no toca otros). **PENDIENTE (batch D)**: adjuntar/ver hoja de vida + cédula/RUT + contratos (Supabase Storage).
+El usuario debe: setear en Vercel `EMAIL_LOGO_URL` (URL pública del logo, ej. .../brand/trd/trd-logo-black.png) y
+`REPLY_TO_EMAIL` (opcional; default contable@turincondigital.com), y confirmar el costo exacto de transferencia.
+Migraciones 0017/0018/0019 YA aplicadas en Supabase.
 **Pendientes**: (1) Vercel: agregar dominio TRD como producción + redirect del viejo; (2) configurar Resend
 (API key + FROM) y probar envío; (3) cargar CIIU+tarifa reales de cada colaborador; (4) notificaciones in-app
 (motor de recordatorios) + PWA push al celular.

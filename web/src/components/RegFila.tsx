@@ -8,7 +8,13 @@ import { guardarPago, toggleCheck, eliminarPago, enviarCorreoPago } from "@/app/
 const cop = (n: number) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
 
-/** Botón-check de un estado del proceso (post al server, revalida). */
+/** Formatea dígitos con puntos de miles para mostrar en el input. */
+const fmtMiles = (v: string | number) => {
+  const d = String(v).replace(/[^\d]/g, "");
+  return d ? Number(d).toLocaleString("es-CO") : "";
+};
+const soloNum = (v: string) => Number(v.replace(/[^\d]/g, "")) || 0;
+
 function CheckCell({ pagoId, campo, valor }: { pagoId: number | null; campo: string; valor: boolean }) {
   if (pagoId == null) {
     return <td className="center"><span className="ck ck-off" title="Guarda el pago primero">–</span></td>;
@@ -27,7 +33,6 @@ function CheckCell({ pagoId, campo, valor }: { pagoId: number | null; campo: str
   );
 }
 
-/** Celda "Correo": envía (o reenvía) el correo de pago y marca el check. */
 function CorreoCell({ pagoId, enviado }: { pagoId: number | null; enviado: boolean }) {
   if (pagoId == null) {
     return <td className="center"><span className="ck ck-off" title="Guarda el pago primero">–</span></td>;
@@ -61,19 +66,22 @@ function CorreoCell({ pagoId, enviado }: { pagoId: number | null; enviado: boole
 }
 
 export function RegFila({ r, mes, uvt }: { r: RenglonReg; mes: string; uvt: number }) {
-  const [valor, setValor] = useState(r.prefill || 0);
+  const [pagoFijo, setPagoFijo] = useState(r.pagoFijo || 0);
+  const [adicional, setAdicional] = useState(r.adicional || 0);
 
-  // Cálculo EN VIVO con la tarifa única y la misma fórmula del backend.
-  const calc = calcularRetenciones({ valor, tarifaIcaMil: TARIFA_ICA_DEFAULT, uvt });
+  const total = pagoFijo + adicional + r.comision;
+  const calc = calcularRetenciones({ valor: total, tarifaIcaMil: TARIFA_ICA_DEFAULT, uvt });
   const rowId = `reg-${r.colaboradorId ?? "f"}-${r.pagoId ?? "new"}`;
 
-  // Freelance ya existente: solo lectura + checklist + eliminar (edición: borrar y recrear).
   if (r.esFreelance) {
     return (
       <tr>
         <td><span className="freelance-tag">freelance</span> {r.nombre}</td>
         <td className="right muted">—</td>
         <td className="right">{cop(r.valorCuentaCobro)}</td>
+        <td className="right muted">—</td>
+        <td className="right muted">—</td>
+        <td className="right strong">{cop(r.valorCuentaCobro)}</td>
         <td className="right neg">{cop(r.reteIca)}</td>
         <td className="right neg">{cop(r.reteRenta)}</td>
         <td className="right strong">{cop(r.valorGirar)}</td>
@@ -94,15 +102,23 @@ export function RegFila({ r, mes, uvt }: { r: RenglonReg; mes: string; uvt: numb
   return (
     <tr>
       <td>{r.nombre}</td>
-      <td className="right muted" title="Cuenta de cobro pagada el mes anterior">
+      <td className="right muted" title="Total pagado el mes anterior">
         {r.valorMesAnterior ? cop(r.valorMesAnterior) : "—"}
       </td>
       <td className="right">
-        <input
-          form={rowId} name="valor" type="number" step="1" value={valor || ""}
-          onChange={(e) => setValor(Number(e.target.value) || 0)} className="in-valor" placeholder="0"
-        />
+        <input form={rowId} name="pagoFijo" inputMode="numeric" value={pagoFijo ? fmtMiles(pagoFijo) : ""}
+          onChange={(e) => setPagoFijo(soloNum(e.target.value))} className="in-valor" placeholder="0" />
       </td>
+      <td>
+        <input form={rowId} name="adicional" inputMode="numeric" value={adicional ? fmtMiles(adicional) : ""}
+          onChange={(e) => setAdicional(soloNum(e.target.value))} className="in-valor" placeholder="0" />
+        <input form={rowId} name="adicionalDesc" defaultValue={r.adicionalDesc ?? ""} placeholder="concepto"
+          className="in-desc" />
+      </td>
+      <td className="right muted" title="Comisión CS del mes (sincronizada con Leadtion)">
+        {r.comision ? cop(r.comision) : "—"}
+      </td>
+      <td className="right strong">{cop(total)}</td>
       <td className="right neg">{cop(calc.reteIca)}</td>
       <td className="right neg">{cop(calc.reteRenta)}</td>
       <td className="right strong">{cop(calc.valorGirar)}</td>
@@ -114,8 +130,6 @@ export function RegFila({ r, mes, uvt }: { r: RenglonReg; mes: string; uvt: numb
         <form id={rowId} action={guardarPago}>
           <input type="hidden" name="colaboradorId" value={r.colaboradorId ?? ""} />
           <input type="hidden" name="mes" value={mes} />
-          <input type="hidden" name="salud" value="0" />
-          <input type="hidden" name="pension" value="0" />
           <button type="submit" className="btn-secondary btn-guardar">{r.pagoId ? "Actualizar" : "Guardar"}</button>
         </form>
       </td>
