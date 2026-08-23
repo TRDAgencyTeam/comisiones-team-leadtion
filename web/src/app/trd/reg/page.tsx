@@ -37,7 +37,7 @@ export default async function RegPage({
         <div>
           <h1>Registro contable</h1>
           <p className="sub">
-            Pago a colaboradores de <strong>{nombreMes(mes)}</strong> · UVT {cop(uvt)} · calcula ICA y renta solo.
+            Pago a colaboradores de <strong>{nombreMes(mes)}</strong> · UVT {cop(uvt)} · ICA 8,66‰ · calcula solo.
           </p>
         </div>
         <form method="get" className="reg-mes">
@@ -63,7 +63,7 @@ export default async function RegPage({
           <thead>
             <tr>
               <th>Colaborador</th>
-              <th>Actividad · tarifa</th>
+              <th className="right">Mes anterior</th>
               <th className="right">Cuenta de cobro</th>
               <th className="right">ReteICA</th>
               <th className="right">ReteRenta</th>

@@ -1,6 +1,6 @@
 import "server-only";
 import { consulta } from "@/lib/db";
-import { calcularRetenciones, uvtDeAnio } from "@/lib/retenciones";
+import { calcularRetenciones, uvtDeAnio, TARIFA_ICA_DEFAULT } from "@/lib/retenciones";
 
 /**
  * Datos del módulo REG (registro contable). Combina los colaboradores activos
@@ -18,6 +18,12 @@ export interface RenglonReg {
   identificacion: string | null;
   actividadCiiu: string | null;
   tarifaIcaMil: number;
+  /** Valor base de nómina del colaborador (pre-llena la cuenta de cobro). */
+  valorNomina: number;
+  /** Valor de la cuenta de cobro pagada el mes anterior (0 si no hubo). */
+  valorMesAnterior: number;
+  /** Valor sugerido para el input (pago del mes si existe; si no, la base). */
+  prefill: number;
   valorCuentaCobro: number;
   aporteSalud: number;
   aportePension: number;
@@ -41,6 +47,14 @@ export function primerDiaMes(mes: string): string {
   return `${m[1]}-${m[2]}-01`;
 }
 
+/** Primer día del mes ANTERIOR al dado ("YYYY-MM" → "YYYY-MM-01"). */
+export function primerDiaMesAnterior(mes: string): string {
+  const primer = primerDiaMes(mes);
+  const [a, m] = primer.split("-").map(Number);
+  const d = new Date(a!, (m! - 1) - 1, 1); // un mes atrás
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
 /** UVT vigente para el mes dado (según su año). */
 export async function uvtDeMes(mes: string): Promise<number> {
   const anio = Number(mes.slice(0, 4));
@@ -54,32 +68,44 @@ export async function uvtDeMes(mes: string): Promise<number> {
  */
 export async function renglonesDelMes(mes: string): Promise<RenglonReg[]> {
   const primer = primerDiaMes(mes);
+  const anterior = primerDiaMesAnterior(mes);
 
-  // Colaboradores activos con LEFT JOIN a su pago del mes.
+  // Colaboradores activos con LEFT JOIN a su pago del mes y al del mes anterior.
   const colabs = await consulta(
-    `select c.id, c.nombre, c.email, c.identificacion, c.actividad_ciiu, c.tarifa_ica_mil,
+    `select c.id, c.nombre, c.email, c.identificacion, c.valor_nomina,
             p.id as pago_id, p.valor_cuenta_cobro, p.aporte_salud, p.aporte_pension,
             p.rete_ica, p.rete_renta, p.valor_girar, p.costo_transferencia,
             p.ck_correo, p.ck_drive, p.ck_registro, p.ck_pagado,
-            p.identificacion as p_ident, p.actividad_ciiu as p_ciiu, p.tarifa_ica_mil as p_tarifa
+            p.identificacion as p_ident,
+            pa.valor_cuenta_cobro as valor_mes_anterior
        from public.colaboradores c
-       left join public.reg_pago p
-         on p.colaborador_id = c.id and p.mes = $1
+       left join public.reg_pago p  on p.colaborador_id = c.id and p.mes = $1
+       left join public.reg_pago pa on pa.colaborador_id = c.id and pa.mes = $2
       where c.activo
       order by (c.categoria is null), c.fecha_ingreso, c.nombre`,
-    [primer],
+    [primer, anterior],
   );
 
-  const renglonesColab: RenglonReg[] = colabs.map((r: Record<string, unknown>) => ({
-    pagoId: r.pago_id != null ? Number(r.pago_id) : null,
+  const renglonesColab: RenglonReg[] = colabs.map((r: Record<string, unknown>) => {
+    const tienePago = r.pago_id != null;
+    const valorPago = num(r.valor_cuenta_cobro);
+    const valorNomina = num(r.valor_nomina);
+    const valorMesAnterior = num(r.valor_mes_anterior);
+    // Prefill: si ya hay pago del mes, ese valor; si no, la base (nómina) o el mes anterior.
+    const prefill = tienePago ? valorPago : (valorNomina || valorMesAnterior || 0);
+    return {
+    pagoId: tienePago ? Number(r.pago_id) : null,
     colaboradorId: Number(r.id),
     nombre: String(r.nombre),
     esFreelance: false,
     email: (r.email as string) ?? null,
     identificacion: (r.p_ident as string) ?? (r.identificacion as string) ?? null,
-    actividadCiiu: (r.p_ciiu as string) ?? (r.actividad_ciiu as string) ?? null,
-    tarifaIcaMil: num(r.p_tarifa ?? r.tarifa_ica_mil),
-    valorCuentaCobro: num(r.valor_cuenta_cobro),
+    actividadCiiu: null,
+    tarifaIcaMil: TARIFA_ICA_DEFAULT,
+    valorNomina,
+    valorMesAnterior,
+    prefill,
+    valorCuentaCobro: valorPago,
     aporteSalud: num(r.aporte_salud),
     aportePension: num(r.aporte_pension),
     reteIca: num(r.rete_ica),
@@ -90,7 +116,8 @@ export async function renglonesDelMes(mes: string): Promise<RenglonReg[]> {
     ckDrive: Boolean(r.ck_drive),
     ckRegistro: Boolean(r.ck_registro),
     ckPagado: Boolean(r.ck_pagado),
-  }));
+    };
+  });
 
   // Freelance del mes (pagos sin colaborador_id).
   const free = await consulta(
@@ -112,6 +139,9 @@ export async function renglonesDelMes(mes: string): Promise<RenglonReg[]> {
     identificacion: (r.identificacion as string) ?? null,
     actividadCiiu: (r.actividad_ciiu as string) ?? null,
     tarifaIcaMil: num(r.tarifa_ica_mil),
+    valorNomina: 0,
+    valorMesAnterior: 0,
+    prefill: num(r.valor_cuenta_cobro),
     valorCuentaCobro: num(r.valor_cuenta_cobro),
     aporteSalud: num(r.aporte_salud),
     aportePension: num(r.aporte_pension),

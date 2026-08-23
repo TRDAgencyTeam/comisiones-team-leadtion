@@ -14,6 +14,13 @@
  *   `=B6+E6+F6` del Sheet, donde ICA y renta se guardan con su signo.
  */
 
+/**
+ * Tarifa de ICA (por mil) ÚNICA para todos los colaboradores. Verificada contra
+ * el Excel del usuario (actividad 7410 "diseño" = 8.66‰). Si cambia, se ajusta
+ * aquí en un solo lugar.
+ */
+export const TARIFA_ICA_DEFAULT = 8.66;
+
 /** UVT (Unidad de Valor Tributario) por año. Ampliable cada año. */
 export const UVT_POR_ANIO: Record<number, number> = {
   2024: 47065,

@@ -684,3 +684,10 @@ button.ck:hover { border-color: var(--muted); }
 .ck-send:hover { background: var(--accent-soft); }
 .ok-msg { background: var(--paid-soft); color: var(--paid); border: 1px solid var(--paid);
   border-radius: 8px; padding: 10px 14px; margin: 12px 0; }
+
+/* Correo: grupo enviado (✓) + reenviar (↻) */
+.ck-group { display: inline-flex; align-items: center; gap: 4px; }
+.ck-mini { width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--panel); color: var(--muted); cursor: pointer; font-size: 0.8rem; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center; }
+.ck-mini:hover { border-color: var(--accent); color: var(--accent); }

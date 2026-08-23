@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { RenglonReg } from "@/lib/reg";
-import { calcularRetenciones } from "@/lib/retenciones";
+import { calcularRetenciones, TARIFA_ICA_DEFAULT } from "@/lib/retenciones";
 import { guardarPago, toggleCheck, eliminarPago, enviarCorreoPago } from "@/app/trd/reg/acciones";
 
 const cop = (n: number) =>
@@ -27,7 +27,7 @@ function CheckCell({ pagoId, campo, valor }: { pagoId: number | null; campo: str
   );
 }
 
-/** Celda "Correo": envía el correo de pago (colaborador) y marca el check. */
+/** Celda "Correo": envía (o reenvía) el correo de pago y marca el check. */
 function CorreoCell({ pagoId, enviado }: { pagoId: number | null; enviado: boolean }) {
   if (pagoId == null) {
     return <td className="center"><span className="ck ck-off" title="Guarda el pago primero">–</span></td>;
@@ -35,12 +35,18 @@ function CorreoCell({ pagoId, enviado }: { pagoId: number | null; enviado: boole
   if (enviado) {
     return (
       <td className="center">
-        <form action={toggleCheck}>
-          <input type="hidden" name="pagoId" value={pagoId} />
-          <input type="hidden" name="campo" value="ck_correo" />
-          <input type="hidden" name="valor" value="0" />
-          <button type="submit" className="ck ck-on" title="Correo enviado (clic para desmarcar)">✓</button>
-        </form>
+        <div className="ck-group">
+          <form action={toggleCheck}>
+            <input type="hidden" name="pagoId" value={pagoId} />
+            <input type="hidden" name="campo" value="ck_correo" />
+            <input type="hidden" name="valor" value="0" />
+            <button type="submit" className="ck ck-on" title="Enviado — clic para desmarcar">✓</button>
+          </form>
+          <form action={enviarCorreoPago}>
+            <input type="hidden" name="pagoId" value={pagoId} />
+            <button type="submit" className="ck-mini" title="Reenviar correo">↻</button>
+          </form>
+        </div>
       </td>
     );
   }
@@ -55,13 +61,10 @@ function CorreoCell({ pagoId, enviado }: { pagoId: number | null; enviado: boole
 }
 
 export function RegFila({ r, mes, uvt }: { r: RenglonReg; mes: string; uvt: number }) {
-  const [valor, setValor] = useState(r.valorCuentaCobro || 0);
-  const [tarifa, setTarifa] = useState(r.tarifaIcaMil || 0);
-  const [salud, setSalud] = useState(r.aporteSalud || 0);
-  const [pension, setPension] = useState(r.aportePension || 0);
+  const [valor, setValor] = useState(r.prefill || 0);
 
-  // Cálculo EN VIVO con la misma fórmula del backend (fuente única).
-  const calc = calcularRetenciones({ valor, tarifaIcaMil: tarifa, aporteSalud: salud, aportePension: pension, uvt });
+  // Cálculo EN VIVO con la tarifa única y la misma fórmula del backend.
+  const calc = calcularRetenciones({ valor, tarifaIcaMil: TARIFA_ICA_DEFAULT, uvt });
   const rowId = `reg-${r.colaboradorId ?? "f"}-${r.pagoId ?? "new"}`;
 
   // Freelance ya existente: solo lectura + checklist + eliminar (edición: borrar y recrear).
@@ -69,7 +72,7 @@ export function RegFila({ r, mes, uvt }: { r: RenglonReg; mes: string; uvt: numb
     return (
       <tr>
         <td><span className="freelance-tag">freelance</span> {r.nombre}</td>
-        <td className="muted">{r.actividadCiiu ?? "—"} · {r.tarifaIcaMil}‰</td>
+        <td className="right muted">—</td>
         <td className="right">{cop(r.valorCuentaCobro)}</td>
         <td className="right neg">{cop(r.reteIca)}</td>
         <td className="right neg">{cop(r.reteRenta)}</td>
@@ -91,12 +94,8 @@ export function RegFila({ r, mes, uvt }: { r: RenglonReg; mes: string; uvt: numb
   return (
     <tr>
       <td>{r.nombre}</td>
-      <td className="reg-actividad">
-        <input form={rowId} name="actividad" defaultValue={r.actividadCiiu ?? ""} placeholder="CIIU" className="in-mini" />
-        <input
-          form={rowId} name="tarifa" type="number" step="0.01" value={tarifa || ""}
-          onChange={(e) => setTarifa(Number(e.target.value) || 0)} placeholder="‰" className="in-tarifa"
-        />
+      <td className="right muted" title="Cuenta de cobro pagada el mes anterior">
+        {r.valorMesAnterior ? cop(r.valorMesAnterior) : "—"}
       </td>
       <td className="right">
         <input
@@ -115,10 +114,9 @@ export function RegFila({ r, mes, uvt }: { r: RenglonReg; mes: string; uvt: numb
         <form id={rowId} action={guardarPago}>
           <input type="hidden" name="colaboradorId" value={r.colaboradorId ?? ""} />
           <input type="hidden" name="mes" value={mes} />
-          <input type="hidden" name="salud" value={salud} />
-          <input type="hidden" name="pension" value={pension} />
-          <input type="hidden" name="identificacion" value={r.identificacion ?? ""} />
-          <button type="submit" className="btn-secondary btn-guardar">Guardar</button>
+          <input type="hidden" name="salud" value="0" />
+          <input type="hidden" name="pension" value="0" />
+          <button type="submit" className="btn-secondary btn-guardar">{r.pagoId ? "Actualizar" : "Guardar"}</button>
         </form>
       </td>
     </tr>

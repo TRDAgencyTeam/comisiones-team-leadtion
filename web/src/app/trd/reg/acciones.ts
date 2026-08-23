@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { soloAdmin } from "@/lib/sesion";
 import { primerDiaMes, uvtDeMes, recalcular } from "@/lib/reg";
+import { TARIFA_ICA_DEFAULT } from "@/lib/retenciones";
 import { enviarEmail, plantillaCorreoPago } from "@/lib/email";
 
 const n = (v: FormDataEntryValue | null): number => {
@@ -22,40 +23,31 @@ export async function guardarPago(formData: FormData) {
   const colaboradorId = Number(formData.get("colaboradorId"));
   const mes = primerDiaMes(String(formData.get("mes") ?? ""));
   const valor = n(formData.get("valor"));
-  const tarifa = n(formData.get("tarifa"));
+  const tarifa = TARIFA_ICA_DEFAULT; // tarifa única para todos
   const salud = n(formData.get("salud"));
   const pension = n(formData.get("pension"));
   const costoTransf = n(formData.get("costoTransferencia"));
-  const actividad = String(formData.get("actividad") ?? "").trim() || null;
-  const identificacion = String(formData.get("identificacion") ?? "").trim() || null;
 
   const uvt = await uvtDeMes(mes);
   const { reteIca, reteRenta, valorGirar } = recalcular(valor, tarifa, salud, pension, uvt);
 
   await consulta(
     `insert into public.reg_pago
-       (colaborador_id, identificacion, actividad_ciiu, tarifa_ica_mil, mes,
+       (colaborador_id, tarifa_ica_mil, mes,
         valor_cuenta_cobro, aporte_salud, aporte_pension,
         rete_ica, rete_renta, valor_girar, costo_transferencia, actualizado_en)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12, now())
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, now())
      on conflict (colaborador_id, mes) where colaborador_id is not null
-     do update set identificacion=$2, actividad_ciiu=$3, tarifa_ica_mil=$4,
-        valor_cuenta_cobro=$6, aporte_salud=$7, aporte_pension=$8,
-        rete_ica=$9, rete_renta=$10, valor_girar=$11, costo_transferencia=$12,
+     do update set tarifa_ica_mil=$2,
+        valor_cuenta_cobro=$4, aporte_salud=$5, aporte_pension=$6,
+        rete_ica=$7, rete_renta=$8, valor_girar=$9, costo_transferencia=$10,
         actualizado_en=now()`,
-    [colaboradorId, identificacion, actividad, tarifa, mes, valor, salud, pension,
+    [colaboradorId, tarifa, mes, valor, salud, pension,
      reteIca, reteRenta, valorGirar, costoTransf],
   );
 
-  // Sincroniza los datos tributarios en la ficha del colaborador (fuente única).
-  await consulta(
-    `update public.colaboradores
-        set identificacion = coalesce($2, identificacion),
-            actividad_ciiu = coalesce($3, actividad_ciiu),
-            tarifa_ica_mil = $4
-      where id = $1`,
-    [colaboradorId, identificacion, actividad, tarifa],
-  );
+  // El valor base de nómina "aprende" del último pago → pre-llena el próximo mes.
+  await consulta(`update public.colaboradores set valor_nomina = $2 where id = $1`, [colaboradorId, valor]);
 
   revalidatePath("/trd/reg");
 }
