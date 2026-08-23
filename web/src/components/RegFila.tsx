@@ -8,7 +8,6 @@ import { guardarPago, toggleCheck, eliminarPago, enviarCorreoPago } from "@/app/
 const cop = (n: number) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
 
-/** Formatea dígitos con puntos de miles para mostrar en el input. */
 const fmtMiles = (v: string | number) => {
   const d = String(v).replace(/[^\d]/g, "");
   return d ? Number(d).toLocaleString("es-CO") : "";
@@ -65,9 +64,27 @@ function CorreoCell({ pagoId, enviado }: { pagoId: number | null; enviado: boole
   );
 }
 
+/** Campo de dinero minimalista con prefijo $ y miles automáticos. */
+function MoneyInput({ form, name, value, onChange }: {
+  form?: string; name: string; value: number; onChange: (n: number) => void;
+}) {
+  return (
+    <span className="money">
+      <span className="money-sig">$</span>
+      <input
+        form={form} name={name} inputMode="numeric" className="money-in"
+        value={value ? fmtMiles(value) : ""} onChange={(e) => onChange(soloNum(e.target.value))} placeholder="0"
+      />
+    </span>
+  );
+}
+
 export function RegFila({ r, mes, uvt }: { r: RenglonReg; mes: string; uvt: number }) {
   const [pagoFijo, setPagoFijo] = useState(r.pagoFijo || 0);
   const [adicional, setAdicional] = useState(r.adicional || 0);
+  const [concepto, setConcepto] = useState(r.adicionalDesc ?? "");
+  const [modal, setModal] = useState(false);
+  const [borrador, setBorrador] = useState("");
 
   const total = pagoFijo + adicional + r.comision;
   const calc = calcularRetenciones({ valor: total, tarifaIcaMil: TARIFA_ICA_DEFAULT, uvt });
@@ -106,14 +123,42 @@ export function RegFila({ r, mes, uvt }: { r: RenglonReg; mes: string; uvt: numb
         {r.valorMesAnterior ? cop(r.valorMesAnterior) : "—"}
       </td>
       <td className="right">
-        <input form={rowId} name="pagoFijo" inputMode="numeric" value={pagoFijo ? fmtMiles(pagoFijo) : ""}
-          onChange={(e) => setPagoFijo(soloNum(e.target.value))} className="in-valor" placeholder="0" />
+        <MoneyInput form={rowId} name="pagoFijo" value={pagoFijo} onChange={setPagoFijo} />
       </td>
       <td>
-        <input form={rowId} name="adicional" inputMode="numeric" value={adicional ? fmtMiles(adicional) : ""}
-          onChange={(e) => setAdicional(soloNum(e.target.value))} className="in-valor" placeholder="0" />
-        <input form={rowId} name="adicionalDesc" defaultValue={r.adicionalDesc ?? ""} placeholder="concepto"
-          className="in-desc" />
+        <div className="adic-cell">
+          <MoneyInput form={rowId} name="adicional" value={adicional} onChange={setAdicional} />
+          <button
+            type="button"
+            className={`chip-concepto ${concepto ? "tiene" : ""}`}
+            onClick={() => { setBorrador(concepto); setModal(true); }}
+            title={concepto || "Agregar concepto del adicional"}
+          >
+            {concepto ? concepto : "+ concepto"}
+          </button>
+          <input type="hidden" form={rowId} name="adicionalDesc" value={concepto} />
+        </div>
+
+        {modal && (
+          <div className="modal-overlay" onClick={() => setModal(false)}>
+            <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+              <h3>Concepto del adicional</h3>
+              <p className="modal-sub">{r.nombre} · sale en el correo de pago.</p>
+              <input
+                autoFocus className="modal-input" value={borrador}
+                onChange={(e) => setBorrador(e.target.value)}
+                placeholder="Ej: 6 videos extra, bono de desempeño…"
+                onKeyDown={(e) => { if (e.key === "Enter") { setConcepto(borrador.trim()); setModal(false); } }}
+              />
+              <div className="modal-acciones">
+                <button type="button" className="btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
+                <button type="button" className="btn-primary" onClick={() => { setConcepto(borrador.trim()); setModal(false); }}>
+                  Guardar concepto
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </td>
       <td className="right muted" title="Comisión CS del mes (sincronizada con Leadtion)">
         {r.comision ? cop(r.comision) : "—"}

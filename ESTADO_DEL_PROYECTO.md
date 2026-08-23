@@ -66,11 +66,16 @@ Nómina: banco (desplegable, migración 0019), área desplegable con significado
 duración vacía = indefinido. Catálogos en `lib/catalogos.ts` (BANCOS, AREAS, GMF 0.4%, IVA 19%, COSTO_TRANSFERENCIA_OTRO=7590).
 Facts verificados: 4x1000=0,4%, IVA=19%; costo transferencia otros bancos ≈ $7.590 (a confirmar por el usuario),
 Bancolombia/Nequi=$0. **Comisión CS: DECIDIDO que entra al total con retención.**
-**PENDIENTE (batch C — REG reestructura)**: renombrar "cuenta de cobro" → "Pago fijo"; columnas Adicional(+desc) y
-Comisión (sincronizada con comisiones Leadtion, solo lectura) → Total = fijo+adicional+comisión → ICA/renta sobre el
-total; sección de Costos de empresa (4x1000 + costo transferencia + IVA) contados SOLO cuando ck_pagado; correo debe
-incluir adicional/comisión (la plantilla ya lo soporta). Histórico por mes YA resuelto (reg_pago por mes; editar un mes
-no toca otros). **PENDIENTE (batch D)**: adjuntar/ver hoja de vida + cédula/RUT + contratos (Supabase Storage).
+**REG Lote C HECHO (2026-08-22)**: fila = Pago fijo + Adicional(+concepto) + Comisión CS → Total, con ICA/renta
+sobre el total (migración 0020: pago_fijo, adicional, adicional_desc, comision). "Cuenta de cobro" → "Pago fijo".
+**Comisión CS sincronizada desde Leadtion (USD→COP a tasa del día)** entra al total; VERIFICADO en local (Andrés
+~$133 USD → $419.108 COP). **Marcar "Pagado" en REG registra el pago de la comisión** (comision_hitos vía
+`lib/comisiones-pago.ts` pagarCiclo/deshacerCiclo) y desmarcar lo deshace; se QUITÓ el botón "Pagar" del módulo CS
+(ahora solo lectura, nota "se paga desde REG"). Sección **Costos de empresa** (4x1000 0,4% + transferencia por banco
++ IVA 19%) contados SOLO cuando ck_pagado. Correo con adicional (concepto) + comisión. Histórico por mes YA resuelto
+(reg_pago por mes; editar un mes no toca otros ni el contrato). Migración 0020 aplicada.
+**PENDIENTE (Lote D)**: adjuntar/ver hoja de vida + cédula/RUT + contratos vigente/anteriores (Supabase Storage) —
+requiere crear un bucket de Storage. Costo transferencia exacto a confirmar por el usuario (usado $7.590).
 El usuario debe: setear en Vercel `EMAIL_LOGO_URL` (URL pública del logo, ej. .../brand/trd/trd-logo-black.png) y
 `REPLY_TO_EMAIL` (opcional; default contable@turincondigital.com), y confirmar el costo exacto de transferencia.
 Migraciones 0017/0018/0019 YA aplicadas en Supabase.

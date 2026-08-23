@@ -726,3 +726,34 @@ button.ck:hover { border-color: var(--muted); }
 .reg-costos-grid .kpi.destacado { border-color: var(--pending); }
 .ciclo-nota { background: var(--accent-soft); color: var(--text); border-radius: 8px; padding: 10px 14px;
   font-size: 0.9rem; margin: 10px 0; }
+
+/* --- REG: campo de dinero minimalista --- */
+.money { display: inline-flex; align-items: center; gap: 2px; width: 118px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--bg);
+  padding: 0 8px; transition: border-color .15s, box-shadow .15s; }
+.money:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.money-sig { color: var(--muted); font-size: 0.82rem; }
+.money-in { border: none; background: transparent; color: var(--text); width: 100%;
+  text-align: right; padding: 7px 0; font-size: 0.9rem; font-variant-numeric: tabular-nums; outline: none; }
+
+/* --- REG: adicional + chip de concepto --- */
+.adic-cell { display: flex; flex-direction: column; gap: 5px; align-items: flex-end; }
+.chip-concepto { max-width: 118px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 0.72rem; padding: 3px 9px; border-radius: 999px; cursor: pointer;
+  border: 1px dashed var(--border); background: transparent; color: var(--muted); transition: all .15s; }
+.chip-concepto:hover { border-color: var(--accent); color: var(--accent); }
+.chip-concepto.tiene { border-style: solid; border-color: transparent; background: var(--accent-soft);
+  color: var(--accent); font-weight: 600; }
+
+/* --- Popup / modal --- */
+.modal-overlay { position: fixed; inset: 0; background: rgba(10, 12, 18, 0.55); backdrop-filter: blur(2px);
+  display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+.modal-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+  padding: 22px 24px; width: 100%; max-width: 380px; box-shadow: 0 12px 40px rgba(0,0,0,.25);
+  text-align: left; }
+.modal-card h3 { margin: 0 0 2px; font-size: 1.1rem; }
+.modal-sub { margin: 0 0 14px; color: var(--muted); font-size: 0.82rem; }
+.modal-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font-size: 0.95rem; outline: none; }
+.modal-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.modal-acciones { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
