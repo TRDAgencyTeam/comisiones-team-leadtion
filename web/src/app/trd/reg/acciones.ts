@@ -6,7 +6,7 @@ import { consulta } from "@/lib/db";
 import { soloAdmin } from "@/lib/sesion";
 import { primerDiaMes, uvtDeMes, recalcular } from "@/lib/reg";
 import { TARIFA_ICA_DEFAULT } from "@/lib/retenciones";
-import { enviarEmail, plantillaCorreoPago } from "@/lib/email";
+import { enviarEmail, plantillaCorreoPago, REPLY_TO } from "@/lib/email";
 
 const n = (v: FormDataEntryValue | null): number => {
   const x = Number(String(v ?? "").replace(/[^0-9.-]/g, ""));
@@ -125,17 +125,19 @@ export async function enviarCorreoPago(formData: FormData) {
   }
 
   const mesLabel = new Date(`${mesISO}-01T00:00:00`).toLocaleDateString("es-CO", { month: "long", year: "numeric" });
+  const total = Number(r!.valor_cuenta_cobro);
   const { subject, html } = plantillaCorreoPago({
     nombre: String(r!.nombre),
     mesLabel,
-    valorCuentaCobro: Number(r!.valor_cuenta_cobro),
+    pagoFijo: total,
+    totalCuentaCobro: total,
     reteIca: Number(r!.rete_ica),
     reteRenta: Number(r!.rete_renta),
     valorGirar: Number(r!.valor_girar),
   });
 
   try {
-    await enviarEmail({ to: email, subject, html });
+    await enviarEmail({ to: email, subject, html, replyTo: REPLY_TO });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Error enviando el correo.";
     redirect(`${back}&error=` + encodeURIComponent(msg));

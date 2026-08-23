@@ -11,6 +11,7 @@ export interface PersonaNomina {
   id: number;
   nombre: string;
   area: string | null;
+  banco: string | null;
   email: string | null;
   identificacion: string | null;
   fechaNacimiento: string | null;
@@ -33,6 +34,7 @@ function mapRow(r: Record<string, unknown>): PersonaNomina {
     id: Number(r.id),
     nombre: String(r.nombre),
     area: (r.area as string) ?? null,
+    banco: (r.banco as string) ?? null,
     email: (r.email as string) ?? null,
     identificacion: (r.identificacion as string) ?? null,
     fechaNacimiento: toISO(r.fecha_nacimiento),
@@ -44,7 +46,7 @@ function mapRow(r: Record<string, unknown>): PersonaNomina {
   };
 }
 
-const CAMPOS = `id, nombre, area, email, identificacion, fecha_nacimiento,
+const CAMPOS = `id, nombre, area, banco, email, identificacion, fecha_nacimiento,
   fecha_inicio_contrato, duracion_contrato_meses, fecha_fin_contrato, valor_nomina, activo`;
 
 /** Lista toda la nómina (activos primero, luego por área y nombre). */

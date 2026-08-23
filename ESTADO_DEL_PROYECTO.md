@@ -52,10 +52,17 @@ dominio trdagency.me verificado en Hostinger; env RESEND_API_KEY/RESEND_FROM en 
 **REG Fase 1 (2026-08-22)**: tarifa ICA única 8,66‰ para todos (se quitaron actividad/tarifa por fila);
 valor base de nómina (migración 0017 `colaboradores.valor_nomina`) que pre-llena la cuenta de cobro y
 "aprende" del último pago; columna "Mes anterior"; botón "Actualizar" para corregir; reenviar correo (↻).
-**Pendiente REG (fases siguientes, pedidas por el usuario)**: (2) mover gestión de colaboradores al módulo
-madre (Nómina): nombre completo, fecha nacimiento, fecha inicio, duración contrato, fecha fin AUTO, valor
-nómina; (3) adjuntar/ver hoja de vida + contratos vigente/anteriores (Supabase Storage); (4) dashboard con
-historial de pagos por mes (ICA/renta/nómina). Tarifa a confirmar (asumida 8,66‰).
+**UVT confirmada**: se deja UVT oficial 2026 = $52.374 (el Excel del usuario usaba la 2025 = $49.799 y por eso la
+renta no cuadraba; la plataforma está correcta legalmente). ICA 8,66‰ confirmada.
+**REG Fase 2 — Nómina dentro de Gastos Fijos (2026-08-22)**: sección `/trd/gastos-fijos/nomina` (la nómina va
+DENTRO de Gastos Fijos, como el Excel, NO aparte). Alta/edición de personas con nombre completo, área,
+identificación, correo, fecha nacimiento, fecha inicio, duración en meses y **fecha fin AUTOMÁTICA**, valor
+nómina; activar/desactivar; etiqueta de contrato (vigente/vence pronto/vencido). Migración 0018 (campos de
+contrato en colaboradores). Las personas se crean con **categoría vacía → NO comisionan CS** (motor filtra por
+fundador/nuevo, verificado). `lib/nomina.ts`, `PersonaForm.tsx`. Nav TRD: "Gastos Fijos · Nómina" + "Registro contable".
+**Pendiente REG (fases siguientes)**: (3) adjuntar/ver hoja de vida + contratos vigente/anteriores (Supabase
+Storage); (4) dashboard con historial de pagos por mes (ICA/renta/nómina); resto de Gastos Fijos (herramientas,
+servicios públicos, reparto). Migraciones 0017 y 0018 YA aplicadas en Supabase.
 **Pendientes**: (1) Vercel: agregar dominio TRD como producción + redirect del viejo; (2) configurar Resend
 (API key + FROM) y probar envío; (3) cargar CIIU+tarifa reales de cada colaborador; (4) notificaciones in-app
 (motor de recordatorios) + PWA push al celular.

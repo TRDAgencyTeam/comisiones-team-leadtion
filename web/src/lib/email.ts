@@ -18,6 +18,9 @@ export interface CorreoParams {
   replyTo?: string;
 }
 
+/** Correo al que responden los colaboradores (configurable por env). */
+export const REPLY_TO = process.env.REPLY_TO_EMAIL || "contable@turincondigital.com";
+
 export function emailConfigurado(): boolean {
   return !!process.env.RESEND_API_KEY && !!process.env.RESEND_FROM;
 }
@@ -53,30 +56,48 @@ const cop = (n: number) =>
 export function plantillaCorreoPago(datos: {
   nombre: string;
   mesLabel: string;
-  valorCuentaCobro: number;
+  pagoFijo: number;
+  adicional?: number;
+  adicionalDescripcion?: string | null;
+  comision?: number;
+  totalCuentaCobro: number;
   reteIca: number;
   reteRenta: number;
   valorGirar: number;
 }): { subject: string; html: string } {
-  const { nombre, mesLabel, valorCuentaCobro, reteIca, reteRenta, valorGirar } = datos;
-  const subject = `Pago realizado — ${mesLabel}`;
+  const {
+    nombre, mesLabel, pagoFijo, adicional = 0, adicionalDescripcion, comision = 0,
+    totalCuentaCobro, reteIca, reteRenta, valorGirar,
+  } = datos;
+  const primerNombre = nombre.trim().split(/\s+/)[0] || nombre;
+  const subject = `Comprobante de pago de nómina — ${mesLabel}`;
+
   const fila = (lbl: string, val: string, fuerte = false) =>
     `<tr>
        <td style="padding:8px 0;color:#586274;font-size:14px">${lbl}</td>
        <td style="padding:8px 0;text-align:right;font-size:14px;${fuerte ? "font-weight:700" : ""}">${val}</td>
      </tr>`;
+
+  const logoUrl = process.env.EMAIL_LOGO_URL;
+  const encabezado = logoUrl
+    ? `<img src="${logoUrl}" alt="TRD Investment" height="40" style="height:40px;margin-bottom:8px" />`
+    : `<div style="font-weight:700;font-size:20px;color:#2e2a6e;margin-bottom:8px">TRD Investment</div>`;
+
   const html = `
-  <div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;color:#141922">
-    <p style="font-size:15px">Hola ${nombre},</p>
-    <p style="font-size:15px">Te confirmamos que se realizó el pago correspondiente a <strong>${mesLabel}</strong>. Este es el detalle:</p>
+  <div style="font-family:Arial,Helvetica,sans-serif;max-width:540px;margin:0 auto;color:#141922">
+    ${encabezado}
+    <p style="font-size:15px">Hola ${primerNombre}, adjuntamos el comprobante y el desglose del pago de tu nómina. Gracias por el trabajo que haces.</p>
     <table style="width:100%;border-collapse:collapse;border-top:1px solid #e2e7ee;border-bottom:1px solid #e2e7ee;margin:14px 0">
-      ${fila("Valor cuenta de cobro", cop(valorCuentaCobro))}
+      ${fila("Pago fijo", cop(pagoFijo))}
+      ${adicional ? fila(`Adicional${adicionalDescripcion ? ` (${adicionalDescripcion})` : ""}`, cop(adicional)) : ""}
+      ${comision ? fila("Comisión", cop(comision)) : ""}
+      ${fila("Total cuenta de cobro", cop(totalCuentaCobro))}
       ${fila("Retención de ICA", cop(reteIca))}
       ${fila("Retención de renta", cop(reteRenta))}
       ${fila("Valor girado", cop(valorGirar), true)}
     </table>
-    <p style="font-size:13px;color:#586274">Cualquier duda, responde a este correo.</p>
-    <p style="font-size:13px;color:#586274">TRD Investment</p>
+    <p style="font-size:13px;color:#586274">Si tienes alguna pregunta o inconsistencia, responde este correo a <a href="mailto:${REPLY_TO}" style="color:#2e2a6e">${REPLY_TO}</a>.</p>
+    <p style="font-size:15px;margin-top:18px">Bendiciones y éxitos en este mes, un abrazo,<br/><strong>Equipo TRD</strong></p>
   </div>`;
   return { subject, html };
 }
