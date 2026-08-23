@@ -91,3 +91,57 @@ export async function cambiarEstadoPersona(formData: FormData) {
   await consulta(`update public.colaboradores set activo=$2 where id=$1`, [id, activar]);
   revalidatePath("/trd/gastos-fijos/nomina");
 }
+
+const MIMES_OK = ["application/pdf", "image/png", "image/jpeg", "image/jpg", "image/webp"];
+const TIPOS_OK = ["hoja_vida", "cedula", "rut", "contrato"];
+
+/** Sube un documento (hoja de vida, cédula/RUT, contrato) del colaborador. */
+export async function subirDocumento(formData: FormData) {
+  await soloAdmin();
+  const colaboradorId = Number(formData.get("colaboradorId"));
+  const tipo = String(formData.get("tipo"));
+  const esVigente = String(formData.get("vigente")) === "1";
+  const archivo = formData.get("archivo");
+  const back = `/trd/gastos-fijos/nomina/${colaboradorId}`;
+
+  if (!TIPOS_OK.includes(tipo)) redirect(`${back}?error=` + encodeURIComponent("Tipo de documento inválido."));
+  if (!(archivo instanceof File) || archivo.size === 0) {
+    redirect(`${back}?error=` + encodeURIComponent("Selecciona un archivo."));
+  }
+  const file = archivo as File;
+  if (!MIMES_OK.includes(file.type)) {
+    redirect(`${back}?error=` + encodeURIComponent("Formato no permitido (usa PDF, PNG o JPG)."));
+  }
+  if (file.size > 15 * 1024 * 1024) {
+    redirect(`${back}?error=` + encodeURIComponent("El archivo supera 15 MB."));
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  // Si es un contrato marcado vigente, los demás contratos pasan a "anteriores".
+  if (tipo === "contrato" && esVigente) {
+    await consulta(
+      `update public.colaborador_documento set es_vigente=false where colaborador_id=$1 and tipo='contrato'`,
+      [colaboradorId],
+    );
+  }
+
+  await consulta(
+    `insert into public.colaborador_documento
+       (colaborador_id, tipo, nombre_archivo, mime, tamano, contenido, es_vigente)
+     values ($1,$2,$3,$4,$5,$6,$7)`,
+    [colaboradorId, tipo, file.name, file.type, file.size, buffer, tipo === "contrato" ? esVigente : false],
+  );
+
+  revalidatePath(back);
+  redirect(back);
+}
+
+/** Elimina un documento del colaborador. */
+export async function eliminarDocumento(formData: FormData) {
+  await soloAdmin();
+  const docId = Number(formData.get("docId"));
+  const colaboradorId = Number(formData.get("colaboradorId"));
+  await consulta(`delete from public.colaborador_documento where id=$1`, [docId]);
+  revalidatePath(`/trd/gastos-fijos/nomina/${colaboradorId}`);
+}
