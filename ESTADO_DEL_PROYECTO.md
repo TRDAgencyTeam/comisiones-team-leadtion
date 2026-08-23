@@ -46,7 +46,16 @@ trd-symbol-*.png, trd-bg.png) — `TrdLogo`/`TrdSymbol` en Brand.tsx.
 (carga pago+email del colaborador, envía y marca `ck_correo`); celda "Correo" en `RegFila` = botón ✉ que envía
 (si no hay email en la ficha, avisa; si Resend no está configurado, muestra error claro). Falta que el usuario
 configure env `RESEND_API_KEY` y `RESEND_FROM` (remitente de dominio verificado) en local y Vercel → luego probar envío real.
-Pago de prueba de Andrés YA eliminado (reg_pago limpio).
+Pago de prueba de Andrés YA eliminado (reg_pago limpio). Correo REAL probado y recibido OK (Resend +
+dominio trdagency.me verificado en Hostinger; env RESEND_API_KEY/RESEND_FROM en Vercel).
+**Publicación**: se trabaja en la rama `trd-madre-reg` (enlace de PRUEBA en Vercel, no en producción aún).
+**REG Fase 1 (2026-08-22)**: tarifa ICA única 8,66‰ para todos (se quitaron actividad/tarifa por fila);
+valor base de nómina (migración 0017 `colaboradores.valor_nomina`) que pre-llena la cuenta de cobro y
+"aprende" del último pago; columna "Mes anterior"; botón "Actualizar" para corregir; reenviar correo (↻).
+**Pendiente REG (fases siguientes, pedidas por el usuario)**: (2) mover gestión de colaboradores al módulo
+madre (Nómina): nombre completo, fecha nacimiento, fecha inicio, duración contrato, fecha fin AUTO, valor
+nómina; (3) adjuntar/ver hoja de vida + contratos vigente/anteriores (Supabase Storage); (4) dashboard con
+historial de pagos por mes (ICA/renta/nómina). Tarifa a confirmar (asumida 8,66‰).
 **Pendientes**: (1) Vercel: agregar dominio TRD como producción + redirect del viejo; (2) configurar Resend
 (API key + FROM) y probar envío; (3) cargar CIIU+tarifa reales de cada colaborador; (4) notificaciones in-app
 (motor de recordatorios) + PWA push al celular.

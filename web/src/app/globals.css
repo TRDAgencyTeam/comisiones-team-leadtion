@@ -691,3 +691,23 @@ button.ck:hover { border-color: var(--muted); }
   background: var(--panel); color: var(--muted); cursor: pointer; font-size: 0.8rem; line-height: 1;
   display: inline-flex; align-items: center; justify-content: center; }
 .ck-mini:hover { border-color: var(--accent); color: var(--accent); }
+
+/* --- Nómina (Gastos Fijos) --- */
+.fila-inactiva { opacity: 0.55; }
+.ct-tag { display: inline-block; font-size: 0.7rem; padding: 2px 8px; border-radius: 999px; font-weight: 600; }
+.ct-ok { background: var(--paid-soft); color: var(--paid); }
+.ct-pronto { background: var(--pending-soft); color: var(--pending); }
+.ct-venc { background: #fde2e1; color: #b42318; }
+.ct-none { background: var(--accent-soft); color: var(--muted); }
+@media (prefers-color-scheme: dark) { .ct-venc { background: #3a1512; color: #f4a6a0; } }
+
+/* Formulario de persona */
+.persona-form { margin-top: 8px; }
+.pf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+.pf-grid label { display: flex; flex-direction: column; gap: 5px; font-size: 0.82rem; color: var(--muted); }
+.pf-grid .pf-full { grid-column: 1 / -1; }
+.pf-grid input { padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font-size: 0.95rem; }
+.pf-readonly { background: var(--accent-soft) !important; color: var(--text) !important; font-weight: 600; }
+.pf-acciones { margin-top: 16px; }
