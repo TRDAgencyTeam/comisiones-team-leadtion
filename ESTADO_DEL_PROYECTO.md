@@ -96,9 +96,17 @@ Nómina, Gastos Fijos, correo, comisión sincronizada, documentos) está **en vi
 ya aplicadas en el Supabase compartido. Dominio: se decidió NO renombrar (Vercel bloquea el redirect por cadena con
 comisiones-team-leadtion-web → leadtionteam); el usuario **agregará `trdinvestment.vercel.app` como dominio ADICIONAL**
 (no borrar leadtionteam) apuntando a Production.
-**PENDIENTE**: (1) usuario: agregar dominio `trdinvestment.vercel.app` (adicional, Production) + verificar que RESEND_API_KEY,
-RESEND_FROM y `EMAIL_LOGO_URL` (URL pública) estén en el entorno **Production** y redeploy; (2) **dashboard TRD con
-historial de pagos por mes** (ICA, renta, nómina) — último de la lista; menor: resumen de nómina por hora/día.
+**Gastos Fijos con datos + dashboard (2026-08-22, en producción)**: sembrados los datos reales del Excel (nómina 13
+personas con sueldo/área/banco = $43.7M COP; 5 servicios públicos con %, 16 herramientas, 2 hosting, otros fijos).
+Pestaña **Herramientas** (USD+COP, diario/mensual/anual, recurrencia, total). Nómina con COP+USD + hora/día/mes/año
+(8h/30d) y cuadros por departamento. **Resumen = dashboard estratégico** con gráficos interactivos (gastos por
+categoría, nómina por departamento, toggle COP/USD) + **histórico mensual por snapshot** ("Guardar mes actual",
+migración 0023). Helpers `periodos()`, `nominaPorArea()`, snapshots en `lib/gastos-fijos.ts`; `GastosDashboard.tsx`.
+Migraciones 0016-0023 aplicadas. Nota: el histórico arranca desde ahora (meses pasados se pueden importar si el
+usuario da los totales).
+**PENDIENTE**: (1) usuario: agregar dominio `trdinvestment.vercel.app` (adicional, Production) + verificar
+RESEND_*/EMAIL_LOGO_URL en Production; (2) **dashboard TRD con historial de pagos por mes de REG** (ICA, renta,
+nómina) — último de la lista original del usuario.
 El usuario debe: setear en Vercel `EMAIL_LOGO_URL` (URL pública del logo, ej. .../brand/trd/trd-logo-black.png) y
 `REPLY_TO_EMAIL` (opcional; default contable@turincondigital.com), y confirmar el costo exacto de transferencia.
 Migraciones 0017/0018/0019 YA aplicadas en Supabase.
