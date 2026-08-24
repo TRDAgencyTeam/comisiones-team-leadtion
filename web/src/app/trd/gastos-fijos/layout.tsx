@@ -7,6 +7,7 @@ export default function GastosFijosLayout({ children }: { children: React.ReactN
       <nav className="subnav">
         <Link href="/trd/gastos-fijos">Resumen</Link>
         <Link href="/trd/gastos-fijos/nomina">Nómina</Link>
+        <Link href="/trd/gastos-fijos/herramientas">Herramientas</Link>
         <Link href="/trd/gastos-fijos/gastos">Gastos</Link>
         <Link href="/trd/gastos-fijos/credito">Crédito</Link>
       </nav>

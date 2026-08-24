@@ -48,6 +48,18 @@ export function valorMensualCop(g: GastoFijo, tasa: number): number {
   return Math.round(base * (g.porcentajeReparto / 100));
 }
 
+/** Desglose de un gasto en día/mes/año, en COP y USD (aplica recurrencia y reparto). */
+export function periodos(g: GastoFijo, tasa: number) {
+  let mMon = g.recurrencia === "anual" ? g.valor / 12 : g.recurrencia === "diario" ? g.valor * 30 : g.valor;
+  mMon = mMon * (g.porcentajeReparto / 100);
+  const mesCop = g.moneda === "USD" ? mMon * tasa : mMon;
+  const mesUsd = g.moneda === "USD" ? mMon : tasa > 0 ? mMon / tasa : 0;
+  return {
+    diaCop: mesCop / 30, mesCop, anualCop: mesCop * 12,
+    diaUsd: mesUsd / 30, mesUsd, anualUsd: mesUsd * 12,
+  };
+}
+
 export interface ResumenGastosFijos {
   tasa: number;
   porCategoria: Record<CategoriaGasto, number>; // COP/mes (solo afecta utilidad, salvo paso_dinero informativo)
@@ -85,4 +97,40 @@ export async function resumenGastosFijos(): Promise<ResumenGastosFijos> {
     porCategoria.hosting + nomina + credito;
 
   return { tasa, porCategoria, nomina, credito, pasoDinero, totalCop, totalUsd: tasa > 0 ? totalCop / tasa : 0 };
+}
+
+/** Nómina activa agrupada por área (departamento), en COP. */
+export async function nominaPorArea(): Promise<{ area: string; count: number; cop: number }[]> {
+  const rows = await consulta(
+    `select coalesce(area,'—') as area, count(*)::int as n, coalesce(sum(valor_nomina),0) as cop
+       from public.colaboradores where activo group by coalesce(area,'—') order by cop desc`,
+  );
+  return rows.map((r: Record<string, unknown>) => ({ area: String(r.area), count: Number(r.n), cop: Number(r.cop) }));
+}
+
+export interface SnapshotGasto { mes: string; totalCop: number; totalUsd: number }
+
+/** Histórico de snapshots mensuales (más reciente primero). */
+export async function listarSnapshots(): Promise<SnapshotGasto[]> {
+  const rows = await consulta(
+    `select mes, total_cop, total_usd from public.gasto_fijo_snapshot order by mes desc limit 24`,
+  );
+  return rows.map((r: Record<string, unknown>) => ({
+    mes: r.mes instanceof Date ? r.mes.toISOString().slice(0, 7) : String(r.mes).slice(0, 7),
+    totalCop: Number(r.total_cop),
+    totalUsd: Number(r.total_usd),
+  }));
+}
+
+/** Guarda (upsert) el snapshot del total de gastos fijos del mes en curso. */
+export async function guardarSnapshotMesActual(): Promise<void> {
+  const r = await resumenGastosFijos();
+  const hoy = new Date();
+  const mes = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-01`;
+  await consulta(
+    `insert into public.gasto_fijo_snapshot (mes, total_cop, total_usd, tasa)
+     values ($1,$2,$3,$4)
+     on conflict (mes) do update set total_cop=$2, total_usd=$3, tasa=$4, creado_en=now()`,
+    [mes, Math.round(r.totalCop), Math.round(r.totalUsd), r.tasa],
+  );
 }
