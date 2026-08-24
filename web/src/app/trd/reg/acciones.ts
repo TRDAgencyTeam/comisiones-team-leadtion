@@ -83,7 +83,8 @@ export async function toggleCheck(formData: FormData) {
     const r = rows[0] as Record<string, unknown> | undefined;
     if (r && r.colaborador_id != null) {
       const colaboradorId = Number(r.colaborador_id);
-      const corte = corteDeMes(String(r.mes).slice(0, 7));
+      const mesISO = r.mes instanceof Date ? r.mes.toISOString().slice(0, 7) : String(r.mes).slice(0, 7);
+      const corte = corteDeMes(mesISO);
       if (valor) await pagarCiclo(colaboradorId, corte);
       else await deshacerCiclo(colaboradorId, corte);
       revalidatePath("/cs");
@@ -135,7 +136,8 @@ export async function enviarCorreoPago(formData: FormData) {
     [pagoId],
   );
   const r = rows[0] as Record<string, unknown> | undefined;
-  const mesISO = r ? String(r.mes).slice(0, 7) : "";
+  // `mes` puede venir como Date (pg) o string: normalizamos a 'YYYY-MM' con seguridad.
+  const mesISO = r ? (r.mes instanceof Date ? r.mes.toISOString().slice(0, 7) : String(r.mes).slice(0, 7)) : "";
   const back = `/trd/reg?mes=${mesISO}`;
 
   if (!r) redirect(`${back}&error=` + encodeURIComponent("No encontré el pago."));

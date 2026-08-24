@@ -74,8 +74,16 @@ sobre el total (migración 0020: pago_fijo, adicional, adicional_desc, comision)
 (ahora solo lectura, nota "se paga desde REG"). Sección **Costos de empresa** (4x1000 0,4% + transferencia por banco
 + IVA 19%) contados SOLO cuando ck_pagado. Correo con adicional (concepto) + comisión. Histórico por mes YA resuelto
 (reg_pago por mes; editar un mes no toca otros ni el contrato). Migración 0020 aplicada.
-**PENDIENTE (Lote D)**: adjuntar/ver hoja de vida + cédula/RUT + contratos vigente/anteriores (Supabase Storage) —
-requiere crear un bucket de Storage. Costo transferencia exacto a confirmar por el usuario (usado $7.590).
+**REG UI (2026-08-22)**: campos de dinero minimalistas ($ + miles) y **concepto del adicional en POPUP** (chip →
+modal). Costo transferencia confirmado $7.590 + IVA 19%.
+**Lote D HECHO (2026-08-22)**: documentos por persona (hoja de vida, cédula, RUT, contratos vigente/anteriores) en la
+ficha de Nómina. Se guardan en la BD como **bytea** (migración 0021 `colaborador_documento`; NO se usó Supabase
+Storage para no depender de llaves), se suben por server action (bodySizeLimit 15mb; valida PDF/PNG/JPG ≤15MB) y se
+previsualizan por una ruta que hace stream inline (solo admin). `lib/documentos.ts`, `components/DocumentosPersona.tsx`.
+Migraciones 0020/0021 aplicadas.
+**PENDIENTE (Lote 4)**: dashboard TRD con **historial de pagos por mes** (ICA, renta, nómina). Y el usuario debe setear
+`EMAIL_LOGO_URL` en Vercel para el logo del correo. Falta también: pasar la rama `trd-madre-reg` a producción (merge a main)
+cuando el usuario apruebe todo en el enlace de prueba.
 El usuario debe: setear en Vercel `EMAIL_LOGO_URL` (URL pública del logo, ej. .../brand/trd/trd-logo-black.png) y
 `REPLY_TO_EMAIL` (opcional; default contable@turincondigital.com), y confirmar el costo exacto de transferencia.
 Migraciones 0017/0018/0019 YA aplicadas en Supabase.
