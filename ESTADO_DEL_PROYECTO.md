@@ -91,9 +91,14 @@ Resumen con Total gastos fijos/mes (nómina + servicios + otros + herramientas +
 con amortización + cuotas restantes + simulador de prepago (sembrado el crédito real). Archivos: `lib/gastos-fijos.ts`,
 `lib/credito.ts`, `lib/gastos-tipos.ts` (tipos compartidos cliente/servidor), `GastoForm`/`CreditoForm`. Migraciones
 0020/0021/0022 aplicadas.
-**PENDIENTE**: (1) dashboard TRD con **historial de pagos por mes** (ICA, renta, nómina) — último de la lista;
-(2) setear `EMAIL_LOGO_URL` en Vercel (URL pública); (3) pasar la rama `trd-madre-reg` a **producción** (merge a main)
-cuando el usuario apruebe en el enlace de prueba. El "resumen de nómina por hora/día" quedó pendiente menor (se tiene mensual).
+**EN PRODUCCIÓN (2026-08-22)**: se hizo **merge de `trd-madre-reg` a `main`** (commit d6e0d4f) → todo lo nuevo (REG,
+Nómina, Gastos Fijos, correo, comisión sincronizada, documentos) está **en vivo** en producción. Migraciones 0016-0022
+ya aplicadas en el Supabase compartido. Dominio: se decidió NO renombrar (Vercel bloquea el redirect por cadena con
+comisiones-team-leadtion-web → leadtionteam); el usuario **agregará `trdinvestment.vercel.app` como dominio ADICIONAL**
+(no borrar leadtionteam) apuntando a Production.
+**PENDIENTE**: (1) usuario: agregar dominio `trdinvestment.vercel.app` (adicional, Production) + verificar que RESEND_API_KEY,
+RESEND_FROM y `EMAIL_LOGO_URL` (URL pública) estén en el entorno **Production** y redeploy; (2) **dashboard TRD con
+historial de pagos por mes** (ICA, renta, nómina) — último de la lista; menor: resumen de nómina por hora/día.
 El usuario debe: setear en Vercel `EMAIL_LOGO_URL` (URL pública del logo, ej. .../brand/trd/trd-logo-black.png) y
 `REPLY_TO_EMAIL` (opcional; default contable@turincondigital.com), y confirmar el costo exacto de transferencia.
 Migraciones 0017/0018/0019 YA aplicadas en Supabase.
