@@ -7,11 +7,6 @@ import {
   type ResultadoVista,
 } from "@/lib/comisiones";
 import { ProximosPagos, type FilaFutura } from "@/components/ProximosPagos";
-import {
-  marcarCicloPagado,
-  marcarHitoPagado,
-  deshacerHitoPagado,
-} from "@/app/pagos-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -129,13 +124,10 @@ function ColaboradorCard({ r, corte, futuros }: { r: ResultadoVista; corte: stri
       ) : (
         <>
           {r.totalPendiente > 0 && (
-            <form action={marcarCicloPagado} className="ciclo-form">
-              <input type="hidden" name="colaboradorId" value={r.colaboradorId} />
-              <input type="hidden" name="corte" value={corte} />
-              <button type="submit" className="btn-ciclo">
-                Marcar todo lo pendiente como pagado ({usd(r.totalPendiente)})
-              </button>
-            </form>
+            <p className="ciclo-nota">
+              El pago de la comisión se registra desde <strong>TRD → Registro contable</strong> (se paga junto con la
+              nómina, en la misma cuenta de cobro).
+            </p>
           )}
           <div className="table-scroll">
             <table>
@@ -146,7 +138,6 @@ function ColaboradorCard({ r, corte, futuros }: { r: ResultadoVista; corte: stri
                   <th>Hito</th>
                   <th className="num">Monto</th>
                   <th>Estado</th>
-                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -168,28 +159,6 @@ function ColaboradorCard({ r, corte, futuros }: { r: ResultadoVista; corte: stri
                           <span className="estado-pagado">✓ Pagado {fechaCorta(h.pagadoEn)}</span>
                         ) : (
                           <span className="estado-pendiente">Pendiente</span>
-                        )}
-                      </td>
-                      <td className="num">
-                        {h.estado === "pagado" ? (
-                          <form action={deshacerHitoPagado}>
-                            <input type="hidden" name="colaboradorId" value={r.colaboradorId} />
-                            <input type="hidden" name="clienteId" value={l.clienteId} />
-                            <input type="hidden" name="hito" value={h.hito} />
-                            <button type="submit" className="btn-deshacer" title="Deshacer pago">
-                              deshacer
-                            </button>
-                          </form>
-                        ) : (
-                          <form action={marcarHitoPagado}>
-                            <input type="hidden" name="colaboradorId" value={r.colaboradorId} />
-                            <input type="hidden" name="clienteId" value={l.clienteId} />
-                            <input type="hidden" name="hito" value={h.hito} />
-                            <input type="hidden" name="corte" value={corte} />
-                            <button type="submit" className="btn-pagar" title="Marcar pagado">
-                              Marcar pagado
-                            </button>
-                          </form>
                         )}
                       </td>
                     </tr>

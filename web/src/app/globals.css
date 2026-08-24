@@ -286,9 +286,8 @@ tr:last-child td { border-bottom: none; }
 /* --- Login de marca + loader palpitante --- */
 .login-brand {
   background:
-    radial-gradient(1100px 600px at 18% 15%, rgba(30, 80, 128, 0.55), transparent 60%),
-    radial-gradient(900px 520px at 85% 85%, rgba(0, 229, 204, 0.16), transparent 55%),
-    linear-gradient(160deg, #10131b 0%, #171a2e 55%, #0b0d13 100%);
+    linear-gradient(160deg, rgba(16, 19, 27, 0.90) 0%, rgba(23, 26, 46, 0.82) 55%, rgba(11, 13, 19, 0.94) 100%),
+    url("/brand/trd/trd-bg.png") center / cover no-repeat fixed;
 }
 .login-brand .login-card {
   background: rgba(18, 20, 30, 0.72);
@@ -323,9 +322,8 @@ tr:last-child td { border-bottom: none; }
 /* --- Selección de módulos --- */
 .modulos-wrap { min-height: 100vh; display: flex; flex-direction: column;
   background:
-    radial-gradient(1000px 560px at 15% 10%, rgba(30, 80, 128, 0.5), transparent 60%),
-    radial-gradient(820px 480px at 88% 90%, rgba(0, 229, 204, 0.14), transparent 55%),
-    linear-gradient(160deg, #10131b 0%, #171a2e 55%, #0b0d13 100%);
+    linear-gradient(160deg, rgba(16, 19, 27, 0.88) 0%, rgba(23, 26, 46, 0.80) 55%, rgba(11, 13, 19, 0.93) 100%),
+    url("/brand/trd/trd-bg.png") center / cover no-repeat fixed;
   color: #e8eaf2;
 }
 .modulos-top { display: flex; justify-content: space-between; align-items: center;
@@ -584,3 +582,217 @@ a.btn-pagar { text-decoration: none; display: inline-block; }
 .reselling-form { display: flex; align-items: flex-end; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 .reselling-form label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--muted); }
 .reselling-form input { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 0.95rem; width: 160px; }
+
+/* =========================================================================
+   TRD (plataforma madre) + REG (registro contable)
+   Reutiliza tipografía y colores de marca; identidad propia vía logo/fondo.
+   ========================================================================= */
+
+/* --- Marca TRD --- */
+.brand-trd-logo { display: inline-flex; align-items: baseline; gap: 6px; font-weight: 700; }
+.brand-trd-logo .trd-mark { color: var(--brand-cyan); font-size: 0.7em; transform: translateY(-1px); }
+.brand-trd-logo .trd-word { letter-spacing: 0.04em; }
+.brand-trd-logo .trd-sub { font-size: 0.5em; text-transform: uppercase; letter-spacing: 0.14em;
+  color: var(--muted); font-weight: 700; align-self: center; }
+.brand-trd { background: var(--brand-indigo); color: #fff; }
+.modulo-trd { border-color: var(--brand-indigo); }
+.modulo-trd .modulo-icono { color: var(--brand-indigo); }
+
+/* --- Shell TRD (fondo propio; si subes trd-bg.jpg lo puedes enganchar aquí) --- */
+.trd-topbar { border-bottom: 2px solid var(--brand-indigo); }
+.trd-nav { display: flex; gap: 6px; padding: 8px 24px; border-bottom: 1px solid var(--border);
+  background: var(--panel); }
+.trd-nav a { padding: 6px 12px; border-radius: 8px; color: var(--text); text-decoration: none;
+  font-size: 0.92rem; }
+.trd-nav a:hover { background: var(--accent-soft); }
+
+/* --- Utilidades --- */
+.right { text-align: right; }
+.center { text-align: center; }
+.muted { color: var(--muted); }
+.neg { color: var(--pending); }
+.strong { font-weight: 700; }
+.alerta { background: var(--pending-soft); color: var(--pending); border: 1px solid var(--pending);
+  border-radius: 8px; padding: 10px 14px; margin: 12px 0; }
+
+/* --- Encabezado REG --- */
+.reg-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px;
+  flex-wrap: wrap; margin-bottom: 16px; }
+.reg-mes { display: flex; align-items: center; gap: 8px; }
+.reg-mes input { padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--panel); color: var(--text); }
+
+/* --- Totales --- */
+.reg-totales { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;
+  margin-bottom: 18px; }
+.reg-totales .kpi { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.reg-totales .kpi.destacado { border-color: var(--brand-indigo); box-shadow: 0 0 0 1px var(--brand-indigo); }
+.kpi-lbl { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.reg-totales .kpi-num { font-size: 1.15rem; }
+
+/* --- Tabla REG --- */
+.reg-tabla-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); }
+.reg-tabla { width: 100%; border-collapse: collapse; min-width: 900px; font-size: 0.9rem; }
+.reg-tabla th, .reg-tabla td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.reg-tabla thead th { text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--muted); background: var(--bg); position: sticky; top: 0; }
+.reg-tabla th.right, .reg-tabla td.right { text-align: right; font-variant-numeric: tabular-nums; }
+.reg-tabla th.center, .reg-tabla td.center { text-align: center; }
+.reg-tabla tbody tr:hover { background: var(--accent-soft); }
+.reg-tabla .vacio { text-align: center; color: var(--muted); padding: 20px; }
+
+.in-valor { width: 120px; text-align: right; }
+.in-mini { width: 64px; }
+.in-tarifa { width: 56px; text-align: right; }
+.reg-tabla input[type="number"], .reg-tabla input[type="text"], .reg-actividad input {
+  padding: 5px 7px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel);
+  color: var(--text); font-size: 0.86rem; }
+.reg-actividad { display: flex; gap: 4px; }
+.btn-guardar { padding: 5px 10px; font-size: 0.82rem; }
+
+/* --- Checks --- */
+.ck { width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--border);
+  background: var(--panel); cursor: pointer; font-size: 0.9rem; color: var(--paid); display: inline-flex;
+  align-items: center; justify-content: center; }
+.ck-on { background: var(--paid-soft); border-color: var(--paid); font-weight: 700; }
+.ck-off { color: var(--muted); }
+button.ck:hover { border-color: var(--muted); }
+
+.btn-borrar { background: none; border: none; cursor: pointer; font-size: 1rem; }
+.freelance-tag { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em;
+  background: var(--accent-soft); color: var(--accent); padding: 1px 6px; border-radius: 999px; margin-right: 4px; }
+
+/* --- Freelance --- */
+.reg-freelance { margin-top: 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel);
+  padding: 12px 16px; }
+.reg-freelance summary { cursor: pointer; font-weight: 700; }
+.reg-freelance-form { margin-top: 12px; }
+.ff-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.ff-grid label { display: flex; flex-direction: column; gap: 3px; font-size: 0.8rem; color: var(--muted); }
+.ff-grid input { padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel);
+  color: var(--text); }
+.reg-nota { color: var(--muted); font-size: 0.82rem; margin-top: 16px; }
+
+/* Co-branding del login: "Casa de <Leadtion>" bajo el formulario */
+.login-familia { display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.15);
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.75; }
+
+/* Correo de pago (REG) */
+.ck-send { color: var(--accent); border-color: var(--accent); }
+.ck-send:hover { background: var(--accent-soft); }
+.ok-msg { background: var(--paid-soft); color: var(--paid); border: 1px solid var(--paid);
+  border-radius: 8px; padding: 10px 14px; margin: 12px 0; }
+
+/* Correo: grupo enviado (✓) + reenviar (↻) */
+.ck-group { display: inline-flex; align-items: center; gap: 4px; }
+.ck-mini { width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--panel); color: var(--muted); cursor: pointer; font-size: 0.8rem; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center; }
+.ck-mini:hover { border-color: var(--accent); color: var(--accent); }
+
+/* --- Nómina (Gastos Fijos) --- */
+.fila-inactiva { opacity: 0.55; }
+.ct-tag { display: inline-block; font-size: 0.7rem; padding: 2px 8px; border-radius: 999px; font-weight: 600; }
+.ct-ok { background: var(--paid-soft); color: var(--paid); }
+.ct-pronto { background: var(--pending-soft); color: var(--pending); }
+.ct-venc { background: #fde2e1; color: #b42318; }
+.ct-none { background: var(--accent-soft); color: var(--muted); }
+@media (prefers-color-scheme: dark) { .ct-venc { background: #3a1512; color: #f4a6a0; } }
+
+/* Formulario de persona */
+.persona-form { margin-top: 8px; }
+.pf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+.pf-grid label { display: flex; flex-direction: column; gap: 5px; font-size: 0.82rem; color: var(--muted); }
+.pf-grid .pf-full { grid-column: 1 / -1; }
+.pf-grid input { padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font-size: 0.95rem; }
+.pf-readonly { background: var(--accent-soft) !important; color: var(--text) !important; font-weight: 600; }
+.pf-acciones { margin-top: 16px; }
+
+/* Selects del formulario de persona */
+.pf-grid select { padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font-size: 0.95rem; }
+
+/* REG: adicional (concepto) + costos de empresa */
+.in-desc { display: block; margin-top: 4px; width: 120px; font-size: 0.78rem !important; }
+.reg-costos { margin-top: 22px; }
+.reg-costos h2 { font-size: 1.05rem; margin-bottom: 10px; }
+.reg-costos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.reg-costos-grid .kpi { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.reg-costos-grid .kpi.destacado { border-color: var(--pending); }
+.ciclo-nota { background: var(--accent-soft); color: var(--text); border-radius: 8px; padding: 10px 14px;
+  font-size: 0.9rem; margin: 10px 0; }
+
+/* --- REG: campo de dinero minimalista --- */
+.money { display: inline-flex; align-items: center; gap: 2px; width: 118px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--bg);
+  padding: 0 8px; transition: border-color .15s, box-shadow .15s; }
+.money:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.money-sig { color: var(--muted); font-size: 0.82rem; }
+.money-in { border: none; background: transparent; color: var(--text); width: 100%;
+  text-align: right; padding: 7px 0; font-size: 0.9rem; font-variant-numeric: tabular-nums; outline: none; }
+
+/* --- REG: adicional + chip de concepto --- */
+.adic-cell { display: flex; flex-direction: column; gap: 5px; align-items: flex-end; }
+.chip-concepto { max-width: 118px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 0.72rem; padding: 3px 9px; border-radius: 999px; cursor: pointer;
+  border: 1px dashed var(--border); background: transparent; color: var(--muted); transition: all .15s; }
+.chip-concepto:hover { border-color: var(--accent); color: var(--accent); }
+.chip-concepto.tiene { border-style: solid; border-color: transparent; background: var(--accent-soft);
+  color: var(--accent); font-weight: 600; }
+
+/* --- Popup / modal --- */
+.modal-overlay { position: fixed; inset: 0; background: rgba(10, 12, 18, 0.55); backdrop-filter: blur(2px);
+  display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+.modal-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+  padding: 22px 24px; width: 100%; max-width: 380px; box-shadow: 0 12px 40px rgba(0,0,0,.25);
+  text-align: left; }
+.modal-card h3 { margin: 0 0 2px; font-size: 1.1rem; }
+.modal-sub { margin: 0 0 14px; color: var(--muted); font-size: 0.82rem; }
+.modal-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font-size: 0.95rem; outline: none; }
+.modal-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.modal-acciones { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+
+/* --- Documentos del colaborador --- */
+.doc-seccion { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); }
+.doc-seccion h2 { font-size: 1.15rem; margin-bottom: 12px; }
+.doc-subir { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; background: var(--panel);
+  border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+.doc-tipo, .doc-file { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font-size: 0.9rem; }
+.doc-vigente-lbl { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--muted); }
+.doc-hint { color: var(--muted); font-size: 0.78rem; margin: 8px 2px 0; }
+.doc-grupos { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 16px; }
+.doc-grupo { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+.doc-grupo h4 { margin: 0 0 8px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.doc-vacio { color: var(--muted); margin: 0; }
+.doc-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.doc-item { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; }
+.doc-icono { flex: 0 0 auto; }
+.doc-nombre { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-meta { color: var(--muted); font-size: 0.78rem; }
+.doc-ver { color: var(--accent); text-decoration: none; font-weight: 600; font-size: 0.82rem; }
+.doc-ver:hover { text-decoration: underline; }
+.doc-item .btn-borrar { padding: 0; }
+
+/* Sub-navegación (Gastos Fijos) */
+.subnav { display: flex; gap: 4px; max-width: 960px; margin: 8px auto 0; padding: 0 24px; flex-wrap: wrap; }
+.subnav a { padding: 6px 12px; border-radius: 8px; color: var(--muted); text-decoration: none; font-size: 0.88rem; }
+.subnav a:hover { background: var(--accent-soft); color: var(--accent); }
+
+/* Checkbox dentro del grid de formulario */
+.pf-check { flex-direction: row !important; align-items: center; gap: 8px !important; color: var(--text) !important;
+  font-size: 0.9rem !important; }
+.pf-check input { width: auto; }
+
+/* Simulador de prepago del crédito */
+.credito-sim { margin-top: 18px; padding: 16px 18px; background: var(--accent-soft); border-radius: 12px; }
+.credito-sim h3 { margin: 0 0 4px; font-size: 1rem; }
+.sim-abono { display: flex; flex-direction: column; gap: 5px; font-size: 0.85rem; color: var(--muted); max-width: 260px; margin-top: 10px; }
+.sim-abono input { padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text); }
+.sim-res { margin-top: 12px; font-size: 0.92rem; }

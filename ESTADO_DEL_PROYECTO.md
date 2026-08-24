@@ -12,15 +12,95 @@
 > de activación, 0 datos de prueba. Config P&L: GHL $497, Andrés 60%, Daniel 30%,
 > Alejandro 100% (nómina Leadtion ≈ $2.409/mes a tasa 3150).
 
-## ⭐ TRABAJO ACTUAL — FASE 3: plataforma madre TRD Investment (EN ANÁLISIS)
+## ⭐ TRABAJO ACTUAL — FASE 3: plataforma madre TRD Investment (ANÁLISIS COMPLETO)
 Desde 2026-08-19 el foco cambió: Leadtion queda en pausa (funciona) y arrancamos la
-**plataforma madre TRD Investment LLC** que consolidará TRD Agency + Leadtion. **Estamos
-en ANÁLISIS del Excel `INGRESOS - EGRESOS TRD AGENCY AGOSTO 2026.xlsx`, NADA construido.**
-Todo el análisis (organigrama, pestañas 2026 y Gastos Fijos ya repasadas, reglas clave como
-el egreso "afecta utilidad sí/no", diezmo 10%, nómina fuente única, doble moneda, crédito
-Bancolombia, etc.) está en **`ANALISIS_TRD_INVESTMENT.md`** — LÉELO al retomar esta fase.
-Pendiente: repasar pestañas Precios, Caja LLC, Caja Col, REG, Cloud TRD, Mantenimiento web,
-luego acordar arquitectura. (Lo de abajo es la fase 1-2 de Leadtion, ya terminada.)
+**plataforma madre TRD Investment LLC** que consolidará TRD Agency + Leadtion. **REPASO DEL
+EXCEL `INGRESOS - EGRESOS TRD AGENCY AGOSTO 2026.xlsx` COMPLETO (2026-08-21); NADA construido aún.**
+Todo el análisis está en **`ANALISIS_TRD_INVESTMENT.md`** — LÉELO al retomar esta fase.
+Pestañas repasadas: 2026, Gastos Fijos, Caja LLC, Caja Col, Precios (+3 contratos de cliente),
+REG, Cloud TRD, Mantenimiento web. Reglas clave: egreso "afecta utilidad sí/no", diezmo 10%,
+nómina fuente única, doble moneda, crédito Bancolombia, contrato cuatrimestral (alertas),
+calculadora de retenciones ICA/renta (fórmulas confirmadas y verificadas), renovaciones
+hosting/dominio + mantenimiento web, motor de recordatorios (dolor #1: se olvida cobrar),
+y el PRINCIPIO RECTOR: una sola BD, cliente = nodo central, la madre crea en cascada a Leadtion.
+**ARQUITECTURA v1 YA REDACTADA** en `ARQUITECTURA_TRD_INVESTMENT.md` (+ artefacto visual con el grafo:
+https://claude.ai/code/artifact/ab7ab800-bd1c-4354-91fc-d951c5c35e3b). Decisión: se EXTIENDE la app actual
+(misma Supabase). **EN CONSTRUCCIÓN: módulo REG (registro contable), primer módulo de la madre.** Ya escrito y
+con typecheck en verde (falta aplicar migración + verificación visual). Archivos:
+`supabase/migrations/0016_reg_registro_contable.sql` (reg_uvt, reg_tarifa_ica, reg_pago +
+colaboradores.identificacion/actividad_ciiu/tarifa_ica_mil); `web/src/lib/retenciones.ts`
+(cálculo puro, VERIFICADO contra el Excel en 4 casos); `web/src/lib/reg.ts`; sección nueva
+`/trd/*` con shell/branding propio (`web/src/app/trd/layout.tsx`, `TrdLogo` en Brand.tsx,
+carpeta `web/public/brand/trd/` con README para logos/fondo); página `/trd/reg` (page + acciones.ts
++ componentes `RegFila`/`RegFreelance`); tarjeta TRD en `/modulos`; estilos en globals.css.
+Notificaciones = dentro de la app (push al celular vía PWA queda como capa posterior).
+**MIGRACIÓN 0016 YA APLICADA en Supabase (2026-08-21)** y `/trd/reg` **VERIFICADO en local**: renderiza,
+calcula ICA/renta/girar en vivo (usa la UVT del año del mes: ago-2026 → UVT $52.374), guarda (upsert OK) y
+el checklist funciona. **Infra decidida = Opción A** (un dominio madre TRD; Leadtion por ruta; un solo login;
+mismo Supabase). En código: identidad de plataforma = TRD Investment (login co-branded "Casa de Leadtion",
+hub `/modulos` con logo/fondo TRD, tarjeta madre primero). Login role-aware ya existente: admin→/modulos,
+colaborador→/cs. **Logos/fondo TRD subidos y conectados** (`web/public/brand/trd/`: trd-logo-black/white.png,
+trd-symbol-*.png, trd-bg.png) — `TrdLogo`/`TrdSymbol` en Brand.tsx.
+**Correo automático (2026-08-21)**: construido con **Resend** (elegido por el usuario) vía API REST, sin SDK.
+`web/src/lib/email.ts` (`enviarEmail` + `plantillaCorreoPago`); acción `enviarCorreoPago` en `trd/reg/acciones.ts`
+(carga pago+email del colaborador, envía y marca `ck_correo`); celda "Correo" en `RegFila` = botón ✉ que envía
+(si no hay email en la ficha, avisa; si Resend no está configurado, muestra error claro). Falta que el usuario
+configure env `RESEND_API_KEY` y `RESEND_FROM` (remitente de dominio verificado) en local y Vercel → luego probar envío real.
+Pago de prueba de Andrés YA eliminado (reg_pago limpio). Correo REAL probado y recibido OK (Resend +
+dominio trdagency.me verificado en Hostinger; env RESEND_API_KEY/RESEND_FROM en Vercel).
+**Publicación**: se trabaja en la rama `trd-madre-reg` (enlace de PRUEBA en Vercel, no en producción aún).
+**REG Fase 1 (2026-08-22)**: tarifa ICA única 8,66‰ para todos (se quitaron actividad/tarifa por fila);
+valor base de nómina (migración 0017 `colaboradores.valor_nomina`) que pre-llena la cuenta de cobro y
+"aprende" del último pago; columna "Mes anterior"; botón "Actualizar" para corregir; reenviar correo (↻).
+**UVT confirmada**: se deja UVT oficial 2026 = $52.374 (el Excel del usuario usaba la 2025 = $49.799 y por eso la
+renta no cuadraba; la plataforma está correcta legalmente). ICA 8,66‰ confirmada.
+**REG Fase 2 — Nómina dentro de Gastos Fijos (2026-08-22)**: sección `/trd/gastos-fijos/nomina` (la nómina va
+DENTRO de Gastos Fijos, como el Excel, NO aparte). Alta/edición de personas con nombre completo, área,
+identificación, correo, fecha nacimiento, fecha inicio, duración en meses y **fecha fin AUTOMÁTICA**, valor
+nómina; activar/desactivar; etiqueta de contrato (vigente/vence pronto/vencido). Migración 0018 (campos de
+contrato en colaboradores). Las personas se crean con **categoría vacía → NO comisionan CS** (motor filtra por
+fundador/nuevo, verificado). `lib/nomina.ts`, `PersonaForm.tsx`. Nav TRD: "Gastos Fijos · Nómina" + "Registro contable".
+**Correo + formulario nómina (2026-08-22)**: correo mejorado (saludo personalizado, desglose, cierre "Equipo TRD",
+logo TRD vía env `EMAIL_LOGO_URL`, contacto + responder-a `contable@turincondigital.com` vía env `REPLY_TO_EMAIL`).
+Nómina: banco (desplegable, migración 0019), área desplegable con significado, cédula/valor con puntos de miles,
+duración vacía = indefinido. Catálogos en `lib/catalogos.ts` (BANCOS, AREAS, GMF 0.4%, IVA 19%, COSTO_TRANSFERENCIA_OTRO=7590).
+Facts verificados: 4x1000=0,4%, IVA=19%; costo transferencia otros bancos ≈ $7.590 (a confirmar por el usuario),
+Bancolombia/Nequi=$0. **Comisión CS: DECIDIDO que entra al total con retención.**
+**REG Lote C HECHO (2026-08-22)**: fila = Pago fijo + Adicional(+concepto) + Comisión CS → Total, con ICA/renta
+sobre el total (migración 0020: pago_fijo, adicional, adicional_desc, comision). "Cuenta de cobro" → "Pago fijo".
+**Comisión CS sincronizada desde Leadtion (USD→COP a tasa del día)** entra al total; VERIFICADO en local (Andrés
+~$133 USD → $419.108 COP). **Marcar "Pagado" en REG registra el pago de la comisión** (comision_hitos vía
+`lib/comisiones-pago.ts` pagarCiclo/deshacerCiclo) y desmarcar lo deshace; se QUITÓ el botón "Pagar" del módulo CS
+(ahora solo lectura, nota "se paga desde REG"). Sección **Costos de empresa** (4x1000 0,4% + transferencia por banco
++ IVA 19%) contados SOLO cuando ck_pagado. Correo con adicional (concepto) + comisión. Histórico por mes YA resuelto
+(reg_pago por mes; editar un mes no toca otros ni el contrato). Migración 0020 aplicada.
+**REG UI (2026-08-22)**: campos de dinero minimalistas ($ + miles) y **concepto del adicional en POPUP** (chip →
+modal). Costo transferencia confirmado $7.590 + IVA 19%.
+**Lote D HECHO (2026-08-22)**: documentos por persona (hoja de vida, cédula, RUT, contratos vigente/anteriores) en la
+ficha de Nómina. Se guardan en la BD como **bytea** (migración 0021 `colaborador_documento`; NO se usó Supabase
+Storage para no depender de llaves), se suben por server action (bodySizeLimit 15mb; valida PDF/PNG/JPG ≤15MB) y se
+previsualizan por una ruta que hace stream inline (solo admin). `lib/documentos.ts`, `components/DocumentosPersona.tsx`.
+Migraciones 0020/0021 aplicadas.
+**Correo fix (2026-08-22)**: corregido "Invalid Date" en el asunto (mes venía como Date de pg; se normaliza a YYYY-MM
+para asunto y para el corte de comisión). Logo del correo: requiere que `EMAIL_LOGO_URL` apunte a una URL PÚBLICA del
+PNG (el logo TRD solo existe en el deploy de prueba hasta que se pase a producción).
+**GASTOS FIJOS COMPLETO (2026-08-22)**: módulo `/trd/gastos-fijos` con sub-nav (Resumen · Nómina · Gastos · Crédito).
+Migración 0022 (`gasto_fijo` + `credito`). Secciones: servicios públicos (% reparto), otros fijos, herramientas
+(recurrencia/día/método), hosting (amortización), paso de dinero (no utilidad); doble moneda COP/USD a la tasa;
+Resumen con Total gastos fijos/mes (nómina + servicios + otros + herramientas + hosting + crédito). Crédito Bancolombia
+con amortización + cuotas restantes + simulador de prepago (sembrado el crédito real). Archivos: `lib/gastos-fijos.ts`,
+`lib/credito.ts`, `lib/gastos-tipos.ts` (tipos compartidos cliente/servidor), `GastoForm`/`CreditoForm`. Migraciones
+0020/0021/0022 aplicadas.
+**PENDIENTE**: (1) dashboard TRD con **historial de pagos por mes** (ICA, renta, nómina) — último de la lista;
+(2) setear `EMAIL_LOGO_URL` en Vercel (URL pública); (3) pasar la rama `trd-madre-reg` a **producción** (merge a main)
+cuando el usuario apruebe en el enlace de prueba. El "resumen de nómina por hora/día" quedó pendiente menor (se tiene mensual).
+El usuario debe: setear en Vercel `EMAIL_LOGO_URL` (URL pública del logo, ej. .../brand/trd/trd-logo-black.png) y
+`REPLY_TO_EMAIL` (opcional; default contable@turincondigital.com), y confirmar el costo exacto de transferencia.
+Migraciones 0017/0018/0019 YA aplicadas en Supabase.
+**Pendientes**: (1) Vercel: agregar dominio TRD como producción + redirect del viejo; (2) configurar Resend
+(API key + FROM) y probar envío; (3) cargar CIIU+tarifa reales de cada colaborador; (4) notificaciones in-app
+(motor de recordatorios) + PWA push al celular.
+(Lo de abajo es la fase 1-2 de Leadtion, ya terminada.)
 
 ## Qué es
 Plataforma web (Next.js + Supabase + Vercel) con selección de **módulos** tras el

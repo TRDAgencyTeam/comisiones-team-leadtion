@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { template: "%s · Leadtion", default: "Leadtion" },
-  description: "Plataforma Leadtion (TRD Agency): membresías, comisiones CS y afiliados.",
+  title: { template: "%s · TRD Investment", default: "TRD Investment" },
+  description: "Plataforma TRD Investment: finanzas de la matriz y Leadtion (membresías, comisiones CS y afiliados).",
 };
 
 export default function RootLayout({

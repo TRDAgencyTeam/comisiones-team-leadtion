@@ -7,6 +7,9 @@ const nextConfig = {
   transpilePackages: ["comisiones-cs-engine"],
   // `pg` es un driver nativo de Node: debe quedar fuera del bundle del servidor.
   serverExternalPackages: ["pg"],
+  // Documentos (hoja de vida, contratos) se suben vía server actions: subir el
+  // límite del body para permitir PDFs/imágenes de varios MB.
+  experimental: { serverActions: { bodySizeLimit: "15mb" } },
   // La raíz real del monorepo (hay lockfiles sueltos en el sistema que
   // confundirían la inferencia automática de Next).
   outputFileTracingRoot: path.join(import.meta.dirname, ".."),

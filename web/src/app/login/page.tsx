@@ -1,7 +1,7 @@
-import { Logo } from "@/components/Brand";
+import { Logo, TrdLogo } from "@/components/Brand";
 import { LoginForm } from "./LoginForm";
 
-export const metadata = { title: "Portal Colaboradores" };
+export const metadata = { title: "Iniciar sesión" };
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage({
@@ -15,12 +15,17 @@ export default async function LoginPage({
     <main className="login-wrap login-brand">
       <div className="login-card">
         <div className="login-logo">
-          <Logo height={38} variant="light" />
+          <TrdLogo height={44} variant="light" />
         </div>
-        <h1>Portal Colaboradores</h1>
-        <p className="sub">Customer Success · TRD Agency</p>
+        <h1>Iniciar sesión</h1>
+        <p className="sub">Plataforma TRD Investment</p>
 
         <LoginForm error={error} />
+
+        <div className="login-familia">
+          <span>Casa de</span>
+          <Logo height={18} variant="light" />
+        </div>
       </div>
     </main>
   );
