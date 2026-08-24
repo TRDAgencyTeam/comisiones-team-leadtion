@@ -779,3 +779,20 @@ button.ck:hover { border-color: var(--muted); }
 .doc-ver { color: var(--accent); text-decoration: none; font-weight: 600; font-size: 0.82rem; }
 .doc-ver:hover { text-decoration: underline; }
 .doc-item .btn-borrar { padding: 0; }
+
+/* Sub-navegación (Gastos Fijos) */
+.subnav { display: flex; gap: 4px; max-width: 960px; margin: 8px auto 0; padding: 0 24px; flex-wrap: wrap; }
+.subnav a { padding: 6px 12px; border-radius: 8px; color: var(--muted); text-decoration: none; font-size: 0.88rem; }
+.subnav a:hover { background: var(--accent-soft); color: var(--accent); }
+
+/* Checkbox dentro del grid de formulario */
+.pf-check { flex-direction: row !important; align-items: center; gap: 8px !important; color: var(--text) !important;
+  font-size: 0.9rem !important; }
+.pf-check input { width: auto; }
+
+/* Simulador de prepago del crédito */
+.credito-sim { margin-top: 18px; padding: 16px 18px; background: var(--accent-soft); border-radius: 12px; }
+.credito-sim h3 { margin: 0 0 4px; font-size: 1rem; }
+.sim-abono { display: flex; flex-direction: column; gap: 5px; font-size: 0.85rem; color: var(--muted); max-width: 260px; margin-top: 10px; }
+.sim-abono input { padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text); }
+.sim-res { margin-top: 12px; font-size: 0.92rem; }

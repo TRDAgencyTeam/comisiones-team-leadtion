@@ -32,7 +32,7 @@ export default async function TrdLayout({
         </div>
       </div>
       <nav className="trd-nav">
-        <Link href="/trd/gastos-fijos/nomina">Gastos Fijos · Nómina</Link>
+        <Link href="/trd/gastos-fijos">Gastos Fijos</Link>
         <Link href="/trd/reg">Registro contable</Link>
       </nav>
       {children}
