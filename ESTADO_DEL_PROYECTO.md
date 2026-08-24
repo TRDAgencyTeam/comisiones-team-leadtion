@@ -81,9 +81,19 @@ ficha de Nómina. Se guardan en la BD como **bytea** (migración 0021 `colaborad
 Storage para no depender de llaves), se suben por server action (bodySizeLimit 15mb; valida PDF/PNG/JPG ≤15MB) y se
 previsualizan por una ruta que hace stream inline (solo admin). `lib/documentos.ts`, `components/DocumentosPersona.tsx`.
 Migraciones 0020/0021 aplicadas.
-**PENDIENTE (Lote 4)**: dashboard TRD con **historial de pagos por mes** (ICA, renta, nómina). Y el usuario debe setear
-`EMAIL_LOGO_URL` en Vercel para el logo del correo. Falta también: pasar la rama `trd-madre-reg` a producción (merge a main)
-cuando el usuario apruebe todo en el enlace de prueba.
+**Correo fix (2026-08-22)**: corregido "Invalid Date" en el asunto (mes venía como Date de pg; se normaliza a YYYY-MM
+para asunto y para el corte de comisión). Logo del correo: requiere que `EMAIL_LOGO_URL` apunte a una URL PÚBLICA del
+PNG (el logo TRD solo existe en el deploy de prueba hasta que se pase a producción).
+**GASTOS FIJOS COMPLETO (2026-08-22)**: módulo `/trd/gastos-fijos` con sub-nav (Resumen · Nómina · Gastos · Crédito).
+Migración 0022 (`gasto_fijo` + `credito`). Secciones: servicios públicos (% reparto), otros fijos, herramientas
+(recurrencia/día/método), hosting (amortización), paso de dinero (no utilidad); doble moneda COP/USD a la tasa;
+Resumen con Total gastos fijos/mes (nómina + servicios + otros + herramientas + hosting + crédito). Crédito Bancolombia
+con amortización + cuotas restantes + simulador de prepago (sembrado el crédito real). Archivos: `lib/gastos-fijos.ts`,
+`lib/credito.ts`, `lib/gastos-tipos.ts` (tipos compartidos cliente/servidor), `GastoForm`/`CreditoForm`. Migraciones
+0020/0021/0022 aplicadas.
+**PENDIENTE**: (1) dashboard TRD con **historial de pagos por mes** (ICA, renta, nómina) — último de la lista;
+(2) setear `EMAIL_LOGO_URL` en Vercel (URL pública); (3) pasar la rama `trd-madre-reg` a **producción** (merge a main)
+cuando el usuario apruebe en el enlace de prueba. El "resumen de nómina por hora/día" quedó pendiente menor (se tiene mensual).
 El usuario debe: setear en Vercel `EMAIL_LOGO_URL` (URL pública del logo, ej. .../brand/trd/trd-logo-black.png) y
 `REPLY_TO_EMAIL` (opcional; default contable@turincondigital.com), y confirmar el costo exacto de transferencia.
 Migraciones 0017/0018/0019 YA aplicadas en Supabase.
