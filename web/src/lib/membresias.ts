@@ -68,7 +68,7 @@ export async function listarMembresias(
 ): Promise<MembresiaRow[]> {
   const [rows, ltv] = await Promise.all([
     consulta(
-      `select id, nombre, plan, plan_tipo, soporte_valor, incluye_crm_en_marketing,
+      `select id, nombre, plan, plan_tipo, soporte_valor, incluye_crm_en_marketing, es_agencia,
               tipo_cliente, estado_actual, fecha_activacion, api_estado
          from public.clientes`,
     ),
@@ -81,7 +81,7 @@ export async function listarMembresias(
       id: Number(r.id), nombre: String(r.nombre),
       planTipo: (r.plan_tipo as string) ?? null, plan: (r.plan as string) ?? null,
       soporteValor: r.soporte_valor == null ? null : Number(r.soporte_valor),
-      esAgencia: Boolean(r.incluye_crm_en_marketing),
+      esAgencia: Boolean(r.es_agencia),
       tipoCliente: (r.tipo_cliente as string) ?? null,
       estado: r.estado_actual as EstadoMembresia,
       fechaActivacion: f, tiempoMeses: mesesDesde(f),
@@ -105,7 +105,8 @@ export async function listarMembresias(
 export interface PagoMes { mes: string; estadoMes: string; valor: number | null; }
 export interface FichaMembresia {
   id: number; nombre: string; planTipo: string | null; soporteValor: number | null;
-  esAgencia: boolean; tipoCliente: string | null; estado: EstadoMembresia; fechaActivacion: string | null;
+  esAgencia: boolean; agenciaDesde: string | null; servicioActivo: boolean;
+  tipoCliente: string | null; estado: EstadoMembresia; fechaActivacion: string | null;
   fechaInicioReal: string | null; tiempoMeses: number; ltv: number;
   valorLicencia: number | null; apiEstado: string | null; apiValor: number | null;
   bono: number | null; reserva: boolean; pagos: PagoMes[];
@@ -129,18 +130,20 @@ export async function opcionesFormulario(): Promise<{
 
 export async function obtenerMembresia(id: number): Promise<FichaMembresia | null> {
   const rows = await consulta(
-    `select id, nombre, plan_tipo, soporte_valor, incluye_crm_en_marketing, tipo_cliente, estado_actual,
-            fecha_activacion, fecha_inicio_real, valor_licencia_general, api_estado, api_valor,
-            bono_reactivacion, reserva
+    `select id, nombre, plan_tipo, soporte_valor, incluye_crm_en_marketing, es_agencia, agencia_desde,
+            tipo_cliente, estado_actual, fecha_activacion, fecha_inicio_real, valor_licencia_general,
+            api_estado, api_valor, bono_reactivacion, reserva
        from public.clientes where id = $1`,
     [id],
   );
   if (rows.length === 0) return null;
   const r = rows[0]!;
-  const [pagos, asignRows, afRows] = await Promise.all([
+  const mesActual = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-01`;
+  const [pagos, asignRows, afRows, servActivo] = await Promise.all([
     consulta(`select mes, estado_mes, valor from public.pagos_mensuales where cliente_id=$1 order by mes`, [id]),
     consulta(`select c.id, c.nombre from public.cliente_colaboradores cc join public.colaboradores c on c.id=cc.colaborador_id where cc.cliente_id=$1`, [id]),
     consulta(`select a.nombre from public.clientes_afiliados ca join public.afiliados a on a.ref=ca.afiliado_ref where ca.ref = $1`, [`cl-mem-${id}`]),
+    consulta(`select 1 from public.pagos_mensuales where cliente_id=$1 and origen='servicio' and mes=$2 and coalesce(valor,0) > 0 limit 1`, [id, mesActual]),
   ]);
   const f = toISO(r.fecha_activacion);
   const lista = pagos.map((p) => ({ mes: toISO(p.mes)!, estadoMes: String(p.estado_mes), valor: p.valor == null ? null : Number(p.valor) }));
@@ -148,7 +151,8 @@ export async function obtenerMembresia(id: number): Promise<FichaMembresia | nul
   return {
     id: Number(r.id), nombre: String(r.nombre), planTipo: (r.plan_tipo as string) ?? null,
     soporteValor: r.soporte_valor == null ? null : Number(r.soporte_valor),
-    esAgencia: Boolean(r.incluye_crm_en_marketing), tipoCliente: (r.tipo_cliente as string) ?? null,
+    esAgencia: Boolean(r.es_agencia), agenciaDesde: toISO(r.agencia_desde), servicioActivo: servActivo.length > 0,
+    tipoCliente: (r.tipo_cliente as string) ?? null,
     estado: r.estado_actual as EstadoMembresia,
     fechaActivacion: f, fechaInicioReal: toISO(r.fecha_inicio_real), tiempoMeses: mesesDesde(f),
     ltv, valorLicencia: r.valor_licencia_general == null ? null : Number(r.valor_licencia_general),
@@ -166,9 +170,9 @@ export async function statsMembresias(): Promise<StatsMembresias> {
             count(*) filter (where estado_actual='activo')::int activas,
             count(*) filter (where estado_actual='pausado')::int pausadas,
             count(*) filter (where estado_actual='cancelado')::int canceladas,
-            count(*) filter (where tipo_cliente='agencia' and estado_actual='activo')::int agencia,
-            count(*) filter (where tipo_cliente='servicio' and estado_actual='activo')::int servicio,
-            count(*) filter (where tipo_cliente='estandar' and estado_actual='activo')::int estandar
+            count(*) filter (where es_agencia and estado_actual='activo')::int agencia,
+            count(*) filter (where not es_agencia and tipo_cliente='servicio' and estado_actual='activo')::int servicio,
+            count(*) filter (where not es_agencia and coalesce(tipo_cliente,'estandar')<>'servicio' and estado_actual='activo')::int estandar
        from public.clientes`,
   );
   const c = r[0]!;

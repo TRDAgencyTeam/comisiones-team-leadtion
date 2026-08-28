@@ -6,6 +6,7 @@ import { soportesDeCliente, soporteEnMes } from "@/lib/soportes";
 import { BotonEliminar } from "../BotonEliminar";
 import { BotonEliminarServicio } from "../BotonEliminarServicio";
 import { BotonEliminarSoporte } from "../BotonEliminarSoporte";
+import { marcarAgencia } from "../acciones";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,8 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
   const tipoBase = servicios.length > 0 ? (c.esAgencia ? "agencia" : "estandar") : (c.tipoCliente ?? "estandar");
   const tipoEnMes = (mes: string) =>
     primerServicio && mes.slice(0, 7) >= primerServicio ? "servicio" : tipoBase;
+  // Nombre del servicio Leadtion (para la etiqueta que se vence solo por calendario).
+  const servicioNombre = servicios.length ? SERVICIO_LABEL[servicios[0]!.tipoServicio] : null;
 
   return (
     <main className="wrap">
@@ -52,15 +55,21 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
       <header className="page page-head-row">
         <div>
           <h1>{c.nombre}</h1>
-          <p>
+          <p className="tags-cliente">
             <span className={badge.cls}>{badge.txt}</span>
-            {c.tipoCliente && c.tipoCliente !== "estandar" ? " · " : ""}
-            {c.tipoCliente && c.tipoCliente !== "estandar" && <span className="tag-agencia">{TIPO_LABEL[c.tipoCliente]}</span>}
-            {c.reserva ? " · " : ""}{c.reserva && <span className="tag-partner">Reserva</span>}
+            {c.esAgencia && <span className="tag-agencia">Agencia</span>}
+            {c.servicioActivo && servicioNombre && <span className="tag-partner">Servicio Leadtion: {servicioNombre}</span>}
+            {!c.esAgencia && !c.servicioActivo && <span className="tag-estandar">Estándar</span>}
+            {c.reserva && <span className="tag-partner">Reserva</span>}
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Link href={`/membresias/${c.id}/servicio`} className="btn-primary">+ Registrar servicio</Link>
+          <form action={marcarAgencia}>
+            <input type="hidden" name="id" value={c.id} />
+            <input type="hidden" name="on" value={c.esAgencia ? "0" : "1"} />
+            <button type="submit" className="btn-secondary">{c.esAgencia ? "Quitar agencia" : "Marcar como agencia"}</button>
+          </form>
           <Link href={`/membresias/${c.id}/editar`} className="btn-secondary">Editar</Link>
           <Link href={`/cs/clientes/${c.id}`} className="btn-secondary">Ver en CS →</Link>
           <BotonEliminar id={c.id} nombre={c.nombre} />

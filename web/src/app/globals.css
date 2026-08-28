@@ -821,3 +821,7 @@ button.ck:hover { border-color: var(--muted); }
 .hist-col:hover .hist-bar { filter: brightness(1.15); }
 .hist-val { font-size: 0.72rem; font-weight: 700; }
 .hist-mes { font-size: 0.7rem; color: var(--muted); text-transform: capitalize; }
+
+/* Etiquetas del cliente (agencia + servicio pueden coexistir) */
+.tags-cliente { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tag-estandar { font-size: 0.7rem; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--muted); font-weight: 600; }

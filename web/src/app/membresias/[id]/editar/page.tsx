@@ -41,12 +41,16 @@ export default async function EditarMembresiaPage({
           </div>
 
           <label>
-            Tipo de cliente
-            <select name="tipoCliente" defaultValue={c.tipoCliente ?? "estandar"}>
+            Tipo base del cliente
+            <select name="tipoCliente" defaultValue={c.tipoCliente === "agencia" ? "estandar" : (c.tipoCliente ?? "estandar")}>
               <option value="estandar">Estándar (solo licencia $69)</option>
-              <option value="agencia">Agencia (viene con plan de marketing; licencia incluida ahí)</option>
               <option value="servicio">Servicio Leadtion (Agente IA / Reactivación / Level Up)</option>
             </select>
+          </label>
+
+          <label className="pf-check" style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <input type="checkbox" name="esAgencia" value="1" defaultChecked={c.esAgencia} style={{ width: "auto" }} />
+            Cliente de agencia (plan de marketing; licencia incluida). Es independiente: no borra el servicio Leadtion.
           </label>
 
           <div className="form-2col">

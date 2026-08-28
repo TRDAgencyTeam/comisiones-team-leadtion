@@ -22,7 +22,8 @@ export async function actualizarMembresia(formData: FormData) {
   const estado = String(formData.get("estado") ?? "activo");
   const tipoRaw = String(formData.get("tipoCliente") ?? "estandar").trim();
   const tipoCliente = ["estandar", "agencia", "servicio"].includes(tipoRaw) ? tipoRaw : "estandar";
-  const esAgencia = tipoCliente === "agencia";
+  // "Agencia" ahora es un flag independiente (no borra el servicio Leadtion).
+  const esAgencia = formData.get("esAgencia") === "1";
   const planTipo = String(formData.get("planTipo") ?? "").trim() || null;
   const soporteRaw = String(formData.get("soporteValor") ?? "").trim();
   const soporteValor = soporteRaw === "" ? null : Number(soporteRaw);
@@ -38,7 +39,9 @@ export async function actualizarMembresia(formData: FormData) {
     `update public.clientes
         set nombre=$2, estado_actual=$3, incluye_crm_en_marketing=$4, plan_tipo=$5,
             soporte_valor=$6, valor_licencia_general=$7, api_estado=$8, api_valor=$9,
-            bono_reactivacion=$10, tipo_cliente=$11, estado_actualizado_en=now()
+            bono_reactivacion=$10, tipo_cliente=$11, es_agencia=$4,
+            agencia_desde = case when $4 then coalesce(agencia_desde, current_date) else agencia_desde end,
+            estado_actualizado_en=now()
       where id=$1`,
     [id, nombre, estado, esAgencia, planTipo, soporteValor, valorLicencia, api.estado, api.valor, bono, tipoCliente],
   );
@@ -47,6 +50,30 @@ export async function actualizarMembresia(formData: FormData) {
   revalidatePath("/membresias/dashboard");
   revalidatePath("/cs");
   redirect(`/membresias/${id}`);
+}
+
+/**
+ * Marca/desmarca al cliente como "de agencia" — flag INDEPENDIENTE del servicio
+ * Leadtion (no toca cliente_servicios ni el historial). La plataforma madre usará
+ * este mismo flag en el futuro.
+ */
+export async function marcarAgencia(formData: FormData) {
+  if (!(await getUsuario())) redirect("/login");
+  const id = Number(formData.get("id"));
+  const on = String(formData.get("on")) === "1";
+  await consulta(
+    `update public.clientes
+        set es_agencia = $2,
+            incluye_crm_en_marketing = $2,
+            agencia_desde = case when $2 then coalesce(agencia_desde, current_date) else agencia_desde end,
+            estado_actualizado_en = now()
+      where id = $1`,
+    [id, on],
+  );
+  revalidatePath(`/membresias/${id}`);
+  revalidatePath("/membresias/clientes");
+  revalidatePath("/membresias/dashboard");
+  revalidatePath("/cs");
 }
 
 /** Suma `n` meses a un "YYYY-MM" y devuelve el primer día como "YYYY-MM-01". */
@@ -387,10 +414,10 @@ export async function crearMembresia(formData: FormData) {
 
   const rows = await consulta(
     `insert into public.clientes
-       (nombre, fecha_activacion, estado_actual, incluye_crm_en_marketing, plan_tipo,
+       (nombre, fecha_activacion, estado_actual, incluye_crm_en_marketing, es_agencia, plan_tipo,
         soporte_valor, valor_licencia_general, api_estado, api_valor,
         bono_reactivacion, reserva, fecha_inicio_real, tipo_cliente, creado_por_rol, estado_actualizado_en)
-     values ($1,$2,'activo',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'admin',now())
+     values ($1,$2,'activo',$3,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'admin',now())
      returning id`,
     [nombre, fechaActivacion, esAgencia, planTipo, soporteValor, valorLicencia,
      apiEstado, apiValor, bono, reserva, fechaInicioReal, tipoCliente],
