@@ -104,6 +104,12 @@ categoría, nómina por departamento, toggle COP/USD) + **histórico mensual por
 migración 0023). Helpers `periodos()`, `nominaPorArea()`, snapshots en `lib/gastos-fijos.ts`; `GastosDashboard.tsx`.
 Migraciones 0016-0023 aplicadas. Nota: el histórico arranca desde ahora (meses pasados se pueden importar si el
 usuario da los totales).
+**Agencia = etiqueta independiente (2026-08-22, en producción)**: `clientes.es_agencia` + `agencia_desde` (migración
+0024, backfill desde tipo_cliente='agencia' → 12 migrados). Un cliente puede ser AGENCIA y tener servicio Leadtion a la
+vez sin que se borren. Etiqueta "Servicio Leadtion" se deriva de si hay cobro origen='servicio' en el mes en curso
+(se vence sola); "Agencia" de es_agencia. Ficha: botón marcar/quitar agencia (`marcarAgencia`, no toca servicios).
+Edición: checkbox de agencia separado del tipo base. Mini-stats por es_agencia. **es_agencia = punto de integración con
+la plataforma madre** (ella lo prenderá/apagará). `incluye_crm_en_marketing` se sincroniza con es_agencia.
 **PENDIENTE**: (1) usuario: agregar dominio `trdinvestment.vercel.app` (adicional, Production) + verificar
 RESEND_*/EMAIL_LOGO_URL en Production; (2) **dashboard TRD con historial de pagos por mes de REG** (ICA, renta,
 nómina) — último de la lista original del usuario.
