@@ -124,10 +124,17 @@ crear/editar/eliminar factura; **"Copiar mes anterior"** para recurrentes; total
 `facturacion-calc.ts` (puro), `FacturaForm`, `EstadoFactura`. Nav TRD: "Clientes" primero. Se construyó SOLO la
 facturación mensual (enfoque elegido); **el "nuevo cliente con cascada" (crear aquí → Membresías/Afiliados/CS) queda como
 2º paso**. Por ahora factura usa `cliente_nombre` (texto) + `cliente_id` opcional (datalist de clientes existentes).
-**PENDIENTE**: (1) 2º paso Clientes: creación con cascada (unificar con crearMembresia; hoy la facturación no crea el
-cliente en `clientes`); (2) usuario: borrar 2 duplicados de afiliados; dominio trdinvestment.vercel.app + RESEND_*/
-EMAIL_LOGO_URL en Production; (3) **dashboard TRD con historial de pagos por mes de REG** (ICA, renta, nómina);
-(4) opcional: comisión/licencia de Carolina. Migraciones 0016–0025 aplicadas.
+**Clientes 2º paso — nuevo cliente EN CASCADA (2026-09-01, en producción)**: `crearClienteCompleto()` extraída en
+`membresias/acciones.ts` (fuente única, sin redirect) — crea el cliente en `clientes` (→ CS), asignados, sincroniza
+Afiliados (guardia anti-duplicado) y registra servicio Leadtion. `/trd/clientes/nuevo-cliente` (`crearClienteCascada`)
+crea el cliente en cascada + su 1ª factura del mes. Botones "+ Nuevo cliente" (cascada) y "+ Factura (existente)".
+`NuevoClienteForm`. NOTA: `crearMembresia` quedó con su lógica propia (duplica un poco a crearClienteCompleto; ambas
+funcionan) — si se toca una, sincronizar la otra.
+**PENDIENTE (pedido por el usuario, siguiente)**: (A) **Egresos del mes** en la vista del mes, con el flag "afecta la
+utilidad del mes (sale del mes)" vs "sale de caja (general)"; (B) **Resumen del mes**: ingresos generales vs egresos
+generales → utilidad → −diezmo 10% → utilidad neta (revisar cuadro madre del Excel: ago total ingresos $20.331,86,
+gastos $18.401,56, utilidad $1.930,30, neta $1.737,27). También: dashboard REG por mes; borrar 2 duplicados afiliados;
+dominio trdinvestment + RESEND_*/EMAIL_LOGO_URL en Production. Migraciones 0016–0025 aplicadas.
 El usuario debe: setear en Vercel `EMAIL_LOGO_URL` (URL pública del logo, ej. .../brand/trd/trd-logo-black.png) y
 `REPLY_TO_EMAIL` (opcional; default contable@turincondigital.com), y confirmar el costo exacto de transferencia.
 Migraciones 0017/0018/0019 YA aplicadas en Supabase.
