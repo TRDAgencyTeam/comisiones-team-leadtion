@@ -827,3 +827,11 @@ button.ck:hover { border-color: var(--muted); }
 .tag-estandar { font-size: 0.7rem; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--muted); font-weight: 600; }
 
 .cliente-acciones { margin-top: 10px; }
+
+/* Botón eliminar en tarjetas de afiliados (fondo oscuro): texto visible */
+.cliente-acciones .btn-borrar {
+  opacity: 1; filter: none; color: #ff6b6b;
+  border: 1px solid rgba(255, 107, 107, 0.5); border-radius: 8px;
+  display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; padding: 6px 12px; font-weight: 600;
+}
+.cliente-acciones .btn-borrar:hover { background: rgba(220, 38, 38, 0.18); border-color: #ff6b6b; opacity: 1; }

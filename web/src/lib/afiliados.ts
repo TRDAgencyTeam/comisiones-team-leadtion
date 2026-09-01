@@ -21,7 +21,7 @@ export const SRV_LABELS: Record<string, string> = {
 
 export interface Base {
   afiliados: (Afiliado & { email: string | null; ingreso: string | null; notas: string | null })[];
-  clientes: (ClienteAfiliado & { email: string | null })[];
+  clientes: (ClienteAfiliado & { email: string | null; id: number })[];
   servicios: ServicioAfiliado[];
   pagos: PagoAfiliado[];
 }
@@ -30,7 +30,7 @@ export interface Base {
 export async function cargarBase(): Promise<Base> {
   const [af, cl, sv, pg] = await Promise.all([
     consulta(`select ref,nombre,email,tipo,ingreso,notas,comision_agencia from public.afiliados order by nombre`),
-    consulta(`select ref,nombre,email,afiliado_ref,fecha_inicio,precio_licencia from public.clientes_afiliados`),
+    consulta(`select id,ref,nombre,email,afiliado_ref,fecha_inicio,precio_licencia from public.clientes_afiliados`),
     consulta(`select ref,cliente_ref,tipo,precio from public.servicios_afiliados`),
     consulta(`select cliente_ref,mes_num from public.pagos_afiliados`),
   ]);
@@ -42,6 +42,7 @@ export async function cargarBase(): Promise<Base> {
       comisionAgencia: r.comision_agencia === null ? null : Number(r.comision_agencia),
     })),
     clientes: cl.map((r) => ({
+      id: Number(r.id),
       ref: String(r.ref), nombre: String(r.nombre), email: (r.email as string) ?? null,
       afiliadoRef: (r.afiliado_ref as string) ?? null, fechaInicio: (r.fecha_inicio as string) ?? null,
       precioLicencia: r.precio_licencia === null ? null : Number(r.precio_licencia),
@@ -101,6 +102,7 @@ export interface AfiliadoResumen {
   activos: number; totalClientes: number; nivel: number; pct: number; totalPagado: number;
 }
 export interface ClienteResumen {
+  id: number;
   ref: string; nombre: string; email: string | null; afiliadoRef: string | null;
   afiliadoNombre: string; afiliadoTipo: string; fechaInicio: string | null;
   precioLicencia: number | null; servicios: { tipo: string; precio: number | null }[];
@@ -127,6 +129,7 @@ export async function cargarResumen(now = new Date()): Promise<{
   const clientes: ClienteResumen[] = base.clientes.map((c) => {
     const af = base.afiliados.find((a) => a.ref === c.afiliadoRef);
     return {
+      id: c.id,
       ref: c.ref, nombre: c.nombre, email: c.email, afiliadoRef: c.afiliadoRef,
       afiliadoNombre: af?.nombre ?? "—", afiliadoTipo: af?.tipo ?? "",
       fechaInicio: c.fechaInicio, precioLicencia: c.precioLicencia,

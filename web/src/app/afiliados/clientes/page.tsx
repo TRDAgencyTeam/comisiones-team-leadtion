@@ -11,7 +11,7 @@ export default async function ClientesAfiliadosPage({
 }: {
   searchParams: Promise<{ q?: string; orden?: string }>;
 }) {
-  const { q, orden = "consumo" } = await searchParams;
+  const { q, orden = "recientes" } = await searchParams;
   let clientes: ClienteResumen[] = [];
   let error: string | null = null;
   try {
@@ -23,7 +23,8 @@ export default async function ClientesAfiliadosPage({
   const filtro = (q ?? "").trim().toLowerCase();
   let lista = clientes.filter((c) => !filtro || c.nombre.toLowerCase().includes(filtro) || c.afiliadoNombre.toLowerCase().includes(filtro));
   if (orden === "nombre") lista = lista.sort((a, b) => a.nombre.localeCompare(b.nombre));
-  else lista = lista.sort((a, b) => b.totalPagado - a.totalPagado);
+  else if (orden === "consumo") lista = lista.sort((a, b) => b.totalPagado - a.totalPagado);
+  else lista = lista.sort((a, b) => b.id - a.id); // recientes primero (default)
 
   return (
     <main className="wrap">
@@ -39,6 +40,7 @@ export default async function ClientesAfiliadosPage({
         <label>
           Orden
           <select name="orden" defaultValue={orden}>
+            <option value="recientes">Más recientes primero</option>
             <option value="consumo">Mayor comisión pagada</option>
             <option value="nombre">Nombre (A-Z)</option>
           </select>
