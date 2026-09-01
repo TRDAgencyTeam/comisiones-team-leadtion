@@ -835,3 +835,17 @@ button.ck:hover { border-color: var(--muted); }
   display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; padding: 6px 12px; font-weight: 600;
 }
 .cliente-acciones .btn-borrar:hover { background: rgba(220, 38, 38, 0.18); border-color: #ff6b6b; opacity: 1; }
+
+/* --- Facturación (Clientes madre) --- */
+.factura-preview { margin-top: 12px; padding: 10px 14px; background: var(--accent-soft); border-radius: 10px; font-size: 0.9rem; }
+.estado-sel { padding: 4px 8px; border-radius: 999px; border: 1px solid var(--border); font-size: 0.75rem;
+  font-weight: 600; cursor: pointer; background: var(--panel); color: var(--text); }
+.est-pagado { background: var(--paid-soft); color: var(--paid); border-color: var(--paid); }
+.est-facturado { background: #e0eaff; color: #2b5cd6; border-color: #2b5cd6; }
+.est-por_facturar { background: var(--pending-soft); color: var(--pending); border-color: var(--pending); }
+.est-programado { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.est-anulado { background: #fde2e1; color: #b42318; border-color: #b42318; }
+@media (prefers-color-scheme: dark) {
+  .est-facturado { background: #16233f; color: #8fb0ff; }
+  .est-anulado { background: #3a1512; color: #f4a6a0; }
+}
