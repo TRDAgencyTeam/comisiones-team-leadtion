@@ -825,3 +825,5 @@ button.ck:hover { border-color: var(--muted); }
 /* Etiquetas del cliente (agencia + servicio pueden coexistir) */
 .tags-cliente { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .tag-estandar { font-size: 0.7rem; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--muted); font-weight: 600; }
+
+.cliente-acciones { margin-top: 10px; }

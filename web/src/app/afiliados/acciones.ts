@@ -122,3 +122,19 @@ export async function crearClienteAfiliado(formData: FormData) {
   revalidatePath("/afiliados");
   redirect("/afiliados/clientes");
 }
+
+/**
+ * Elimina un cliente referido de Afiliados (y sus servicios/pagos). Úsalo para
+ * quitar duplicados. NO toca el cliente de Membresías/Leadtion (tabla aparte).
+ */
+export async function eliminarClienteAfiliado(formData: FormData) {
+  if (!(await getUsuario())) redirect("/login");
+  const ref = String(formData.get("ref") ?? "").trim();
+  if (!ref) return;
+  await consulta(`delete from public.pagos_afiliados where cliente_ref = $1`, [ref]);
+  await consulta(`delete from public.servicios_afiliados where cliente_ref = $1`, [ref]);
+  await consulta(`delete from public.clientes_afiliados where ref = $1`, [ref]);
+  revalidatePath("/afiliados/clientes");
+  revalidatePath("/afiliados");
+  revalidatePath("/afiliados/comisiones");
+}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cargarResumen, SRV_LABELS, type ClienteResumen } from "@/lib/afiliados";
+import { BotonEliminarCliente } from "../BotonEliminarCliente";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,9 @@ export default async function ClientesAfiliadosPage({
                 c.servicios.map((s, i) => <span key={i} className="hito-chip" style={{ marginRight: 4 }}>{SRV_LABELS[s.tipo] ?? s.tipo}{s.precio ? ` ${usd(s.precio)}` : ""}</span>)}
             </div>
             <div className="cliente-pagado">Costó en comisión: <b className="ms-ok">{usd(c.totalPagado)}</b></div>
+            <div className="cliente-acciones">
+              <BotonEliminarCliente refCliente={c.ref} nombre={c.nombre} />
+            </div>
           </div>
         ))}
         {lista.length === 0 && <p className="empty">Sin clientes que coincidan.</p>}

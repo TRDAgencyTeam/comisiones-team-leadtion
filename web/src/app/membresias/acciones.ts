@@ -440,13 +440,22 @@ export async function crearMembresia(formData: FormData) {
   }
 
   // Si vino recomendado por un afiliado -> sincronizar con módulo Afiliados.
+  // ANTI-DUPLICADO: si ese afiliado ya tiene un cliente con el mismo nombre
+  // (registrado nativo en Afiliados), NO se crea otro (evita comisión doble).
   const afiliadoRef = String(formData.get("afiliadoRef") ?? "").trim();
   if (afiliadoRef) {
-    await consulta(
-      `insert into public.clientes_afiliados (ref, nombre, afiliado_ref, fecha_inicio, precio_licencia)
-       values ($1,$2,$3,$4,$5) on conflict (ref) do nothing`,
-      [`cl-mem-${id}`, nombre, afiliadoRef, mesTexto(fechaActivacion), valorLicencia || 69],
+    const yaExiste = await consulta(
+      `select 1 from public.clientes_afiliados
+        where afiliado_ref = $1 and lower(trim(nombre)) = lower(trim($2)) limit 1`,
+      [afiliadoRef, nombre],
     );
+    if (yaExiste.length === 0) {
+      await consulta(
+        `insert into public.clientes_afiliados (ref, nombre, afiliado_ref, fecha_inicio, precio_licencia)
+         values ($1,$2,$3,$4,$5) on conflict (ref) do nothing`,
+        [`cl-mem-${id}`, nombre, afiliadoRef, mesTexto(fechaActivacion), valorLicencia || 69],
+      );
+    }
   }
 
   // Si el plan de entrada es un servicio Leadtion, registra el servicio y genera
