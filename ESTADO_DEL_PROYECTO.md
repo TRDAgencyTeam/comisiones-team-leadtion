@@ -110,9 +110,15 @@ vez sin que se borren. Etiqueta "Servicio Leadtion" se deriva de si hay cobro or
 (se vence sola); "Agencia" de es_agencia. Ficha: botón marcar/quitar agencia (`marcarAgencia`, no toca servicios).
 Edición: checkbox de agencia separado del tipo base. Mini-stats por es_agencia. **es_agencia = punto de integración con
 la plataforma madre** (ella lo prenderá/apagará). `incluye_crm_en_marketing` se sincroniza con es_agencia.
-**PENDIENTE**: (1) usuario: agregar dominio `trdinvestment.vercel.app` (adicional, Production) + verificar
-RESEND_*/EMAIL_LOGO_URL en Production; (2) **dashboard TRD con historial de pagos por mes de REG** (ICA, renta,
-nómina) — último de la lista original del usuario.
+**Bugfix Afiliados (2026-08-22, en producción)**: clientes duplicados (Melia Residenses, Mayra González) porque
+`crearMembresia` insertaba en `clientes_afiliados` (cl-mem-<id>) sin verificar duplicado → comisión doble. FIX:
+guardia anti-duplicado por afiliado+nombre. Nuevo **botón "Eliminar" en Afiliados → Clientes** (`eliminarClienteAfiliado`;
+borra cliente+servicios+pagos SOLO en Afiliados, no toca Membresías) con texto visible sobre tarjeta oscura. Orden por
+defecto de la lista = **más recientes primero** (id desc; se mantienen "mayor comisión" y "nombre"). Los duplicados
+cl-mem-75 y cl-mem-76 los borra el usuario manualmente (quedarse con los nativos que tienen servicio).
+**PENDIENTE**: (1) usuario: borrar los 2 duplicados con el botón; agregar dominio `trdinvestment.vercel.app` (adicional,
+Production) + verificar RESEND_*/EMAIL_LOGO_URL en Production; (2) **dashboard TRD con historial de pagos por mes de REG**
+(ICA, renta, nómina) — último de la lista; (3) opcional: revisar a fondo comisión/licencia de Carolina (agencia).
 El usuario debe: setear en Vercel `EMAIL_LOGO_URL` (URL pública del logo, ej. .../brand/trd/trd-logo-black.png) y
 `REPLY_TO_EMAIL` (opcional; default contable@turincondigital.com), y confirmar el costo exacto de transferencia.
 Migraciones 0017/0018/0019 YA aplicadas en Supabase.
