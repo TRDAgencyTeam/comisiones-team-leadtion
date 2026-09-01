@@ -116,9 +116,18 @@ guardia anti-duplicado por afiliado+nombre. Nuevo **botón "Eliminar" en Afiliad
 borra cliente+servicios+pagos SOLO en Afiliados, no toca Membresías) con texto visible sobre tarjeta oscura. Orden por
 defecto de la lista = **más recientes primero** (id desc; se mantienen "mayor comisión" y "nombre"). Los duplicados
 cl-mem-75 y cl-mem-76 los borra el usuario manualmente (quedarse con los nativos que tienen servicio).
-**PENDIENTE**: (1) usuario: borrar los 2 duplicados con el botón; agregar dominio `trdinvestment.vercel.app` (adicional,
-Production) + verificar RESEND_*/EMAIL_LOGO_URL en Production; (2) **dashboard TRD con historial de pagos por mes de REG**
-(ICA, renta, nómina) — último de la lista; (3) opcional: revisar a fondo comisión/licencia de Carolina (agencia).
+**Pestaña Clientes / Facturación (2026-09-01, en producción)**: `/trd/clientes` — cuadro de ingresos por mes. Migración
+0025 (`factura_mensual`). Dos bloques: **LLC (USD)** y **Colombia (COP/IVA · Ebenezer)**. Cálculos verificados con Excel:
+pasarela Stripe 2,9%+$0,30, neto = facturado − pasarela; COL IVA 19% y **neto agencia USD = COP antes de IVA ÷ tasa**
+(el IVA no es ingreso). Estados semáforo (pagado/facturado/por_facturar/programado/anulado) con selector inline;
+crear/editar/eliminar factura; **"Copiar mes anterior"** para recurrentes; totales del mes. `lib/facturacion.ts` +
+`facturacion-calc.ts` (puro), `FacturaForm`, `EstadoFactura`. Nav TRD: "Clientes" primero. Se construyó SOLO la
+facturación mensual (enfoque elegido); **el "nuevo cliente con cascada" (crear aquí → Membresías/Afiliados/CS) queda como
+2º paso**. Por ahora factura usa `cliente_nombre` (texto) + `cliente_id` opcional (datalist de clientes existentes).
+**PENDIENTE**: (1) 2º paso Clientes: creación con cascada (unificar con crearMembresia; hoy la facturación no crea el
+cliente en `clientes`); (2) usuario: borrar 2 duplicados de afiliados; dominio trdinvestment.vercel.app + RESEND_*/
+EMAIL_LOGO_URL en Production; (3) **dashboard TRD con historial de pagos por mes de REG** (ICA, renta, nómina);
+(4) opcional: comisión/licencia de Carolina. Migraciones 0016–0025 aplicadas.
 El usuario debe: setear en Vercel `EMAIL_LOGO_URL` (URL pública del logo, ej. .../brand/trd/trd-logo-black.png) y
 `REPLY_TO_EMAIL` (opcional; default contable@turincondigital.com), y confirmar el costo exacto de transferencia.
 Migraciones 0017/0018/0019 YA aplicadas en Supabase.
