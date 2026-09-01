@@ -381,6 +381,75 @@ export async function guardarReselling(formData: FormData) {
 const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 const mesTexto = (iso: string) => { const [y, m] = iso.split("-").map(Number); return `${MESES[(m ?? 1) - 1]} ${y}`; };
 
+/** Datos para crear un cliente completo (reutilizable desde Membresías y la madre). */
+export interface NuevoClienteInput {
+  nombre: string; fechaActivacion: string; tipoCliente: string; esAgencia: boolean;
+  planTipo: string | null; soporteValor: number | null; apiEstado: string; apiValor: number | null;
+  bono: number | null; precioMes1: number | null; reserva: boolean; fechaInicioReal: string | null;
+  valorLicencia: number; asignados: number[]; afiliadoRef: string | null; origen?: string;
+}
+
+/**
+ * CREACIÓN COMPLETA de un cliente (fuente única, SIN redirect). Inserta en
+ * `clientes` (→ CS al instante), personas asignadas, sincroniza Afiliados (con
+ * guardia anti-duplicado) y registra el servicio Leadtion si aplica. La usan
+ * Membresías y la pestaña Clientes de la madre (cascada). Devuelve el id creado.
+ */
+export async function crearClienteCompleto(d: NuevoClienteInput): Promise<number> {
+  if (!(await getUsuario())) throw new Error("No autorizado");
+  const rows = await consulta(
+    `insert into public.clientes
+       (nombre, fecha_activacion, estado_actual, incluye_crm_en_marketing, es_agencia, plan_tipo,
+        soporte_valor, valor_licencia_general, api_estado, api_valor,
+        bono_reactivacion, reserva, fecha_inicio_real, tipo_cliente, creado_por_rol, estado_actualizado_en)
+     values ($1,$2,'activo',$3,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'admin',now())
+     returning id`,
+    [d.nombre, d.fechaActivacion, d.esAgencia, d.planTipo, d.soporteValor, d.valorLicencia,
+     d.apiEstado, d.apiValor, d.bono, d.reserva, d.fechaInicioReal, d.tipoCliente],
+  );
+  const id = Number(rows[0]!.id);
+  await consulta(
+    `insert into public.cliente_estado_historial (cliente_id, estado, motivo) values ($1, 'activo', $2)`,
+    [id, `Alta desde ${d.origen ?? "Membresías"}`],
+  );
+  for (const colId of d.asignados) {
+    await consulta(
+      `insert into public.cliente_colaboradores (cliente_id, colaborador_id) values ($1,$2) on conflict do nothing`,
+      [id, colId],
+    );
+  }
+  if (d.afiliadoRef) {
+    const yaExiste = await consulta(
+      `select 1 from public.clientes_afiliados
+        where afiliado_ref = $1 and lower(trim(nombre)) = lower(trim($2)) limit 1`,
+      [d.afiliadoRef, d.nombre],
+    );
+    if (yaExiste.length === 0) {
+      await consulta(
+        `insert into public.clientes_afiliados (ref, nombre, afiliado_ref, fecha_inicio, precio_licencia)
+         values ($1,$2,$3,$4,$5) on conflict (ref) do nothing`,
+        [`cl-mem-${id}`, d.nombre, d.afiliadoRef, mesTexto(d.fechaActivacion), d.valorLicencia || 69],
+      );
+    }
+  }
+  const serviciosValidos = ["agente_ai", "reactivacion", "level_up"];
+  if (d.planTipo && serviciosValidos.includes(d.planTipo)) {
+    const mes = d.fechaActivacion.slice(0, 7);
+    await consulta(
+      `insert into public.cliente_servicios
+         (cliente_id, tipo_servicio, mes_inicio, fecha_compra, soporte_valor, precio_mes1, bono_reactivacion)
+       values ($1,$2,$3,$4,$5,$6,$7)`,
+      [id, d.planTipo, `${mes}-01`, d.fechaActivacion, d.soporteValor, d.precioMes1, d.bono],
+    );
+    await recomputarPagosDeCliente(id);
+  }
+  revalidatePath("/membresias/clientes");
+  revalidatePath("/membresias/dashboard");
+  revalidatePath("/cs");
+  revalidatePath("/afiliados");
+  return id;
+}
+
 /**
  * Crea un cliente en el maestro (tabla `clientes`). Al vivir en la misma tabla
  * que usa Customer Success, queda sincronizado con Comisiones CS de inmediato.

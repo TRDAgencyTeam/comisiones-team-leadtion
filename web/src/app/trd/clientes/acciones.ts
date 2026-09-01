@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { soloAdmin } from "@/lib/sesion";
 import { primerDiaMes, mesAnteriorISO } from "@/lib/facturacion";
+import { crearClienteCompleto, type NuevoClienteInput } from "@/app/membresias/acciones";
 
 const n = (v: FormDataEntryValue | null): number => {
   const x = Number(String(v ?? "").replace(/[^\d.-]/g, ""));
@@ -67,6 +68,59 @@ export async function editarFactura(formData: FormData) {
   );
   revalidatePath("/trd/clientes");
   redirect(`/trd/clientes?mes=${primerDiaMes(String(formData.get("mes") ?? "")).slice(0, 7)}`);
+}
+
+/**
+ * 2º PASO — Nuevo cliente EN CASCADA: crea el cliente completo (→ Membresías,
+ * Afiliados, CS) usando la fuente única, y de una vez su primera factura del mes.
+ */
+export async function crearClienteCascada(formData: FormData) {
+  await soloAdmin();
+  const mes = primerDiaMes(String(formData.get("mes") ?? ""));
+  const nombre = String(formData.get("nombre") ?? "").trim();
+  const back = `/trd/clientes/nuevo-cliente?mes=${mes.slice(0, 7)}`;
+  if (!nombre) redirect(`${back}&error=` + encodeURIComponent("El nombre es obligatorio."));
+
+  const entidad = String(formData.get("entidad") ?? "LLC") === "COL" ? "COL" : "LLC";
+  const esAgencia = formData.get("esAgencia") === "1";
+  const planTipo = String(formData.get("planTipo") ?? "").trim() || null;
+  const fechaActivacion = String(formData.get("fechaActivacion") ?? "").trim() || `${mes.slice(0, 7)}-01`;
+  const soporteRaw = String(formData.get("soporteValor") ?? "").trim();
+  const precioRaw = String(formData.get("precioMes1") ?? "").trim();
+  const asignados = formData.getAll("asignados").map((v) => Number(v)).filter(Boolean);
+  const afiliadoRef = String(formData.get("afiliadoRef") ?? "").trim() || null;
+  const reserva = String(formData.get("reserva")) === "1";
+
+  const datos: NuevoClienteInput = {
+    nombre, fechaActivacion,
+    tipoCliente: planTipo ? "servicio" : esAgencia ? "agencia" : "estandar",
+    esAgencia, planTipo,
+    soporteValor: soporteRaw === "" ? null : Number(soporteRaw),
+    apiEstado: "ninguna", apiValor: null, bono: null,
+    precioMes1: precioRaw === "" ? null : Number(precioRaw),
+    reserva, fechaInicioReal: null,
+    valorLicencia: esAgencia ? 0 : 69,
+    asignados, afiliadoRef, origen: "Madre / Clientes",
+  };
+  const clienteId = await crearClienteCompleto(datos);
+
+  // Primera factura del mes, enlazada al cliente recién creado.
+  const facturado = n(formData.get("facturado"));
+  const medio = txt(formData.get("medio"));
+  const servicios = txt(formData.get("servicios"));
+  const precioDesglose = txt(formData.get("precioDesglose"));
+  const ivaPct = entidad === "COL" ? (txt(formData.get("ivaPct")) ? Number(String(formData.get("ivaPct")).replace(/[^\d.]/g, "")) : 19) : 0;
+  const estado = String(formData.get("estado") ?? "por_facturar");
+  await consulta(
+    `insert into public.factura_mensual
+       (mes, entidad, cliente_id, cliente_nombre, reserva, servicios, precio_desglose,
+        facturado, medio, iva_pct, estado)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+    [mes, entidad, clienteId, nombre, reserva, servicios, precioDesglose, facturado, medio, ivaPct, estado],
+  );
+
+  revalidatePath("/trd/clientes");
+  redirect(`/trd/clientes?mes=${mes.slice(0, 7)}`);
 }
 
 /** Cambia solo el estado (semáforo) de una factura. */

@@ -40,7 +40,8 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
             <input type="month" name="mes" defaultValue={mes} />
             <button type="submit" className="btn-secondary">Ver</button>
           </form>
-          <Link href={`/trd/clientes/nuevo?mes=${mes}`} className="btn-primary">+ Cliente</Link>
+          <Link href={`/trd/clientes/nuevo-cliente?mes=${mes}`} className="btn-primary">+ Nuevo cliente</Link>
+          <Link href={`/trd/clientes/nuevo?mes=${mes}`} className="btn-secondary">+ Factura (existente)</Link>
           <form action={copiarMesAnterior}><input type="hidden" name="mes" value={mes} /><button type="submit" className="btn-secondary">Copiar mes anterior</button></form>
         </div>
       </div>
