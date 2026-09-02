@@ -35,15 +35,10 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
           <h1>Clientes — Facturación</h1>
           <p className="sub">Cuadro de ingresos de <strong>{nombreMes(mes)}</strong> · tasa {cop(totales.tasa)} · ingresos netos {usd(totales.ingresosUsd)}.</p>
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <form method="get" className="reg-mes">
-            <input type="month" name="mes" defaultValue={mes} />
-            <button type="submit" className="btn-secondary">Ver</button>
-          </form>
-          <Link href={`/trd/clientes/nuevo-cliente?mes=${mes}`} className="btn-primary">+ Nuevo cliente</Link>
-          <Link href={`/trd/clientes/nuevo?mes=${mes}`} className="btn-secondary">+ Factura (existente)</Link>
-          <form action={copiarMesAnterior}><input type="hidden" name="mes" value={mes} /><button type="submit" className="btn-secondary">Copiar mes anterior</button></form>
-        </div>
+        <form method="get" className="reg-mes">
+          <input type="month" name="mes" defaultValue={mes} />
+          <button type="submit" className="btn-secondary">Ver</button>
+        </form>
       </div>
       {sp.error && <p className="alerta">{decodeURIComponent(sp.error)}</p>}
 
@@ -52,6 +47,21 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
         <div className="kpi"><span className="kpi-lbl">Clientes COL (neto USD)</span><span className="kpi-num">{usd(totales.col.netoUsd)}</span></div>
         <div className="kpi destacado"><span className="kpi-lbl">Total ingresos netos</span><span className="kpi-num">{usd(totales.ingresosUsd)}</span></div>
         <div className="kpi"><span className="kpi-lbl">Comisión pasarela</span><span className="kpi-num neg">{usd(totales.llc.pasarela)}</span></div>
+      </div>
+
+      <div className="clientes-acciones">
+        <div className="acc-item">
+          <Link href={`/trd/clientes/nuevo-cliente?mes=${mes}`} className="btn-primary">+ Nuevo cliente</Link>
+          <span className="acc-help">Cliente que entra por primera vez. Se conecta con Membresías, Afiliados y CS, y crea su primera factura.</span>
+        </div>
+        <div className="acc-item">
+          <Link href={`/trd/clientes/nuevo?mes=${mes}`} className="btn-secondary">+ Nueva factura</Link>
+          <span className="acc-help">Registra la factura de este mes de un cliente que ya existe.</span>
+        </div>
+        <div className="acc-item">
+          <form action={copiarMesAnterior}><input type="hidden" name="mes" value={mes} /><button type="submit" className="btn-secondary">Copiar recurrentes del mes anterior</button></form>
+          <span className="acc-help">Trae las facturas del mes pasado a este mes (como “por facturar”) para no reescribir a los recurrentes.</span>
+        </div>
       </div>
 
       {/* LLC */}
