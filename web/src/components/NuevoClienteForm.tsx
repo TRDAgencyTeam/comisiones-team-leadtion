@@ -118,6 +118,9 @@ export function NuevoClienteForm({
             {ESTADOS.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
           </select>
         </label>
+        <label className="pf-check" style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <input type="checkbox" name="recurrente" value="1" defaultChecked={esAgencia} style={{ width: "auto" }} /> Recurrente (se autogenera cada mes)
+        </label>
       </div>
 
       <div className="factura-preview">

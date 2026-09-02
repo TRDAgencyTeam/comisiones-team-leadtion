@@ -84,6 +84,9 @@ export function FacturaForm({
         <label className="pf-check" style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <input type="checkbox" name="reserva" value="1" defaultChecked={factura?.reserva} style={{ width: "auto" }} /> Vino con reserva
         </label>
+        <label className="pf-check" style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <input type="checkbox" name="recurrente" value="1" defaultChecked={factura?.recurrente} style={{ width: "auto" }} /> Recurrente (plan mensual, se autogenera)
+        </label>
       </div>
 
       <div className="factura-preview">

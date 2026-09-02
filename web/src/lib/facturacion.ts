@@ -11,6 +11,7 @@ export interface FacturaRow {
   clienteNombre: string;
   mrr: number | null;
   reserva: boolean;
+  recurrente: boolean;
   servicios: string | null;
   precioDesglose: string | null;
   facturado: number;
@@ -35,6 +36,10 @@ export function mesAnteriorISO(mes: string): string {
   const d = new Date(a!, (m! - 1) - 1, 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
+export function mesActualISO(): string {
+  const h = new Date();
+  return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}`;
+}
 
 function mapRow(r: Record<string, unknown>): FacturaRow {
   return {
@@ -45,6 +50,7 @@ function mapRow(r: Record<string, unknown>): FacturaRow {
     clienteNombre: String(r.cliente_nombre),
     mrr: r.mrr != null ? Number(r.mrr) : null,
     reserva: Boolean(r.reserva),
+    recurrente: Boolean(r.recurrente),
     servicios: (r.servicios as string) ?? null,
     precioDesglose: (r.precio_desglose as string) ?? null,
     facturado: num(r.facturado),
@@ -56,41 +62,118 @@ function mapRow(r: Record<string, unknown>): FacturaRow {
   };
 }
 
-export interface TotalesFactura {
-  tasa: number;
-  llc: { facturado: number; pasarela: number; neto: number; count: number };
-  col: { facturado: number; iva: number; copConIva: number; netoUsd: number; count: number };
-  ingresosUsd: number;
+/** Neto de una factura en USD (LLC: facturado−pasarela; COL: antes de IVA ÷ tasa). */
+export function netoUsdDeFactura(f: FacturaRow, tasa: number): number {
+  return f.entidad === "LLC" ? calcLLC(f.facturado, f.medio).neto : calcCOL(f.facturado, f.ivaPct, tasa).netoUsd;
 }
 
-export async function facturasDelMes(mes: string): Promise<{ llc: FacturaRow[]; col: FacturaRow[]; totales: TotalesFactura }> {
+/**
+ * AUTO-GENERACIÓN de recurrentes: si el mes no tiene facturas aún, clona las
+ * recurrentes del mes anterior (cliente no cancelado) como "por facturar".
+ * Idempotente y seguro (solo actúa si el mes está vacío). Lo usa la vista (lazy)
+ * y el cron del día 1.
+ */
+export async function asegurarRecurrentesDelMes(mes: string): Promise<number> {
   const primer = primerDiaMes(mes);
-  const [rows, fx] = await Promise.all([
-    consulta(
-      `select * from public.factura_mensual where mes = $1
-        order by entidad, (mrr is null), mrr, cliente_nombre`, [primer]),
+  const anterior = primerDiaMes(mesAnteriorISO(mes));
+  const yaHay = await consulta(`select 1 from public.factura_mensual where mes = $1 limit 1`, [primer]);
+  if (yaHay.length > 0) return 0;
+  const res = await consulta(
+    `insert into public.factura_mensual
+       (mes, entidad, cliente_id, cliente_nombre, mrr, reserva, recurrente, servicios, precio_desglose,
+        facturado, medio, iva_pct, estado)
+     select $1, f.entidad, f.cliente_id, f.cliente_nombre, f.mrr, f.reserva, true, f.servicios, f.precio_desglose,
+        f.facturado, f.medio, f.iva_pct, 'por_facturar'
+       from public.factura_mensual f
+       left join public.clientes c on c.id = f.cliente_id
+      where f.mes = $2 and f.recurrente = true and f.estado <> 'anulado'
+        and (c.id is null or c.estado_actual = 'activo')`,
+    [primer, anterior],
+  );
+  return res.length ?? 0;
+}
+
+export interface ServicioLeadtion { clienteNombre: string; concepto: string; esReactivacion: boolean; valorUsd: number; }
+export interface MembresiasResumen { cuentas: number; totalUsd: number; }
+
+const SRV_LABEL: Record<string, string> = { reactivacion: "Reactivación", agente_ai: "Agente IA", level_up: "Level Up" };
+
+/** Servicios/soporte de Leadtion cobrados este mes (se jalan; no se re-escriben). */
+export async function serviciosLeadtionDelMes(mes: string): Promise<ServicioLeadtion[]> {
+  const primer = primerDiaMes(mes);
+  const rows = await consulta(
+    `select c.nombre, p.origen, p.valor,
+            (select string_agg(distinct cs.tipo_servicio, ',') from public.cliente_servicios cs where cs.cliente_id = p.cliente_id) tipos
+       from public.pagos_mensuales p
+       join public.clientes c on c.id = p.cliente_id
+      where p.mes = $1 and p.origen in ('servicio','soporte') and coalesce(p.valor,0) > 0
+      order by c.nombre`,
+    [primer],
+  );
+  return rows.map((r: Record<string, unknown>) => {
+    const tipos = String(r.tipos ?? "");
+    const esReactivacion = tipos.includes("reactivacion");
+    const concepto = r.origen === "soporte"
+      ? "Soporte"
+      : tipos.split(",").filter(Boolean).map((t) => SRV_LABEL[t] ?? t).join(" + ") || "Servicio Leadtion";
+    return { clienteNombre: String(r.nombre), concepto, esReactivacion, valorUsd: num(r.valor) };
+  });
+}
+
+/** Resumen de cuentas Leadtion (membresías) del mes: # con cobro y total USD. */
+export async function membresiasLeadtionDelMes(mes: string): Promise<MembresiasResumen> {
+  const primer = primerDiaMes(mes);
+  const r = await consulta(
+    `select count(*)::int cuentas, coalesce(sum(valor),0)::float total
+       from public.pagos_mensuales
+      where mes = $1 and origen is null and coalesce(valor,0) > 0`,
+    [primer],
+  );
+  return { cuentas: Number(r[0]!.cuentas), totalUsd: Number(r[0]!.total) };
+}
+
+export interface VistaFacturacion {
+  tasa: number;
+  recurrentes: FacturaRow[];
+  delMomento: FacturaRow[];
+  leadtion: ServicioLeadtion[];
+  membresias: MembresiasResumen;
+  totales: {
+    agenciaNetoUsd: number; pasarelaUsd: number; leadtionServiciosUsd: number;
+    ingresosUsd: number; pendientes: number;
+  };
+}
+
+export async function vistaFacturacion(mes: string): Promise<VistaFacturacion> {
+  await asegurarRecurrentesDelMes(mes); // lazy: deja el mes listo
+  const primer = primerDiaMes(mes);
+  const [rows, fx, leadtion, membresias] = await Promise.all([
+    consulta(`select * from public.factura_mensual where mes = $1
+              order by recurrente desc, (mrr is null), mrr, cliente_nombre`, [primer]),
     tasaUsdCop(),
+    serviciosLeadtionDelMes(mes),
+    membresiasLeadtionDelMes(mes),
   ]);
   const filas = rows.map(mapRow);
-  const llc = filas.filter((f) => f.entidad === "LLC");
-  const col = filas.filter((f) => f.entidad === "COL");
   const tasa = fx.cop;
+  const recurrentes = filas.filter((f) => f.recurrente);
+  const delMomento = filas.filter((f) => !f.recurrente);
 
-  const tLlc = { facturado: 0, pasarela: 0, neto: 0, count: llc.length };
-  for (const f of llc) {
+  let agenciaNetoUsd = 0, pasarelaUsd = 0, pendientes = 0;
+  for (const f of filas) {
     if (f.estado === "anulado") continue;
-    const c = calcLLC(f.facturado, f.medio);
-    tLlc.facturado += f.facturado; tLlc.pasarela += c.pasarela; tLlc.neto += c.neto;
+    if (f.entidad === "LLC") { const c = calcLLC(f.facturado, f.medio); agenciaNetoUsd += c.neto; pasarelaUsd += c.pasarela; }
+    else agenciaNetoUsd += calcCOL(f.facturado, f.ivaPct, tasa).netoUsd;
+    if (f.estado !== "pagado") pendientes += 1;
   }
-  const tCol = { facturado: 0, iva: 0, copConIva: 0, netoUsd: 0, count: col.length };
-  for (const f of col) {
-    if (f.estado === "anulado") continue;
-    const c = calcCOL(f.facturado, f.ivaPct, tasa);
-    tCol.facturado += f.facturado; tCol.iva += c.iva; tCol.copConIva += c.copConIva; tCol.netoUsd += c.netoUsd;
-  }
+  const leadtionServiciosUsd = leadtion.reduce((s, x) => s + x.valorUsd, 0);
+  const r2 = (n: number) => Math.round(n * 100) / 100;
   return {
-    llc, col,
-    totales: { tasa, llc: tLlc, col: tCol, ingresosUsd: Math.round((tLlc.neto + tCol.netoUsd) * 100) / 100 },
+    tasa, recurrentes, delMomento, leadtion, membresias,
+    totales: {
+      agenciaNetoUsd: r2(agenciaNetoUsd), pasarelaUsd: r2(pasarelaUsd), leadtionServiciosUsd: r2(leadtionServiciosUsd),
+      ingresosUsd: r2(agenciaNetoUsd + leadtionServiciosUsd + membresias.totalUsd), pendientes,
+    },
   };
 }
 
