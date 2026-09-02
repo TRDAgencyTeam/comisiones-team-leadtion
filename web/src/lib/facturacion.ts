@@ -30,7 +30,7 @@ export interface FacturaRow {
 export async function catalogoServicios(): Promise<ServicioCatalogo[]> {
   const rows = await consulta(
     `select clave, nombre, categoria, recurrente, precio_variable, precio_mes1, precio_resto,
-            min_meses, aplica_cs, aplica_referido, aplica_reserva, por_persona, precio_persona
+            min_meses, aplica_cs, aplica_referido, aplica_reserva, por_persona, precio_persona, unidad
        from public.servicio_catalogo where activo = true order by orden, nombre`,
   );
   return rows.map((r: Record<string, unknown>) => ({
@@ -47,6 +47,7 @@ export async function catalogoServicios(): Promise<ServicioCatalogo[]> {
     aplicaReserva: Boolean(r.aplica_reserva),
     porPersona: Boolean(r.por_persona),
     precioPersona: r.precio_persona != null ? Number(r.precio_persona) : null,
+    unidad: (r.unidad as string) ?? null,
   }));
 }
 

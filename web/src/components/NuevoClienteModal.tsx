@@ -32,7 +32,7 @@ export function NuevoClienteModal({
     if (!srv) return;
     const conv = (usd: number | null): string => {
       if (usd == null) return "";
-      const v = entidad === "COL" ? Math.round(usd * tasa) : usd;
+      const v = entidad === "COL" ? Math.round(usd * tasa) : Math.round(usd);
       return String(v);
     };
     if (srv.porPersona) {
@@ -107,7 +107,7 @@ export function NuevoClienteModal({
 
                 {srv?.porPersona && (
                   <div className="cf-f">
-                    <label>Cantidad de personas ({money(srv.precioPersona ?? 0, "USD")} c/u{entidad === "COL" ? ` ≈ ${money(Math.round((srv.precioPersona ?? 0) * tasa), "COP")}` : ""})</label>
+                    <label>Cantidad de {srv.unidad === "hora" ? "horas" : "personas"} ({money(srv.precioPersona ?? 0, "USD")} c/u{entidad === "COL" ? ` ≈ ${money(Math.round((srv.precioPersona ?? 0) * tasa), "COP")}` : ""})</label>
                     <input type="number" min={1} value={personas} onChange={(e) => setPersonas(Math.max(1, Number(e.target.value) || 1))} />
                   </div>
                 )}

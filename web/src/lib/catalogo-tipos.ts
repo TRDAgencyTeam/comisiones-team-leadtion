@@ -13,6 +13,7 @@ export interface ServicioCatalogo {
   aplicaReserva: boolean;
   porPersona: boolean;
   precioPersona: number | null;
+  unidad: string | null;
 }
 
 export const CATEGORIA_LABEL: Record<string, string> = {

@@ -23,7 +23,7 @@ export function NuevaFacturaForm({ mes, tasa, catalogo }: { mes: string; tasa: n
     if (!srv) return;
     setServicios(srv.nombre);
     const base = srv.porPersona ? (srv.precioPersona ?? 0) * Math.max(1, personas) : (srv.precioMes1 ?? 0);
-    const v = srv.precioVariable && !srv.porPersona ? 0 : (entidad === "COL" ? Math.round(base * tasa) : base);
+    const v = srv.precioVariable && !srv.porPersona ? 0 : (entidad === "COL" ? Math.round(base * tasa) : Math.round(base));
     setFacturado(v ? String(v) : "");
   }, [clave, entidad, personas, srv, tasa]);
 
@@ -62,7 +62,7 @@ export function NuevaFacturaForm({ mes, tasa, catalogo }: { mes: string; tasa: n
 
         {srv?.porPersona && (
           <div className="cf-f">
-            <label>Cantidad de personas ({money(srv.precioPersona ?? 0, "USD")} c/u)</label>
+            <label>Cantidad de {srv.unidad === "hora" ? "horas" : "personas"} ({money(srv.precioPersona ?? 0, "USD")} c/u)</label>
             <input type="number" min={1} value={personas} onChange={(e) => setPersonas(Math.max(1, Number(e.target.value) || 1))} />
           </div>
         )}
