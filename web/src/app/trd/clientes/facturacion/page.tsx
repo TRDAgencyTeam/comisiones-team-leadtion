@@ -2,11 +2,13 @@ import Link from "next/link";
 import { soloAdmin } from "@/lib/sesion";
 import { vistaFacturacion, catalogoServicios, netoUsdDeFactura, type FacturaRow } from "@/lib/facturacion";
 import { calcLLC } from "@/lib/facturacion-calc";
+import { otrosIngresosDelMes } from "@/lib/egresos";
 import { opcionesFormulario } from "@/lib/membresias";
 import { EstadoFactura } from "@/components/EstadoFactura";
 import { ClientesHeader } from "@/components/ClientesHeader";
 import { NuevoClienteModal } from "@/components/NuevoClienteModal";
-import { eliminarFactura } from "../acciones";
+import { MovimientoModal } from "@/components/MovimientoModal";
+import { eliminarFactura, eliminarIngreso } from "../acciones";
 
 export const metadata = { title: "Facturación" };
 export const dynamic = "force-dynamic";
@@ -62,10 +64,11 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
   await soloAdmin();
   const sp = await searchParams;
   const mes = sp.mes && /^\d{4}-\d{2}$/.test(sp.mes) ? sp.mes : mesISO();
-  const [v, catalogo, opciones] = await Promise.all([vistaFacturacion(mes), catalogoServicios(), opcionesFormulario()]);
+  const [v, catalogo, opciones, otros] = await Promise.all([vistaFacturacion(mes), catalogoServicios(), opcionesFormulario(), otrosIngresosDelMes(mes)]);
 
   const recLLC = v.recurrentes.filter((f) => f.entidad === "LLC");
   const recCOL = v.recurrentes.filter((f) => f.entidad === "COL");
+  const otrosTotal = otros.reduce((s, o) => s + o.valorUsd, 0);
 
   return (
     <main className="cf">
@@ -87,7 +90,29 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
       <div className="cf-sec-head"><h2>Servicios del momento <span className="count">{v.delMomento.length}</span></h2></div>
       <Tabla filas={v.delMomento} tasa={v.tasa} entidad="LLC" />
 
+      <div className="cf-sec-head">
+        <h2>Otros ingresos del mes <span className="count">{usd(otrosTotal)}</span></h2>
+        <MovimientoModal mes={mes} tipo="ingreso" />
+      </div>
+      <div className="cf-table-wrap">
+        <table className="cf-table" style={{ minWidth: 0 }}>
+          <thead><tr><th>Concepto</th><th>Categoría</th><th className="r">Monto USD</th><th></th></tr></thead>
+          <tbody>
+            {otros.map((o) => (
+              <tr key={o.id}>
+                <td className="nom">{o.concepto}</td>
+                <td><span className="cf-tag caja">{o.categoria ?? "otro"}</span></td>
+                <td className="r neto">{usd(o.valorUsd)}</td>
+                <td><form action={eliminarIngreso}><input type="hidden" name="id" value={o.id} /><button type="submit" className="btn-borrar" title="Eliminar">🗑️</button></form></td>
+              </tr>
+            ))}
+            {otros.length === 0 && <tr><td colSpan={4} className="cf-empty" style={{ padding: 24 }}>Sin otros ingresos. Agrega reselling, mantenimientos, API vendida, afiliaciones…</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
       <p className="cf-nota">
+        <b>Otros ingresos</b> = plata que entra y no es cliente de agencia: reselling Leadtion, licencias de afiliado, mantenimientos web, reservas P2P, API vendida, afiliación de herramientas. Se cargan aquí (ya no en Leadtion).<br />
         <b>Servicios del momento</b> = compras de una sola vez o servicios Leadtion puntuales (Agente IA, Reactivación, grabación, evento…). Los recurrentes se autogeneran cada mes;
         al terminar el contrato el cliente pasa a <b>“¿Continúa?”</b> (automático) para confirmar. Neto USD = facturado − pasarela (LLC) / antes de IVA ÷ tasa (COL).
       </p>

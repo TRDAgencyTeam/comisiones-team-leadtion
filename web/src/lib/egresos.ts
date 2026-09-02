@@ -2,7 +2,7 @@ import "server-only";
 import { consulta } from "@/lib/db";
 import { tasaUsdCop } from "@/lib/fx";
 import { calcLLC, calcCOL } from "@/lib/facturacion-calc";
-import { primerDiaMes } from "@/lib/facturacion";
+import { primerDiaMes, mesActualISO } from "@/lib/facturacion";
 
 export interface EgresoRow {
   id: number;
@@ -14,7 +14,43 @@ export interface EgresoRow {
   valorCop: number | null;
   afectaUtilidad: boolean;
   categoria: string | null;
+  subcategoria: string | null;
   automatico: boolean;
+}
+
+/**
+ * SNAPSHOT de egresos fijos del mes (idempotente): si el mes en curso/futuro no
+ * tiene fijos, los copia desde Nómina (colaboradores) y Gastos Fijos (gasto_fijo).
+ * Así se repiten cada mes y quedan EDITABLES por mes (sin tocar el histórico).
+ * No hace backfill de meses pasados (esos conservan lo que ya tienen).
+ */
+export async function asegurarEgresosFijosDelMes(mes: string): Promise<number> {
+  const primer = primerDiaMes(mes);
+  if (primer < primerDiaMes(mesActualISO())) return 0; // no backfill histórico
+  const ya = await consulta(`select 1 from public.egreso_mensual where mes = $1 and categoria = 'fijo' limit 1`, [primer]);
+  if (ya.length > 0) return 0;
+  const { cop: tasa } = await tasaUsdCop();
+
+  await consulta(
+    `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
+     select $1, nombre, coalesce(area,'Equipo'), round((valor_nomina/$2)::numeric,2), valor_nomina, true, 'fijo', 'nomina'
+       from public.colaboradores where activo and coalesce(valor_nomina,0) > 0`,
+    [primer, tasa],
+  );
+  await consulta(
+    `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
+     select $1, nombre, 'TRD',
+        round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
+                * (coalesce(porcentaje_reparto,100)/100.0)
+                / case when moneda='COP' then $2 else 1 end )::numeric, 2),
+        case when moneda='COP' then valor else null end,
+        true, 'fijo', categoria
+       from public.gasto_fijo
+      where activo and afecta_utilidad and categoria <> 'paso_dinero'
+        and (recurrencia='mensual' or (recurrencia='anual' and amortizar) or recurrencia='diario')`,
+    [primer, tasa],
+  );
+  return 1;
 }
 export interface IngresoRow {
   id: number;
@@ -40,6 +76,7 @@ export async function egresosDelMes(mes: string): Promise<EgresoRow[]> {
     marca: (r.marca as string) ?? null, fecha: toISO(r.fecha), valorUsd: num(r.valor_usd),
     valorCop: r.valor_cop != null ? Number(r.valor_cop) : null,
     afectaUtilidad: Boolean(r.afecta_utilidad), categoria: (r.categoria as string) ?? null,
+    subcategoria: (r.subcategoria as string) ?? null,
     automatico: Boolean(r.automatico),
   }));
 }
@@ -85,6 +122,7 @@ const DIEZMO_PCT = 0.1;
  * (incluido el diezmo) no bajan la utilidad; bajan la caja.
  */
 export async function resumenDelMes(mes: string): Promise<ResumenMes> {
+  await asegurarEgresosFijosDelMes(mes); // fijos del mes en curso/futuro (idempotente)
   const primer = primerDiaMes(mes);
   const [facturas, fx, otros, egresos] = await Promise.all([
     consulta(`select entidad, facturado, medio, iva_pct, estado, tasa from public.factura_mensual where mes = $1`, [primer]),
@@ -116,7 +154,7 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
   // Diezmo automático como línea "sale de caja" (virtual, no se guarda).
   const diezmoRow: EgresoRow = {
     id: -1, mes: mes.slice(0, 7), concepto: "Diezmo (10% sobre utilidad)", marca: "TRD",
-    fecha: null, valorUsd: diezmo, valorCop: null, afectaUtilidad: false, categoria: "diezmo", automatico: true,
+    fecha: null, valorUsd: diezmo, valorCop: null, afectaUtilidad: false, categoria: "diezmo", subcategoria: null, automatico: true,
   };
   const totalCaja = r2(caja.reduce((s, e) => s + e.valorUsd, 0) + diezmo);
 

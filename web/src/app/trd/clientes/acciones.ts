@@ -158,10 +158,11 @@ export async function crearEgreso(formData: FormData) {
   const valorCop = txt(formData.get("valorCop")) ? n(formData.get("valorCop")) : null;
   const afectaUtilidad = String(formData.get("afectaUtilidad")) === "1";
   const categoria = txt(formData.get("categoria"));
+  const subcategoria = txt(formData.get("subcategoria"));
   await consulta(
-    `insert into public.egreso_mensual (mes, concepto, marca, fecha, valor_usd, valor_cop, afecta_utilidad, categoria)
-     values ($1,$2,$3,$4,$5,$6,$7,$8)`,
-    [mes, concepto, marca, fecha, valorUsd, valorCop, afectaUtilidad, categoria],
+    `insert into public.egreso_mensual (mes, concepto, marca, fecha, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+    [mes, concepto, marca, fecha, valorUsd, valorCop, afectaUtilidad, categoria, subcategoria],
   );
   revalidatePath("/trd/clientes/egresos");
   revalidatePath("/trd/clientes");
