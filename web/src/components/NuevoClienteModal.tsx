@@ -1,14 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CATEGORIA_LABEL, type ServicioCatalogo } from "@/lib/catalogo-tipos";
 import { MEDIOS, ESTADOS } from "@/lib/facturacion-calc";
 import { crearClienteCascada } from "@/app/trd/clientes/acciones";
 
+const money = (n: number, moneda: "USD" | "COP") =>
+  new Intl.NumberFormat("es-CO", { style: "currency", currency: moneda, maximumFractionDigits: moneda === "COP" ? 0 : 2 }).format(n);
+
 export function NuevoClienteModal({
-  mes, catalogo, afiliados, colaboradores,
+  mes, tasa, catalogo, afiliados, colaboradores,
 }: {
   mes: string;
+  tasa: number;
   catalogo: ServicioCatalogo[];
   afiliados: { ref: string; nombre: string; tipo: string }[];
   colaboradores: { id: number; nombre: string }[];
@@ -16,20 +20,46 @@ export function NuevoClienteModal({
   const [open, setOpen] = useState(false);
   const [entidad, setEntidad] = useState<"LLC" | "COL">("LLC");
   const [clave, setClave] = useState(catalogo[0]?.clave ?? "");
+  const [personas, setPersonas] = useState(1);
+  const [precios, setPrecios] = useState<string[]>([]);
 
   const srv = useMemo(() => catalogo.find((c) => c.clave === clave), [catalogo, clave]);
-  const meses = srv?.recurrente ? [1, 2, 3, 4] : [1];
-  const preciosDefault = (n: number) => {
-    if (!srv || srv.precioVariable) return "";
-    return String(n === 1 ? (srv.precioMes1 ?? "") : (srv.precioResto ?? srv.precioMes1 ?? ""));
-  };
   const moneda = entidad === "COL" ? "COP" : "USD";
+  const nMeses = srv?.recurrente && !srv?.porPersona ? 4 : 1;
+
+  // Recalcula los precios por defecto al cambiar servicio / entidad / personas.
+  useEffect(() => {
+    if (!srv) return;
+    const conv = (usd: number | null): string => {
+      if (usd == null) return "";
+      const v = entidad === "COL" ? Math.round(usd * tasa) : usd;
+      return String(v);
+    };
+    if (srv.porPersona) {
+      const totalUsd = (srv.precioPersona ?? 0) * Math.max(1, personas);
+      setPrecios([conv(totalUsd)]);
+    } else if (srv.recurrente) {
+      setPrecios([conv(srv.precioMes1), conv(srv.precioResto ?? srv.precioMes1), conv(srv.precioResto ?? srv.precioMes1), conv(srv.precioResto ?? srv.precioMes1)]);
+    } else {
+      setPrecios([conv(srv.precioMes1)]);
+    }
+  }, [clave, entidad, personas, srv, tasa]);
+
+  // Bloquea el scroll del fondo mientras el popup está abierto.
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
 
   const grupos = useMemo(() => {
     const g: Record<string, ServicioCatalogo[]> = {};
     for (const c of catalogo) (g[c.categoria] ??= []).push(c);
     return g;
   }, [catalogo]);
+
+  const setPrecio = (i: number, v: string) => setPrecios((p) => p.map((x, j) => (j === i ? v : x)));
 
   return (
     <>
@@ -45,6 +75,7 @@ export function NuevoClienteModal({
               <input type="hidden" name="mes" value={mes} />
               <input type="hidden" name="entidad" value={entidad} />
               <input type="hidden" name="servicioClave" value={clave} />
+              {srv?.porPersona && <input type="hidden" name="personas" value={personas} />}
               <div className="cf-modal-body">
                 <div className="cf-f">
                   <label>Nombre del cliente</label>
@@ -61,7 +92,7 @@ export function NuevoClienteModal({
 
                 <div className="cf-f">
                   <label>Servicio</label>
-                  <select value={clave} onChange={(e) => setClave(e.target.value)}>
+                  <select value={clave} onChange={(e) => { setClave(e.target.value); setPersonas(1); }}>
                     {Object.entries(grupos).map(([cat, items]) => (
                       <optgroup key={cat} label={CATEGORIA_LABEL[cat] ?? cat}>
                         {items.map((i) => <option key={i.clave} value={i.clave}>{i.nombre}</option>)}
@@ -70,21 +101,29 @@ export function NuevoClienteModal({
                   </select>
                 </div>
 
-                {srv?.recurrente && (
+                {srv?.recurrente && !srv?.porPersona && (
                   <div className="cf-autonote">✓ Recurrente{srv.minMeses > 1 ? ` · contrato mínimo ${srv.minMeses} meses` : ""}. Se factura solo cada mes; al terminar el contrato pide confirmar continuidad.</div>
                 )}
 
+                {srv?.porPersona && (
+                  <div className="cf-f">
+                    <label>Cantidad de personas ({money(srv.precioPersona ?? 0, "USD")} c/u{entidad === "COL" ? ` ≈ ${money(Math.round((srv.precioPersona ?? 0) * tasa), "COP")}` : ""})</label>
+                    <input type="number" min={1} value={personas} onChange={(e) => setPersonas(Math.max(1, Number(e.target.value) || 1))} />
+                  </div>
+                )}
+
                 <div className="cf-f">
-                  <label>{srv?.precioVariable ? `Precio (${moneda}) — este cliente` : `Precio por mes (${moneda}) — editable`}</label>
-                  <div className="cf-price-grid" style={{ gridTemplateColumns: `repeat(${meses.length}, 1fr)` }}>
-                    {meses.map((m) => (
-                      <div className="pc" key={m}>
-                        <label>Mes {m}</label>
-                        <input name={`precioMes${m}`} inputMode="decimal" defaultValue={preciosDefault(m)} placeholder={srv?.precioVariable ? "—" : ""} />
+                  <label>{srv?.precioVariable ? `Precio (${moneda}) — este cliente` : srv?.porPersona ? `Total (${moneda}) — editable` : `Precio por mes (${moneda}) — editable`}</label>
+                  <div className="cf-price-grid" style={{ gridTemplateColumns: `repeat(${Math.min(nMeses, precios.length || 1)}, 1fr)` }}>
+                    {Array.from({ length: nMeses }).map((_, i) => (
+                      <div className="pc" key={i}>
+                        <label>{srv?.porPersona ? "Total" : `Mes ${i + 1}`}</label>
+                        <input name={`precioMes${i + 1}`} inputMode="decimal" value={precios[i] ?? ""} onChange={(e) => setPrecio(i, e.target.value)} placeholder={srv?.precioVariable ? "—" : ""} />
                       </div>
                     ))}
                   </div>
-                  {srv?.precioVariable && <span className="cf-hint">Servicio de valor variable: escribe el valor acordado con el cliente.</span>}
+                  {srv?.precioVariable && <span className="cf-hint">Valor variable: escribe el acordado con el cliente.</span>}
+                  {entidad === "COL" && !srv?.precioVariable && <span className="cf-hint">Convertido a la tasa de hoy ({money(tasa, "COP")}). Puedes ajustarlo.</span>}
                 </div>
 
                 <div className="cf-f">
@@ -106,10 +145,10 @@ export function NuevoClienteModal({
                   </select>
                 </div>
 
-                {srv?.aplicaCs && (
+                {srv?.aplicaCs ? (
                   <div className="cf-f">
                     <label>Customer Success (comisiona su cuenta Leadtion)</label>
-                    <div className="cf-donut-legend" style={{ gap: 6 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                       {colaboradores.map((c) => (
                         <label key={c.id} style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 500, color: "var(--text)" }}>
                           <input type="checkbox" name="asignados" value={c.id} style={{ width: "auto" }} /> {c.nombre}
@@ -117,8 +156,7 @@ export function NuevoClienteModal({
                       ))}
                     </div>
                   </div>
-                )}
-                {!srv?.aplicaCs && (
+                ) : (
                   <span className="cf-hint">Este servicio no comisiona CS (no incluye cuenta Leadtion).</span>
                 )}
 

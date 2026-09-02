@@ -135,9 +135,11 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
   };
 }
 
-/** Serie de utilidad neta / ingresos por mes para la tendencia (últimos n meses). */
-export async function tendenciaMensual(mesFin: string, n = 8): Promise<{ mes: string; ingresos: number; neta: number }[]> {
-  const out: { mes: string; ingresos: number; neta: number }[] = [];
+export interface PuntoMes { mes: string; ingresos: number; neta: number; egresosTotal: number; egresosUtilidad: number }
+
+/** Serie por mes (últimos n) para las tendencias de ingresos y de egresos. */
+export async function tendenciaMensual(mesFin: string, n = 8): Promise<PuntoMes[]> {
+  const out: PuntoMes[] = [];
   const [ay, am] = primerDiaMes(mesFin).split("-").map(Number);
   const meses: string[] = [];
   for (let i = n - 1; i >= 0; i--) {
@@ -146,7 +148,10 @@ export async function tendenciaMensual(mesFin: string, n = 8): Promise<{ mes: st
   }
   for (const m of meses) {
     const r = await resumenDelMes(m);
-    out.push({ mes: m, ingresos: r.ingresos.total, neta: r.utilidadNeta });
+    out.push({
+      mes: m, ingresos: r.ingresos.total, neta: r.utilidadNeta,
+      egresosTotal: r2(r.egresos.totalAfectan + r.egresos.totalCaja), egresosUtilidad: r.egresos.totalAfectan,
+    });
   }
   return out;
 }

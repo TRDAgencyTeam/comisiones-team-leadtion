@@ -606,6 +606,40 @@ a.btn-pagar { text-decoration: none; display: inline-block; }
   font-size: 0.92rem; }
 .trd-nav a:hover { background: var(--accent-soft); }
 
+/* --- Menú lateral (nueva infraestructura de navegación) --- */
+.trd-app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+.trd-side { background: #141320; color: #e7e6f0; padding: 20px 16px; display: flex; flex-direction: column; gap: 22px;
+  position: sticky; top: 0; height: 100vh; }
+.trd-side .brand { display: flex; gap: 11px; align-items: center; }
+.trd-side .logo { width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(120deg, #2e2a6e, #6d5ac0);
+  display: grid; place-items: center; font-weight: 800; color: #fff; font-size: 18px; }
+.trd-side .brand-name { font-weight: 700; font-size: 1rem; line-height: 1.1; }
+.trd-side .brand-sub { font-size: 0.68rem; color: #8f8da6; }
+.trd-side .side-sec { font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; color: #8f8da6; margin: 0 8px 8px; }
+.trd-side nav { display: flex; flex-direction: column; gap: 3px; }
+.trd-side nav a { display: flex; gap: 11px; align-items: center; padding: 10px 12px; border-radius: 10px;
+  color: #b7b5c9; text-decoration: none; font-size: 0.9rem; font-weight: 500; }
+.trd-side nav a:hover { background: rgba(255,255,255,.05); color: #fff; }
+.trd-side nav a.on { background: rgba(255,255,255,.08); color: #fff; }
+.trd-side nav a .ic { width: 26px; height: 26px; border-radius: 7px; background: rgba(255,255,255,.06);
+  display: grid; place-items: center; font-size: 0.8rem; }
+.trd-side nav a.on .ic { background: linear-gradient(120deg, #2e2a6e, #6d5ac0); color: #fff; }
+.trd-side .side-foot { margin-top: auto; border-top: 1px solid rgba(255,255,255,.08); padding-top: 14px; display: flex;
+  flex-direction: column; gap: 8px; font-size: 0.8rem; }
+.trd-side .side-foot .em { color: #8f8da6; font-size: 0.72rem; word-break: break-all; }
+.trd-side .side-foot a, .trd-side .side-foot button { color: #b7b5c9; text-decoration: none; background: none; border: none;
+  text-align: left; cursor: pointer; font: inherit; padding: 4px 0; }
+.trd-side .side-foot a:hover, .trd-side .side-foot button:hover { color: #fff; }
+.trd-main { min-width: 0; }
+@media (max-width: 820px) {
+  .trd-app { grid-template-columns: 1fr; }
+  .trd-side { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .trd-side .side-sec { display: none; }
+  .trd-side nav { flex-direction: row; flex-wrap: wrap; }
+  .trd-side .side-foot { margin-top: 0; border-top: none; padding-top: 0; flex-direction: row; gap: 12px; align-items: center; }
+  .trd-side .side-foot .em { display: none; }
+}
+
 /* --- Utilidades --- */
 .right { text-align: right; }
 .center { text-align: center; }
@@ -845,10 +879,16 @@ button.ck:hover { border-color: var(--muted); }
 .est-por_facturar { background: var(--pending-soft); color: var(--pending); border-color: var(--pending); }
 .est-programado { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
 .est-anulado { background: #fde2e1; color: #b42318; border-color: #b42318; }
+.est-por_confirmar { background: #efe9fb; color: #6d5ac0; border-color: #6d5ac0; }
+.estado-sel:disabled { opacity: 0.6; cursor: wait; }
 @media (prefers-color-scheme: dark) {
   .est-facturado { background: #16233f; color: #8fb0ff; }
   .est-anulado { background: #3a1512; color: #f4a6a0; }
+  .est-por_confirmar { background: #241d3a; color: #b6a6ec; }
 }
+/* Fila de factura pagada: fondo verde muy sutil (se ve de un vistazo). */
+.cf-trow.pagada { background: color-mix(in srgb, var(--paid) 8%, transparent); }
+.cf-trow.pagada:hover { background: color-mix(in srgb, var(--paid) 13%, transparent); }
 
 /* Formulario nuevo cliente (cascada) */
 .nc-sec { font-size: 0.9rem; margin: 18px 0 8px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.05em; }
@@ -964,6 +1004,23 @@ button.ck:hover { border-color: var(--muted); }
 .cf-empty .plus { width: 46px; height: 46px; border-radius: 50%; background: var(--bg); border: 1.5px dashed var(--border);
   display: grid; place-items: center; font-size: 22px; color: var(--accent); margin: 0 auto 10px; cursor: pointer; text-decoration: none; }
 .cf-nota { font-size: 0.76rem; color: var(--muted); margin-top: 14px; line-height: 1.5; }
+
+/* Tabla de facturación (muchas columnas) */
+.cf-table-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; overflow-x: auto; box-shadow: var(--shadow); }
+.cf-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 860px; }
+.cf-table thead th { text-align: left; font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted);
+  font-weight: 700; padding: 11px 14px; background: var(--bg); border-bottom: 1px solid var(--border); white-space: nowrap; }
+.cf-table thead th.r, .cf-table tbody td.r { text-align: right; font-variant-numeric: tabular-nums; }
+.cf-table tbody td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.cf-table tbody tr:last-child td { border-bottom: none; }
+.cf-table tbody tr.pagada { background: color-mix(in srgb, var(--paid) 8%, transparent); }
+.cf-table tbody tr.pagada:hover { background: color-mix(in srgb, var(--paid) 13%, transparent); }
+.cf-table tbody tr.anulada { opacity: 0.5; }
+.cf-table .nom { font-weight: 600; }
+.cf-table .nom small { display: block; color: var(--muted); font-weight: 500; font-size: 0.72rem; }
+.cf-table .srv { color: var(--muted); max-width: 200px; }
+.cf-table .neto { font-weight: 700; }
+.cf-table .acc { display: inline-flex; gap: 8px; align-items: center; }
 
 /* Modal Nuevo cliente / egreso */
 .cf-scrim { position: fixed; inset: 0; background: rgba(14,13,22,.5); display: grid; place-items: center; padding: 20px; z-index: 60; }

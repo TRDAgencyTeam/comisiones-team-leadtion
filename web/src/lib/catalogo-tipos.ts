@@ -11,6 +11,8 @@ export interface ServicioCatalogo {
   aplicaCs: boolean;
   aplicaReferido: boolean;
   aplicaReserva: boolean;
+  porPersona: boolean;
+  precioPersona: number | null;
 }
 
 export const CATEGORIA_LABEL: Record<string, string> = {

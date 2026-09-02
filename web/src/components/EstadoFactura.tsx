@@ -1,18 +1,34 @@
 "use client";
 
-import { useRef } from "react";
+import { useState, useTransition } from "react";
 import { ESTADOS } from "@/lib/facturacion-calc";
 import { cambiarEstadoFactura } from "@/app/trd/clientes/acciones";
 
-/** Chip-selector del estado (semáforo) de una factura; guarda al cambiar. */
+/**
+ * Selector de estado (semáforo) CONTROLADO: el valor mostrado sigue al estado
+ * elegido (sin revertir el texto). "¿Continúa?" (por_confirmar) es automático:
+ * solo aparece si la fila ya está en ese estado; no se puede elegir a mano.
+ */
 export function EstadoFactura({ id, estado }: { id: number; estado: string }) {
-  const ref = useRef<HTMLFormElement>(null);
+  const [val, setVal] = useState(estado);
+  const [pending, start] = useTransition();
+  const opciones = ESTADOS.filter((e) => e.value !== "por_confirmar" || val === "por_confirmar");
+
   return (
-    <form action={cambiarEstadoFactura} ref={ref}>
-      <input type="hidden" name="id" value={id} />
-      <select name="estado" defaultValue={estado} className={`estado-sel est-${estado}`} onChange={() => ref.current?.requestSubmit()}>
-        {ESTADOS.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
-      </select>
-    </form>
+    <select
+      className={`estado-sel est-${val}`}
+      value={val}
+      disabled={pending}
+      onChange={(e) => {
+        const v = e.target.value;
+        setVal(v);
+        const fd = new FormData();
+        fd.set("id", String(id));
+        fd.set("estado", v);
+        start(async () => { await cambiarEstadoFactura(fd); });
+      }}
+    >
+      {opciones.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
+    </select>
   );
 }

@@ -364,6 +364,23 @@ Aprobado por mockup (Artifact) antes de construir. Implementado y verificado loc
 - Nota: `/trd/clientes/nuevo-cliente` ahora redirige a Facturación (el alta es el modal).
   Pendiente al retomar: commitear/desplegar tras revisión del usuario; luego seguir con REG dashboard.
 
+### Ronda 2 de ajustes (2026-09-02) — CONSTRUIDO
+- **Menú lateral** (sidebar) para toda la plataforma madre (`TrdSidebar`), reemplaza el nav superior.
+- **Gráficos interactivos**: `TendenciaChart` (hover con valor + delta vs mes anterior) y `DonutChart`
+  (hover resalta porción, centro abreviado $23.1k, leyenda con puntos de color). Egresos también tiene tendencia.
+- **Bug precios del modal** (todo salía $1500) → corregido: inputs controlados por servicio. Precios base
+  corregidos en catálogo (0030). **Servicios por persona** (Campaña 90/10 $100/pers, Evento $150/pers) con cantidad.
+- **Modal**: scroll-lock del fondo, conversión automática a COP (tasa viva) para clientes Colombia.
+- **EstadoFactura** controlado (bug del texto que se revertía) + "¿Continúa?" ya NO es opción manual (solo automática).
+  Al marcar Pagado se registra la fecha de pago automáticamente (editable en la ficha).
+- **Facturación**: tablas separadas LLC (USA) y Colombia; columnas Facturado/Pasarela/Neto/F.factura/F.pago/mes;
+  fila verde sutil cuando está pagada. **Ficha de cliente** (`[id]`) con LTV, meses activo, servicios, historial + edición.
+- **Nueva factura**: nueva visual + selector de servicios del catálogo (`NuevaFacturaForm`).
+- **Egresos**: tarjetas Egresos totales / de utilidad / de caja + %-por-gasto + tendencia. "Otros ingresos" explicado.
+- **Seed JULIO 2026** (0031): cuadra $20.427 / util. neta $3.977 (COL de julio como agregado — falta detalle).
+- La generación perezosa de meses funciona: septiembre se crea solo desde agosto (mes_contrato +1, "¿Continúa?" al superar el mínimo).
+- Pendiente: detalle COL de julio; pasar más meses (jun) si el usuario los manda; ubicar servicios Leadtion/membresías.
+
 ## Siguiente paso
 La plataforma está en USO REAL (el usuario dejó el Excel el 2026-08-18). Los 3 módulos
 funcionan y están sincronizados/verificados. Backlog priorizado (features futuras, NO bugs):

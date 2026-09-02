@@ -41,17 +41,20 @@ export async function crearFactura(formData: FormData) {
   await soloAdmin();
   const mes = primerDiaMes(String(formData.get("mes") ?? ""));
   const d = parse(formData);
-  const back = `/trd/clientes?mes=${mes.slice(0, 7)}`;
-  if (!d.clienteNombre) redirect(`${back}&error=` + encodeURIComponent("El nombre del cliente es obligatorio."));
+  const back = `/trd/clientes/facturacion?mes=${mes.slice(0, 7)}`;
+  if (!d.clienteNombre) redirect(`/trd/clientes/nuevo?mes=${mes.slice(0, 7)}&error=` + encodeURIComponent("El nombre del cliente es obligatorio."));
+  const servicioClave = txt(formData.get("servicioClave"));
+  const tasaVal = d.entidad === "COL" ? (await tasaUsdCop()).cop : null;
   await consulta(
     `insert into public.factura_mensual
        (mes, entidad, cliente_id, cliente_nombre, mrr, reserva, recurrente, servicios, precio_desglose,
-        facturado, medio, fecha_factura, fecha_pago, iva_pct, estado)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+        facturado, medio, fecha_factura, fecha_pago, iva_pct, estado, servicio_clave, tasa, mes_contrato)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
     [mes, d.entidad, d.clienteId, d.clienteNombre, d.mrr, d.reserva, d.recurrente, d.servicios, d.precioDesglose,
-     d.facturado, d.medio, d.fechaFactura, d.fechaPago, d.ivaPct, d.estado],
+     d.facturado, d.medio, d.fechaFactura, d.fechaPago, d.ivaPct, d.estado, servicioClave, tasaVal, d.recurrente ? 1 : null],
   );
   revalidatePath("/trd/clientes");
+  revalidatePath("/trd/clientes/facturacion");
   redirect(back);
 }
 
@@ -69,7 +72,8 @@ export async function editarFactura(formData: FormData) {
      d.facturado, d.medio, d.fechaFactura, d.fechaPago, d.ivaPct, d.estado],
   );
   revalidatePath("/trd/clientes");
-  redirect(`/trd/clientes?mes=${primerDiaMes(String(formData.get("mes") ?? "")).slice(0, 7)}`);
+  revalidatePath("/trd/clientes/facturacion");
+  redirect(`/trd/clientes/${id}`);
 }
 
 /**
@@ -121,7 +125,10 @@ export async function crearClienteCascada(formData: FormData) {
 
   // Primera factura del mes (facturado = precio mes 1; desglose con los 4 meses).
   const facturado = precios[0] ?? 0;
-  const desglose = precios.filter((p) => p > 0).map((p, i) => `$${p} (mes ${i + 1})`).join(" · ") || null;
+  const personas = Number(formData.get("personas") ?? 0);
+  const desglose = personas > 0
+    ? `${personas} personas × $${Math.round((facturado || 0) / personas)}`
+    : (precios.filter((p) => p > 0).map((p, i) => `$${p} (mes ${i + 1})`).join(" · ") || null);
   const ivaPct = entidad === "COL" ? 19 : 0;
   const tasaVal = entidad === "COL" ? (await tasaUsdCop()).cop : null;
   await consulta(
@@ -201,8 +208,19 @@ export async function cambiarEstadoFactura(formData: FormData) {
   const estado = String(formData.get("estado"));
   const ok = ["pagado", "facturado", "por_facturar", "por_confirmar", "programado", "anulado"];
   if (!ok.includes(estado)) return;
-  await consulta(`update public.factura_mensual set estado=$2, actualizado_en=now() where id=$1`, [id, estado]);
+  // Al marcar Pagado, registra la fecha de pago (si no había); al Facturar, la de
+  // factura. Editable después en la ficha del cliente si fue un clic por error.
+  await consulta(
+    `update public.factura_mensual
+        set estado = $2,
+            fecha_pago    = case when $2 = 'pagado'    and fecha_pago    is null then current_date else fecha_pago end,
+            fecha_factura = case when $2 in ('facturado','pagado') and fecha_factura is null then current_date else fecha_factura end,
+            actualizado_en = now()
+      where id = $1`,
+    [id, estado],
+  );
   revalidatePath("/trd/clientes");
+  revalidatePath("/trd/clientes/facturacion");
 }
 
 export async function eliminarFactura(formData: FormData) {

@@ -30,7 +30,7 @@ export interface FacturaRow {
 export async function catalogoServicios(): Promise<ServicioCatalogo[]> {
   const rows = await consulta(
     `select clave, nombre, categoria, recurrente, precio_variable, precio_mes1, precio_resto,
-            min_meses, aplica_cs, aplica_referido, aplica_reserva
+            min_meses, aplica_cs, aplica_referido, aplica_reserva, por_persona, precio_persona
        from public.servicio_catalogo where activo = true order by orden, nombre`,
   );
   return rows.map((r: Record<string, unknown>) => ({
@@ -45,6 +45,8 @@ export async function catalogoServicios(): Promise<ServicioCatalogo[]> {
     aplicaCs: Boolean(r.aplica_cs),
     aplicaReferido: Boolean(r.aplica_referido),
     aplicaReserva: Boolean(r.aplica_reserva),
+    porPersona: Boolean(r.por_persona),
+    precioPersona: r.precio_persona != null ? Number(r.precio_persona) : null,
   }));
 }
 
@@ -217,6 +219,15 @@ export async function vistaFacturacion(mes: string): Promise<VistaFacturacion> {
 export async function obtenerFactura(id: number): Promise<FacturaRow | null> {
   const rows = await consulta(`select * from public.factura_mensual where id = $1`, [id]);
   return rows.length ? mapRow(rows[0]!) : null;
+}
+
+/** Historial de todas las facturas de un cliente (por nombre), viejo→nuevo. */
+export async function historialCliente(nombre: string): Promise<FacturaRow[]> {
+  const rows = await consulta(
+    `select * from public.factura_mensual where lower(trim(cliente_nombre)) = lower(trim($1)) order by mes`,
+    [nombre],
+  );
+  return rows.map(mapRow);
 }
 
 /** Clientes existentes (para enlazar la factura con un cliente Leadtion/Membresías). */
