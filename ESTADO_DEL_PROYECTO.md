@@ -130,6 +130,15 @@ Afiliados (guardia anti-duplicado) y registra servicio Leadtion. `/trd/clientes/
 crea el cliente en cascada + su 1ª factura del mes. Botones "+ Nuevo cliente" (cascada) y "+ Factura (existente)".
 `NuevoClienteForm`. NOTA: `crearMembresia` quedó con su lógica propia (duplica un poco a crearClienteCompleto; ambas
 funcionan) — si se toca una, sincronizar la otra.
+**Clientes rediseño automático (2026-09-01, en producción)**: facturación por SECCIONES: 🔵 Marketing recurrente
+(agencia) · 🟢 Servicios del momento (agencia) · 🟠 Servicios/Reactivación Leadtion (JALADO de `pagos_mensuales`
+origen servicio/soporte, read-only) · Cuentas Leadtion membresías (resumen # + total, NO se listan). Recurrencia:
+flag `factura_mensual.recurrente` (migración 0026); planes de marketing se AUTOGENERAN cada mes: **lazy al abrir el
+mes** (`asegurarRecurrentesDelMes`, idempotente, solo si el mes está vacío) + **cron real el día 1**
+(`/api/cron/facturacion` + `web/vercel.json` schedule "0 6 1 * *"). Se quitó "copiar mes anterior". Formularios con
+toggle "recurrente". `vistaFacturacion()` en `lib/facturacion.ts`; neto USD por fila. **Usuario debe setear `CRON_SECRET`
+en Vercel** (el cron lo valida; sin él igual funciona el lazy). Total ingresos = agencia neto + servicios Leadtion +
+membresías. Migraciones 0016–0026 aplicadas.
 **PENDIENTE (pedido por el usuario, siguiente)**: (A) **Egresos del mes** en la vista del mes, con el flag "afecta la
 utilidad del mes (sale del mes)" vs "sale de caja (general)"; (B) **Resumen del mes**: ingresos generales vs egresos
 generales → utilidad → −diezmo 10% → utilidad neta (revisar cuadro madre del Excel: ago total ingresos $20.331,86,
