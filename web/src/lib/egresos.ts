@@ -1,0 +1,152 @@
+import "server-only";
+import { consulta } from "@/lib/db";
+import { tasaUsdCop } from "@/lib/fx";
+import { calcLLC, calcCOL } from "@/lib/facturacion-calc";
+import { primerDiaMes } from "@/lib/facturacion";
+
+export interface EgresoRow {
+  id: number;
+  mes: string;
+  concepto: string;
+  marca: string | null;
+  fecha: string | null;
+  valorUsd: number;
+  valorCop: number | null;
+  afectaUtilidad: boolean;
+  categoria: string | null;
+  automatico: boolean;
+}
+export interface IngresoRow {
+  id: number;
+  mes: string;
+  concepto: string;
+  fecha: string | null;
+  valorUsd: number;
+  categoria: string | null;
+}
+
+const num = (v: unknown): number => (v == null ? 0 : Number(v));
+const toISO = (v: unknown): string | null =>
+  v == null ? null : v instanceof Date ? v.toISOString().slice(0, 10) : String(v).slice(0, 10);
+const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+export async function egresosDelMes(mes: string): Promise<EgresoRow[]> {
+  const rows = await consulta(
+    `select * from public.egreso_mensual where mes = $1 order by afecta_utilidad desc, valor_usd desc`,
+    [primerDiaMes(mes)],
+  );
+  return rows.map((r: Record<string, unknown>) => ({
+    id: Number(r.id), mes: toISO(r.mes)!.slice(0, 7), concepto: String(r.concepto),
+    marca: (r.marca as string) ?? null, fecha: toISO(r.fecha), valorUsd: num(r.valor_usd),
+    valorCop: r.valor_cop != null ? Number(r.valor_cop) : null,
+    afectaUtilidad: Boolean(r.afecta_utilidad), categoria: (r.categoria as string) ?? null,
+    automatico: Boolean(r.automatico),
+  }));
+}
+
+export async function otrosIngresosDelMes(mes: string): Promise<IngresoRow[]> {
+  const rows = await consulta(
+    `select * from public.ingreso_mensual where mes = $1 order by valor_usd desc`,
+    [primerDiaMes(mes)],
+  );
+  return rows.map((r: Record<string, unknown>) => ({
+    id: Number(r.id), mes: toISO(r.mes)!.slice(0, 7), concepto: String(r.concepto),
+    fecha: toISO(r.fecha), valorUsd: num(r.valor_usd), categoria: (r.categoria as string) ?? null,
+  }));
+}
+
+export interface ResumenMes {
+  tasa: number;
+  ingresos: {
+    clientesUsa: number;
+    clientesCol: number;
+    otros: IngresoRow[];
+    total: number;
+    porFuente: { etiqueta: string; valor: number }[];
+  };
+  egresos: {
+    afectanUtilidad: EgresoRow[];
+    saleDeCaja: EgresoRow[];
+    totalAfectan: number;
+    totalCaja: number;
+  };
+  utilidadBruta: number;
+  diezmo: number;
+  utilidadNeta: number;
+  margen: number;
+}
+
+const DIEZMO_PCT = 0.1;
+
+/**
+ * Resumen del mes (cuadro madre): ingresos por cliente (facturas neto) + otros
+ * ingresos, menos egresos que afectan la utilidad → utilidad bruta − diezmo
+ * (automático 10%, sale de caja) → utilidad neta. Los egresos "sale de caja"
+ * (incluido el diezmo) no bajan la utilidad; bajan la caja.
+ */
+export async function resumenDelMes(mes: string): Promise<ResumenMes> {
+  const primer = primerDiaMes(mes);
+  const [facturas, fx, otros, egresos] = await Promise.all([
+    consulta(`select entidad, facturado, medio, iva_pct, estado, tasa from public.factura_mensual where mes = $1`, [primer]),
+    tasaUsdCop(),
+    otrosIngresosDelMes(mes),
+    egresosDelMes(mes),
+  ]);
+  const tasa = fx.cop;
+
+  let clientesUsa = 0, clientesCol = 0;
+  for (const f of facturas as Record<string, unknown>[]) {
+    if (String(f.estado) === "anulado") continue;
+    if (f.entidad === "LLC") clientesUsa += calcLLC(num(f.facturado), (f.medio as string) ?? null).neto;
+    else clientesCol += calcCOL(num(f.facturado), num(f.iva_pct), f.tasa != null ? Number(f.tasa) : tasa).netoUsd;
+  }
+  clientesUsa = r2(clientesUsa); clientesCol = r2(clientesCol);
+  const otrosTotal = r2(otros.reduce((s, x) => s + x.valorUsd, 0));
+  const totalIngresos = r2(clientesUsa + clientesCol + otrosTotal);
+
+  const afectan = egresos.filter((e) => e.afectaUtilidad);
+  const caja = egresos.filter((e) => !e.afectaUtilidad);
+  const totalAfectan = r2(afectan.reduce((s, e) => s + e.valorUsd, 0));
+
+  const utilidadBruta = r2(totalIngresos - totalAfectan);
+  const diezmo = r2(Math.max(0, utilidadBruta) * DIEZMO_PCT);
+  const utilidadNeta = r2(utilidadBruta - diezmo);
+  const margen = totalIngresos > 0 ? r2((utilidadNeta / totalIngresos) * 100) : 0;
+
+  // Diezmo automático como línea "sale de caja" (virtual, no se guarda).
+  const diezmoRow: EgresoRow = {
+    id: -1, mes: mes.slice(0, 7), concepto: "Diezmo (10% sobre utilidad)", marca: "TRD",
+    fecha: null, valorUsd: diezmo, valorCop: null, afectaUtilidad: false, categoria: "diezmo", automatico: true,
+  };
+  const totalCaja = r2(caja.reduce((s, e) => s + e.valorUsd, 0) + diezmo);
+
+  return {
+    tasa,
+    ingresos: {
+      clientesUsa, clientesCol, otros, total: totalIngresos,
+      porFuente: [
+        { etiqueta: "Clientes USA", valor: clientesUsa },
+        { etiqueta: "Clientes Colombia", valor: clientesCol },
+        ...otros.map((o) => ({ etiqueta: o.concepto, valor: o.valorUsd })),
+      ].filter((x) => x.valor > 0),
+    },
+    egresos: { afectanUtilidad: afectan, saleDeCaja: [diezmoRow, ...caja], totalAfectan, totalCaja },
+    utilidadBruta, diezmo, utilidadNeta, margen,
+  };
+}
+
+/** Serie de utilidad neta / ingresos por mes para la tendencia (últimos n meses). */
+export async function tendenciaMensual(mesFin: string, n = 8): Promise<{ mes: string; ingresos: number; neta: number }[]> {
+  const out: { mes: string; ingresos: number; neta: number }[] = [];
+  const [ay, am] = primerDiaMes(mesFin).split("-").map(Number);
+  const meses: string[] = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(ay!, am! - 1 - i, 1));
+    meses.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`);
+  }
+  for (const m of meses) {
+    const r = await resumenDelMes(m);
+    out.push({ mes: m, ingresos: r.ingresos.total, neta: r.utilidadNeta });
+  }
+  return out;
+}

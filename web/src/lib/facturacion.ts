@@ -2,6 +2,7 @@ import "server-only";
 import { consulta } from "@/lib/db";
 import { tasaUsdCop } from "@/lib/fx";
 import { calcLLC, calcCOL } from "@/lib/facturacion-calc";
+import type { ServicioCatalogo } from "@/lib/catalogo-tipos";
 
 export interface FacturaRow {
   id: number;
@@ -20,6 +21,31 @@ export interface FacturaRow {
   fechaPago: string | null;
   ivaPct: number;
   estado: string;
+  mesContrato: number | null;
+  servicioClave: string | null;
+  tasa: number | null;
+}
+
+/** Catálogo de servicios (para el modal Nuevo cliente y la vista). */
+export async function catalogoServicios(): Promise<ServicioCatalogo[]> {
+  const rows = await consulta(
+    `select clave, nombre, categoria, recurrente, precio_variable, precio_mes1, precio_resto,
+            min_meses, aplica_cs, aplica_referido, aplica_reserva
+       from public.servicio_catalogo where activo = true order by orden, nombre`,
+  );
+  return rows.map((r: Record<string, unknown>) => ({
+    clave: String(r.clave),
+    nombre: String(r.nombre),
+    categoria: r.categoria as ServicioCatalogo["categoria"],
+    recurrente: Boolean(r.recurrente),
+    precioVariable: Boolean(r.precio_variable),
+    precioMes1: r.precio_mes1 != null ? Number(r.precio_mes1) : null,
+    precioResto: r.precio_resto != null ? Number(r.precio_resto) : null,
+    minMeses: Number(r.min_meses),
+    aplicaCs: Boolean(r.aplica_cs),
+    aplicaReferido: Boolean(r.aplica_referido),
+    aplicaReserva: Boolean(r.aplica_reserva),
+  }));
 }
 
 const num = (v: unknown): number => (v == null ? 0 : Number(v));
@@ -59,12 +85,16 @@ function mapRow(r: Record<string, unknown>): FacturaRow {
     fechaPago: toISO(r.fecha_pago),
     ivaPct: num(r.iva_pct),
     estado: String(r.estado),
+    mesContrato: r.mes_contrato != null ? Number(r.mes_contrato) : null,
+    servicioClave: (r.servicio_clave as string) ?? null,
+    tasa: r.tasa != null ? Number(r.tasa) : null,
   };
 }
 
 /** Neto de una factura en USD (LLC: facturado−pasarela; COL: antes de IVA ÷ tasa). */
 export function netoUsdDeFactura(f: FacturaRow, tasa: number): number {
-  return f.entidad === "LLC" ? calcLLC(f.facturado, f.medio).neto : calcCOL(f.facturado, f.ivaPct, tasa).netoUsd;
+  const t = f.tasa ?? tasa; // tasa histórica del mes si existe
+  return f.entidad === "LLC" ? calcLLC(f.facturado, f.medio).neto : calcCOL(f.facturado, f.ivaPct, t).netoUsd;
 }
 
 /**
@@ -78,14 +108,21 @@ export async function asegurarRecurrentesDelMes(mes: string): Promise<number> {
   const anterior = primerDiaMes(mesAnteriorISO(mes));
   const yaHay = await consulta(`select 1 from public.factura_mensual where mes = $1 limit 1`, [primer]);
   if (yaHay.length > 0) return 0;
+  // Clona los recurrentes del mes anterior. mes_contrato +1; si supera el mínimo
+  // del contrato (catálogo) justo en el mes siguiente → estado 'por_confirmar'
+  // (aviso "¿Continúa?"). El precio del "resto" del catálogo se respeta si existe.
   const res = await consulta(
     `insert into public.factura_mensual
        (mes, entidad, cliente_id, cliente_nombre, mrr, reserva, recurrente, servicios, precio_desglose,
-        facturado, medio, iva_pct, estado)
+        facturado, medio, iva_pct, estado, mes_contrato, servicio_clave)
      select $1, f.entidad, f.cliente_id, f.cliente_nombre, f.mrr, f.reserva, true, f.servicios, f.precio_desglose,
-        f.facturado, f.medio, f.iva_pct, 'por_facturar'
+        f.facturado, f.medio, f.iva_pct,
+        case when coalesce(f.mes_contrato,1) + 1 = coalesce(sc.min_meses, 4) + 1
+             then 'por_confirmar' else 'por_facturar' end,
+        coalesce(f.mes_contrato,1) + 1, f.servicio_clave
        from public.factura_mensual f
        left join public.clientes c on c.id = f.cliente_id
+       left join public.servicio_catalogo sc on sc.clave = f.servicio_clave
       where f.mes = $2 and f.recurrente = true and f.estado <> 'anulado'
         and (c.id is null or c.estado_actual = 'activo')`,
     [primer, anterior],
@@ -163,7 +200,7 @@ export async function vistaFacturacion(mes: string): Promise<VistaFacturacion> {
   for (const f of filas) {
     if (f.estado === "anulado") continue;
     if (f.entidad === "LLC") { const c = calcLLC(f.facturado, f.medio); agenciaNetoUsd += c.neto; pasarelaUsd += c.pasarela; }
-    else agenciaNetoUsd += calcCOL(f.facturado, f.ivaPct, tasa).netoUsd;
+    else agenciaNetoUsd += calcCOL(f.facturado, f.ivaPct, f.tasa ?? tasa).netoUsd;
     if (f.estado !== "pagado") pendientes += 1;
   }
   const leadtionServiciosUsd = leadtion.reduce((s, x) => s + x.valorUsd, 0);

@@ -344,6 +344,26 @@ abajo). Cada módulo tiene su propia URL: `/cs`, `/afiliados`, `/membresias`.
 - Membresías: maestro madre; sueldos COP→USD tasa diaria (~3140). Ver spec en
   `MODULO_CLIENTES_MEMBRESIAS.md`.
 
+## Rediseño Clientes/Facturación (2026-09-02) — CONSTRUIDO, sin commitear aún
+Aprobado por mockup (Artifact) antes de construir. Implementado y verificado local:
+- **3 pestañas**: `/trd/clientes` (Resumen), `/trd/clientes/facturacion`, `/trd/clientes/egresos`.
+  Encabezado común `ClientesHeader` (título + selector de mes + tasa + tabs).
+- **Resumen** = cuadro madre: KPIs (ingresos/util. bruta/util. neta+margen/clientes),
+  tendencia (línea sparse-safe), dona por fuente, desglose ingresos vs gastos →
+  utilidad bruta − **diezmo automático 10%** → utilidad neta. `resumenDelMes()` en `lib/egresos.ts`.
+- **Facturación** = solo clientes (recurrentes + del momento) con estados; **modal Nuevo cliente**
+  (`NuevoClienteModal`) con lista del catálogo, precios editables mes 1-4, campos progresivos
+  (CS salvo Social Media; referido/reserva solo Leadtion). Estado **`por_confirmar` ("¿Continúa?")**
+  automático al superar el contrato mínimo (en `asegurarRecurrentesDelMes`).
+- **Egresos** = flag **afecta_utilidad / sale de caja** + otros ingresos (no-factura). Modal `MovimientoModal`.
+- **Migraciones 0027-0029** aplicadas a prod: `servicio_catalogo` (16 servicios), `egreso_mensual`,
+  `ingreso_mensual`, factura+`mes_contrato`/`servicio_clave`/`tasa`/estado `por_confirmar`. **Seed AGOSTO 2026**
+  (idempotente) que cuadra EXACTO con el Excel: ingresos $23.142 · gastos $18.359 · util. neta $4.305 (18,6%).
+  Datos transcritos en `DATOS_AGOSTO_2026.md`.
+- **Fix plataforma-wide**: ícono del selector de fecha/mes visible en oscuro (globals.css).
+- Nota: `/trd/clientes/nuevo-cliente` ahora redirige a Facturación (el alta es el modal).
+  Pendiente al retomar: commitear/desplegar tras revisión del usuario; luego seguir con REG dashboard.
+
 ## Siguiente paso
 La plataforma está en USO REAL (el usuario dejó el Excel el 2026-08-18). Los 3 módulos
 funcionan y están sincronizados/verificados. Backlog priorizado (features futuras, NO bugs):

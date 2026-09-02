@@ -12,6 +12,7 @@ export const ESTADOS = [
   { value: "pagado", label: "Pagado" },
   { value: "facturado", label: "Facturado" },
   { value: "por_facturar", label: "Por facturar" },
+  { value: "por_confirmar", label: "¿Continúa?" },
   { value: "programado", label: "Programado" },
   { value: "anulado", label: "Anulado" },
 ];
