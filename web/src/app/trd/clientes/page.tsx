@@ -13,6 +13,30 @@ const usd = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", c
 const usd2 = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(n);
 const mesISO = () => { const h = new Date(); return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}`; };
 
+const enLista = (v: string | null, arr: string[]) => arr.includes(v ?? "");
+/** Agrupa los gastos que afectan la utilidad por categoría (resumen, no fila a fila). */
+function agruparGastos(filas: { categoria: string | null; subcategoria: string | null; valorUsd: number }[]) {
+  const g: Record<string, { label: string; total: number; count: number; unidad: string }> = {
+    nomina: { label: "Nómina", total: 0, count: 0, unidad: "personas" },
+    oper: { label: "Operativos fijos", total: 0, count: 0, unidad: "conceptos" },
+    tools: { label: "Herramientas & Hosting", total: 0, count: 0, unidad: "herramientas" },
+    fijo: { label: "Gastos fijos", total: 0, count: 0, unidad: "conceptos" },
+    lead: { label: "Operación Leadtion", total: 0, count: 0, unidad: "conceptos" },
+    var: { label: "Gastos variables del mes", total: 0, count: 0, unidad: "conceptos" },
+  };
+  for (const e of filas) {
+    let k: string;
+    if (e.categoria === "fijo" && e.subcategoria === "nomina") k = "nomina";
+    else if (e.categoria === "fijo" && enLista(e.subcategoria, ["servicio_publico", "otro"])) k = "oper";
+    else if (e.categoria === "fijo" && enLista(e.subcategoria, ["herramienta", "hosting"])) k = "tools";
+    else if (e.categoria === "fijo") k = "fijo";
+    else if (enLista(e.categoria, ["comision", "api", "bono", "referido", "comision_banco"])) k = "lead";
+    else k = "var";
+    g[k]!.total += e.valorUsd; g[k]!.count += 1;
+  }
+  return Object.values(g).filter((x) => x.count > 0);
+}
+
 function delta(actual: number, previo: number): { txt: string; dn: boolean } | null {
   if (!previo || previo <= 0) return null;
   const p = Math.round(((actual - previo) / previo) * 100);
@@ -37,6 +61,8 @@ export default async function ResumenPage({ searchParams }: { searchParams: Prom
   const prev = tendencia.length >= 2 ? tendencia[tendencia.length - 2]! : null;
   const dIng = prev ? delta(r.ingresos.total, prev.ingresos) : null;
   const dNeta = prev ? delta(r.utilidadNeta, prev.neta) : null;
+  const gruposGasto = agruparGastos(r.egresos.afectanUtilidad);
+  const egresosTotales = r.egresos.totalAfectan + r.egresos.totalCaja;
 
   return (
     <main className="cf">
@@ -49,9 +75,9 @@ export default async function ResumenPage({ searchParams }: { searchParams: Prom
           <div className="sub">USD · {new Intl.NumberFormat("es-CO", { notation: "compact", maximumFractionDigits: 1 }).format(r.ingresos.total * r.tasa)} COP</div>
           {dIng && <div className="cf-delta">{dIng.txt} vs. mes anterior</div>}
         </div>
-        <div className="cf-kpi"><div className="lbl">Utilidad bruta del mes</div><div className="big">{usd(r.utilidadBruta)}</div><div className="sub">ingresos − gastos</div></div>
-        <div className="cf-kpi"><div className="lbl">Utilidad neta</div><div className="big">{usd(r.utilidadNeta)}</div><div className="sub">{r.margen}% de margen</div>{dNeta && <div className={`cf-delta${dNeta.dn ? " dn" : ""}`}>{dNeta.txt}</div>}</div>
-        <div className="cf-kpi"><div className="lbl">Clientes activos</div><div className="big">{rec + mom}</div><div className="sub">{rec} recurrentes · {mom} del momento</div></div>
+        <div className="cf-kpi"><div className="lbl">Egresos totales del mes</div><div className="big">{usd(egresosTotales)}</div><div className="sub">afectan utilidad {usd(r.egresos.totalAfectan)} · caja {usd(r.egresos.totalCaja)}</div></div>
+        <div className="cf-kpi"><div className="lbl">Utilidad neta</div><div className="big">{usd(r.utilidadNeta)}</div><div className="sub">bruta {usd(r.utilidadBruta)} · {r.margen}% margen</div>{dNeta && <div className={`cf-delta${dNeta.dn ? " dn" : ""}`}>{dNeta.txt}</div>}</div>
+        <div className="cf-kpi"><div className="lbl">Clientes activos</div><div className="big">{rec + mom}</div><div className="sub" style={{ display: "flex", gap: 6, marginTop: 6 }}><span className="cf-chip llc">{rec} recurrentes</span><span className="cf-chip col">{mom} del momento</span></div></div>
       </div>
 
       <div className="cf-charts">
@@ -71,10 +97,17 @@ export default async function ResumenPage({ searchParams }: { searchParams: Prom
           <div className="cf-li tot"><span>Total ingresos</span><b>{usd2(r.ingresos.total)}</b></div>
         </div>
         <div className="cf-card">
-          <h3>Gastos (afectan la utilidad)</h3>
-          {r.egresos.afectanUtilidad.map((e) => (<div key={e.id} className="cf-li"><span>{e.concepto}</span><b>{usd2(e.valorUsd)}</b></div>))}
-          {r.egresos.afectanUtilidad.length === 0 && <div className="cf-li"><span>Sin gastos registrados</span><b>—</b></div>}
-          <div className="cf-li tot"><span>Total gastos</span><b>{usd2(r.egresos.totalAfectan)}</b></div>
+          <h3>Gastos por categoría <span className="cf-legend">(afectan la utilidad)</span></h3>
+          {gruposGasto.map((g) => (
+            <div key={g.label} className="cf-li">
+              <span>{g.label} {g.label === "Nómina" || g.label === "Herramientas & Hosting" ? <small style={{ color: "var(--faint)" }}>· {g.count} {g.unidad}</small> : null}</span>
+              <b>{usd2(g.total)}</b>
+            </div>
+          ))}
+          {gruposGasto.length === 0 && <div className="cf-li"><span>Sin gastos registrados</span><b>—</b></div>}
+          <div className="cf-li tot"><span>Total que afecta utilidad</span><b>{usd2(r.egresos.totalAfectan)}</b></div>
+          <div className="cf-li"><span>+ Sale de caja (inversiones, diezmo)</span><b>{usd2(r.egresos.totalCaja)}</b></div>
+          <div className="cf-li tot"><span>Egresos totales del mes</span><b>{usd2(egresosTotales)}</b></div>
         </div>
       </div>
 
