@@ -67,6 +67,18 @@ export function corteDeMes(mes: string): string {
   return corteFinDeMes(new Date(a!, m! - 1, 15));
 }
 
+/**
+ * Corte para PAGAR comisiones: nunca incluye el mes en curso (que aún no cierra).
+ * = mínimo entre el fin del mes de REG y el fin del último mes cerrado. Así el
+ * pago corresponde solo a cortes ya cerrados (ej. hasta agosto), no acumula el mes actual.
+ */
+export function corteCerrado(mes: string): string {
+  const cm = corteDeMes(mes);
+  const h = new Date();
+  const ultimoCerrado = corteFinDeMes(new Date(h.getFullYear(), h.getMonth() - 1, 15));
+  return cm < ultimoCerrado ? cm : ultimoCerrado;
+}
+
 /** UVT vigente para el mes dado. */
 export async function uvtDeMes(mes: string): Promise<number> {
   const anio = Number(mes.slice(0, 4));
@@ -76,7 +88,7 @@ export async function uvtDeMes(mes: string): Promise<number> {
 
 /** Comisión CS pendiente por colaborador (COP) para el corte del mes. */
 async function comisionesCopDelMes(mes: string): Promise<{ mapa: Map<number, number>; tasa: number }> {
-  const corte = corteDeMes(mes);
+  const corte = corteCerrado(mes);
   const [resultados, fx] = await Promise.all([cargarResultados(corte), tasaUsdCop()]);
   const mapa = new Map<number, number>();
   for (const r of resultados) {
@@ -87,7 +99,7 @@ async function comisionesCopDelMes(mes: string): Promise<{ mapa: Map<number, num
 
 /** Comisión CS pendiente (COP) de un colaborador para el corte del mes. */
 export async function comisionPendienteCop(colaboradorId: number, mes: string): Promise<number> {
-  const corte = corteDeMes(mes);
+  const corte = corteCerrado(mes);
   const [res, fx] = await Promise.all([resultadoDeColaborador(colaboradorId, corte), tasaUsdCop()]);
   return res ? Math.round(res.totalPendiente * fx.cop) : 0;
 }
@@ -118,8 +130,9 @@ export async function renglonesDelMes(mes: string): Promise<RenglonReg[]> {
     const valorNomina = num(r.valor_nomina);
     const valorMesAnterior = num(r.valor_mes_anterior);
     const pagoFijo = tienePago ? num(r.pago_fijo) : (valorNomina || valorMesAnterior || 0);
-    // Comisión: si el pago está guardado, la guardada; si no, la pendiente en vivo.
-    const comision = tienePago ? num(r.comision) : (comisionCop.get(Number(r.id)) ?? 0);
+    // Comisión: si ya está PAGADA, la guardada (histórica); si no, la del corte
+    // cerrado en vivo (aunque haya un pago guardado, para no mostrar acumulados viejos).
+    const comision = (tienePago && Boolean(r.ck_pagado)) ? num(r.comision) : (comisionCop.get(Number(r.id)) ?? 0);
     return {
       pagoId: tienePago ? Number(r.pago_id) : null,
       colaboradorId: Number(r.id),

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { soloAdmin } from "@/lib/sesion";
-import { primerDiaMes, uvtDeMes, recalcular, corteDeMes, comisionPendienteCop } from "@/lib/reg";
+import { primerDiaMes, uvtDeMes, recalcular, corteCerrado, comisionPendienteCop } from "@/lib/reg";
 import { TARIFA_ICA_DEFAULT } from "@/lib/retenciones";
 import { enviarEmail, plantillaCorreoPago, REPLY_TO } from "@/lib/email";
 import { pagarCiclo, deshacerCiclo } from "@/lib/comisiones-pago";
@@ -84,9 +84,24 @@ export async function toggleCheck(formData: FormData) {
     if (r && r.colaborador_id != null) {
       const colaboradorId = Number(r.colaborador_id);
       const mesISO = r.mes instanceof Date ? r.mes.toISOString().slice(0, 7) : String(r.mes).slice(0, 7);
-      const corte = corteDeMes(mesISO);
-      if (valor) await pagarCiclo(colaboradorId, corte);
-      else await deshacerCiclo(colaboradorId, corte);
+      const corte = corteCerrado(mesISO);
+      if (valor) {
+        // Antes de bloquear el pago, refresca la comisión al corte cerrado (por si
+        // el valor guardado era un acumulado viejo) y recalcula el total del renglón.
+        const comision = await comisionPendienteCop(colaboradorId, mesISO);
+        const prow = await consulta(`select pago_fijo, adicional from public.reg_pago where id=$1`, [pagoId]);
+        const pagoFijo = num(prow[0]?.pago_fijo), adicional = num(prow[0]?.adicional);
+        const total = pagoFijo + adicional + comision;
+        const uvt = await uvtDeMes(mesISO);
+        const { reteIca, reteRenta, valorGirar } = recalcular(total, TARIFA_ICA_DEFAULT, 0, 0, uvt);
+        await consulta(
+          `update public.reg_pago set comision=$2, valor_cuenta_cobro=$3, rete_ica=$4, rete_renta=$5, valor_girar=$6, actualizado_en=now() where id=$1`,
+          [pagoId, comision, total, reteIca, reteRenta, valorGirar],
+        );
+        await pagarCiclo(colaboradorId, corte);
+      } else {
+        await deshacerCiclo(colaboradorId, corte);
+      }
       revalidatePath("/cs");
       revalidatePath("/cs/comisiones");
       revalidatePath("/membresias/dashboard");
