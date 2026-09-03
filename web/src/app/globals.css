@@ -666,14 +666,19 @@ a.btn-pagar { text-decoration: none; display: inline-block; }
 .reg-totales .kpi-num { font-size: 1.15rem; }
 
 /* --- Tabla REG --- */
-.reg-tabla-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); }
-.reg-tabla { width: 100%; border-collapse: collapse; min-width: 900px; font-size: 0.9rem; }
-.reg-tabla th, .reg-tabla td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+/* Contenedor con scroll propio (vertical + horizontal) para poder fijar encabezado y 1ª columna. */
+.reg-tabla-wrap { overflow: auto; max-height: calc(100vh - 210px); border: 1px solid var(--border); border-radius: 12px; background: var(--panel); }
+.reg-tabla { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 900px; font-size: 0.9rem; }
+.reg-tabla th, .reg-tabla td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; background: var(--panel); }
+/* Encabezado fijo al hacer scroll vertical. */
 .reg-tabla thead th { text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em;
-  color: var(--muted); background: var(--bg); position: sticky; top: 0; }
+  color: var(--muted); background: var(--bg); position: sticky; top: 0; z-index: 2; }
+/* Primera columna (Colaborador) fija al hacer scroll horizontal. */
+.reg-tabla th:first-child, .reg-tabla td:first-child { position: sticky; left: 0; z-index: 1; box-shadow: 1px 0 0 var(--border); }
+.reg-tabla thead th:first-child { z-index: 3; }
 .reg-tabla th.right, .reg-tabla td.right { text-align: right; font-variant-numeric: tabular-nums; }
 .reg-tabla th.center, .reg-tabla td.center { text-align: center; }
-.reg-tabla tbody tr:hover { background: var(--accent-soft); }
+.reg-tabla tbody tr:hover td { background: var(--accent-soft); }
 .reg-tabla .vacio { text-align: center; color: var(--muted); padding: 20px; }
 
 .in-valor { width: 120px; text-align: right; }
