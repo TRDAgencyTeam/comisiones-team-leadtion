@@ -3,6 +3,7 @@ import { resumenDelMes, egresosDelMes, tendenciaMensual, asegurarEgresosFijosDel
 import { ClientesHeader } from "@/components/ClientesHeader";
 import { MovimientoModal } from "@/components/MovimientoModal";
 import { TendenciaChart } from "@/components/TendenciaChart";
+import { CostoHover } from "@/components/CostoHover";
 import { eliminarEgreso } from "../acciones";
 
 export const metadata = { title: "Egresos" };
@@ -15,16 +16,16 @@ const mesISO = () => { const h = new Date(); return `${h.getFullYear()}-${String
 const fFecha = (iso: string | null) => { if (!iso) return "—"; const [, m, d] = iso.split("-"); return `${d}/${m}`; };
 
 const inList = (v: string | null, arr: string[]) => arr.includes(v ?? "");
-const GRUPOS: { key: string; t: string; ic: string; auto: boolean; f: (e: EgresoRow) => boolean }[] = [
-  { key: "nomina", t: "Nómina", ic: "👥", auto: true, f: (e) => e.categoria === "fijo" && e.subcategoria === "nomina" },
+const GRUPOS: { key: string; t: string; ic: string; auto: boolean; hover?: boolean; conHora?: boolean; f: (e: EgresoRow) => boolean }[] = [
+  { key: "nomina", t: "Nómina", ic: "👥", auto: true, hover: true, conHora: true, f: (e) => e.categoria === "fijo" && e.subcategoria === "nomina" },
   { key: "oper", t: "Operativos fijos", ic: "🏢", auto: true, f: (e) => e.categoria === "fijo" && inList(e.subcategoria, ["servicio_publico", "otro"]) },
-  { key: "tools", t: "Herramientas & Hosting", ic: "🧰", auto: true, f: (e) => e.categoria === "fijo" && inList(e.subcategoria, ["herramienta", "hosting"]) },
+  { key: "tools", t: "Herramientas & Hosting", ic: "🧰", auto: true, hover: true, f: (e) => e.categoria === "fijo" && inList(e.subcategoria, ["herramienta", "hosting"]) },
   { key: "fijohist", t: "Fijos (histórico)", ic: "📌", auto: false, f: (e) => e.categoria === "fijo" && !e.subcategoria },
   { key: "lead", t: "Operación Leadtion del mes", ic: "⚡", auto: false, f: (e) => e.afectaUtilidad && inList(e.categoria, ["comision", "api", "bono", "referido", "comision_banco"]) },
   { key: "var", t: "Gastos variables del mes", ic: "🧾", auto: false, f: (e) => e.afectaUtilidad && !inList(e.categoria, ["fijo", "comision", "api", "bono", "referido", "comision_banco"]) },
 ];
 
-function Grupo({ t, ic, auto, filas }: { t: string; ic: string; auto: boolean; filas: EgresoRow[] }) {
+function Grupo({ t, ic, auto, filas, hover, conHora }: { t: string; ic: string; auto: boolean; filas: EgresoRow[]; hover?: boolean; conHora?: boolean }) {
   if (filas.length === 0) return null;
   const sub = filas.reduce((s, e) => s + e.valorUsd, 0);
   return (
@@ -36,8 +37,8 @@ function Grupo({ t, ic, auto, filas }: { t: string; ic: string; auto: boolean; f
       {filas.map((e) => (
         <div key={`${e.id}-${e.concepto}`} className="cf-erow">
           <span className="nom">{e.concepto}{e.marca ? <small>{e.marca}{e.fecha ? ` · ${fFecha(e.fecha)}` : ""}</small> : null}</span>
-          <span className="cop">{e.valorCop != null ? cop(e.valorCop) : ""}</span>
-          <span className="cf-mono val">{usd(e.valorUsd)}</span>
+          <span className="cop">{!hover && e.valorCop != null ? cop(e.valorCop) : ""}</span>
+          <span className="val">{hover ? <CostoHover mensualUsd={e.valorUsd} mensualCop={e.valorCop} conHora={conHora} /> : <span className="cf-mono">{usd(e.valorUsd)}</span>}</span>
           <span className="del">{e.automatico ? <span className="cf-hint" title="Automático">🔒 auto</span> : e.id > 0 ? <form action={eliminarEgreso}><input type="hidden" name="id" value={e.id} /><button type="submit" className="btn-borrar" title="Eliminar">🗑️</button></form> : null}</span>
         </div>
       ))}
@@ -89,7 +90,7 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
         <h2>Egresos por categoría</h2>
         <MovimientoModal mes={mes} tipo="egreso" />
       </div>
-      {GRUPOS.map((g) => <Grupo key={g.key} t={g.t} ic={g.ic} auto={g.auto} filas={egresos.filter(g.f)} />)}
+      {GRUPOS.map((g) => <Grupo key={g.key} t={g.t} ic={g.ic} auto={g.auto} hover={g.hover} conHora={g.conHora} filas={egresos.filter(g.f)} />)}
       <Grupo t="Sale de caja" ic="🏦" auto={false} filas={caja} />
 
       <p className="cf-nota">

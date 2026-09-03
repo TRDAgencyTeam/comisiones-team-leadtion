@@ -3,6 +3,7 @@ import { consulta } from "@/lib/db";
 import { tasaUsdCop } from "@/lib/fx";
 import { calcLLC, calcCOL } from "@/lib/facturacion-calc";
 import { primerDiaMes, mesActualISO } from "@/lib/facturacion";
+import { comisionesAfiliadosDelMes } from "@/lib/afiliados";
 
 export interface EgresoRow {
   id: number;
@@ -37,19 +38,44 @@ export async function asegurarEgresosFijosDelMes(mes: string): Promise<number> {
        from public.colaboradores where activo and coalesce(valor_nomina,0) > 0`,
     [primer, tasa],
   );
+  // "share" = valor mensual × % que asume la empresa. valor_cop y valor_usd usan
+  // ese share (no el valor full), así seguridad social 60% se ve bien en ambas.
   await consulta(
     `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
      select $1, nombre, 'TRD',
         round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
                 * (coalesce(porcentaje_reparto,100)/100.0)
                 / case when moneda='COP' then $2 else 1 end )::numeric, 2),
-        case when moneda='COP' then valor else null end,
+        case when moneda='COP'
+             then round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
+                          * (coalesce(porcentaje_reparto,100)/100.0) )::numeric, 2)
+             else null end,
         true, 'fijo', categoria
        from public.gasto_fijo
       where activo and afecta_utilidad and categoria <> 'paso_dinero'
         and (recurrencia='mensual' or (recurrencia='anual' and amortizar) or recurrencia='diario')`,
     [primer, tasa],
   );
+
+  // Comisiones CS del mes (de reg_pago; COP → USD). Solo si hay monto.
+  await consulta(
+    `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria)
+     select $1, 'Comisiones CS Team', 'Leadtion',
+            round((sum(comision)/$2)::numeric,2), sum(comision), true, 'comision'
+       from public.reg_pago where to_char(mes,'YYYY-MM') = $3
+      having coalesce(sum(comision),0) > 0`,
+    [primer, tasa, mes.slice(0, 7)],
+  );
+
+  // Referidos Leadtion del mes (motor de afiliados; USD). Solo si hay monto.
+  const refUsd = await comisionesAfiliadosDelMes(mes.slice(0, 7));
+  if (refUsd > 0) {
+    await consulta(
+      `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, afecta_utilidad, categoria)
+       values ($1, 'Referidos Leadtion (afiliados)', 'Leadtion', $2, true, 'referido')`,
+      [primer, refUsd],
+    );
+  }
   return 1;
 }
 export interface IngresoRow {

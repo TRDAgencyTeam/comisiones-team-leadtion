@@ -88,6 +88,14 @@ export async function dashboardAfiliados(now = new Date()): Promise<{ base: Base
   };
 }
 
+/** Total de comisiones de afiliados (referidos Leadtion) acumuladas en un mes 'YYYY-MM'. */
+export async function comisionesAfiliadosDelMes(mesISO: string): Promise<number> {
+  const base = await cargarBase();
+  const filas = getAllComisiones(base.afiliados, base.clientes, base.servicios, base.pagos, new Date());
+  const total = filas.filter((f) => f.mes === mesISO).reduce((s, f) => s + f.monto, 0);
+  return Math.round(total * 100) / 100;
+}
+
 /** Nivel y % actual de un afiliado. */
 export function nivelAfiliado(afRef: string, clientes: ClienteAfiliado[], now = new Date()) {
   const n = getActiveCount(afRef, clientes, now);
