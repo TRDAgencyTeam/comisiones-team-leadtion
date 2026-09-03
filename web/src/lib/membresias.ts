@@ -93,7 +93,10 @@ export async function listarMembresias(
   const q = (opts.q ?? "").trim().toLowerCase();
   if (q) lista = lista.filter((c) => c.nombre.toLowerCase().includes(q));
   if (opts.estado && opts.estado !== "todos") lista = lista.filter((c) => c.estado === opts.estado);
-  if (opts.tipo && opts.tipo !== "todos") lista = lista.filter((c) => (c.tipoCliente ?? "estandar") === opts.tipo);
+  // "Agencia" = flag es_agencia (independiente del tipo); servicio/estándar solo si NO es agencia.
+  if (opts.tipo === "agencia") lista = lista.filter((c) => c.esAgencia);
+  else if (opts.tipo === "servicio") lista = lista.filter((c) => !c.esAgencia && c.tipoCliente === "servicio");
+  else if (opts.tipo === "estandar") lista = lista.filter((c) => !c.esAgencia && (c.tipoCliente ?? "estandar") !== "servicio");
 
   if (opts.orden === "ltv") lista.sort((a, b) => b.ltv - a.ltv);
   else if (opts.orden === "antiguo") lista.sort((a, b) => (a.fechaActivacion ?? "").localeCompare(b.fechaActivacion ?? ""));

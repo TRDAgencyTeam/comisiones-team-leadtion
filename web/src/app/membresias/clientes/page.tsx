@@ -109,7 +109,9 @@ export default async function ClientesMembresiasPage({
                   <tr key={c.id}>
                     <td><Link href={`/membresias/${c.id}`} className="link-cliente">{c.nombre}</Link></td>
                     <td>{plan}{soporte}</td>
-                    <td>{c.tipoCliente === "agencia" ? <span className="tag-agencia">Agencia</span> : <span className="td-concepto">{TIPO_LABEL[c.tipoCliente ?? "estandar"] ?? "Estándar"}</span>}</td>
+                    <td>{c.esAgencia
+                      ? <><span className="tag-agencia">Agencia</span>{c.tipoCliente === "servicio" && <span className="td-concepto" style={{ marginLeft: 6 }}>+ Leadtion</span>}</>
+                      : <span className="td-concepto">{TIPO_LABEL[c.tipoCliente ?? "estandar"] ?? "Estándar"}</span>}</td>
                     <td><span className={b.cls}>{b.txt}</span></td>
                     <td className="num">{antiguedad(c.tiempoMeses)}</td>
                     <td className="num">{c.ltv > 0 ? usd(c.ltv) : "—"}</td>
