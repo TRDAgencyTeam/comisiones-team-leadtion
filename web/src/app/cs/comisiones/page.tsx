@@ -13,6 +13,42 @@ export const dynamic = "force-dynamic";
 const usd = (n: number) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 const fechaCorta = (iso: string | null) => (iso ? iso.slice(0, 10) : "");
+const nombreMes = (ym: string) => {
+  const [a, m] = ym.split("-").map(Number);
+  const s = new Date(a!, (m! - 1), 1).toLocaleDateString("es-CO", { month: "long", year: "numeric" });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
+
+interface CorteVista {
+  mes: string;
+  filas: { clienteId: number; clienteNombre: string; hito: string; monto: number; estado: string; pagadoEn: string | null }[];
+  pendiente: number;
+  pagado: number;
+}
+
+/** Agrupa los hitos del colaborador por CORTE (mes del hito), no acumulado. */
+function cortesDe(r: ResultadoVista): CorteVista[] {
+  const mapa = new Map<string, CorteVista>();
+  for (const l of r.lineas) {
+    for (const h of l.hitos) {
+      const mes = h.fechaHito.slice(0, 7);
+      let c = mapa.get(mes);
+      if (!c) { c = { mes, filas: [], pendiente: 0, pagado: 0 }; mapa.set(mes, c); }
+      c.filas.push({ clienteId: l.clienteId, clienteNombre: l.clienteNombre, hito: h.hito, monto: h.monto, estado: h.estado, pagadoEn: h.pagadoEn });
+      if (h.estado === "pagado") c.pagado += h.monto; else c.pendiente += h.monto;
+    }
+  }
+  return [...mapa.values()].sort((a, b) => a.mes.localeCompare(b.mes));
+}
+
+const mesHoy = () => { const h = new Date(); return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}`; };
+
+/** Pendiente POR PAGAR = suma de cortes ya CERRADOS (meses anteriores al actual)
+ *  y no pagados. El mes en curso no se cobra todavía. */
+function pendientePorPagar(r: ResultadoVista): number {
+  const hoy = mesHoy();
+  return cortesDe(r).filter((c) => c.mes < hoy).reduce((s, c) => s + c.pendiente, 0);
+}
 
 export default async function ComisionesPage({
   searchParams,
@@ -87,7 +123,7 @@ export default async function ComisionesPage({
                 className={activa ? "col-tab activa" : "col-tab"}
               >
                 <span className="col-tab-nombre">{r.colaboradorNombre}</span>
-                <span className="col-tab-monto">{usd(r.totalPendiente)} pend.</span>
+                <span className="col-tab-monto">{(() => { const p = pendientePorPagar(r); return p > 0 ? `Por pagar ${usd(p)}` : "al día"; })()}</span>
               </Link>
             );
           })}
@@ -100,6 +136,9 @@ export default async function ComisionesPage({
 }
 
 function ColaboradorCard({ r, corte, futuros }: { r: ResultadoVista; corte: string; futuros: FilaFutura[] }) {
+  const cortes = cortesDe(r);
+  const hoy = mesHoy();
+  const porPagar = pendientePorPagar(r);
   return (
     <>
     <section className="card">
@@ -110,63 +149,47 @@ function ColaboradorCard({ r, corte, futuros }: { r: ResultadoVista; corte: stri
           {r.enPeriodoPrueba && <span className="badge">en prueba</span>}
         </div>
         <div className="totales">
-          <span className="t-pendiente">
-            Pendiente <b>{usd(r.totalPendiente)}</b>
-          </span>
-          <span className="t-pagado">
-            Pagado <b>{usd(r.totalPagado)}</b>
-          </span>
+          {porPagar > 0
+            ? <span className="t-pendiente">Por pagar (cortes cerrados) <b>{usd(porPagar)}</b></span>
+            : <span className="t-pagado">Al día <b>✓</b></span>}
+          <span className="t-pagado">Pagado histórico <b>{usd(r.totalPagado)}</b></span>
         </div>
       </div>
 
-      {r.lineas.length === 0 ? (
+      {cortes.length === 0 ? (
         <p className="empty">Sin comisión a esta fecha de corte.</p>
       ) : (
         <>
-          {r.totalPendiente > 0 && (
-            <p className="ciclo-nota">
-              El pago de la comisión se registra desde <strong>TRD → Registro contable</strong> (se paga junto con la
-              nómina, en la misma cuenta de cobro).
-            </p>
-          )}
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Cliente</th>
-                  <th>Activación</th>
-                  <th>Hito</th>
-                  <th className="num">Monto</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {r.lineas.flatMap((l) =>
-                  l.hitos.map((h) => (
-                    <tr key={`${l.clienteId}-${h.hito}`}>
-                      <td>
-                        <Link href={`/cs/clientes/${l.clienteId}`} className="link-cliente">
-                          {l.clienteNombre}
-                        </Link>
-                      </td>
-                      <td>{l.fechaActivacion}</td>
-                      <td>
-                        <span className="hito-chip">{h.hito}</span>
-                      </td>
-                      <td className="num">{usd(h.monto)}</td>
-                      <td>
-                        {h.estado === "pagado" ? (
-                          <span className="estado-pagado">✓ Pagado {fechaCorta(h.pagadoEn)}</span>
-                        ) : (
-                          <span className="estado-pendiente">Pendiente</span>
-                        )}
-                      </td>
-                    </tr>
-                  )),
-                )}
-              </tbody>
-            </table>
-          </div>
+          <p className="ciclo-nota">
+            Cada <strong>corte es un mes</strong> y se paga por separado. El corte se salda al marcar <strong>Pagado</strong> ese
+            mes en <strong>TRD → Registro contable</strong>; ahí desaparece de “pendiente”. No se acumulan cortes distintos.
+          </p>
+          {cortes.map((c) => (
+            <div key={c.mes} className="corte-bloque">
+              <div className="corte-head">
+                <span className="corte-mes">Corte {nombreMes(c.mes)} {c.mes >= hoy && <span className="badge">en curso</span>}</span>
+                <span className="corte-montos">
+                  {c.pendiente > 0 && <span className={c.mes < hoy ? "estado-pendiente" : "estado-programado"}>{c.mes < hoy ? "Por pagar" : "Proyección"} {usd(c.pendiente)}</span>}
+                  {c.pagado > 0 && <span className="estado-pagado">Pagado {usd(c.pagado)}</span>}
+                </span>
+              </div>
+              <div className="table-scroll">
+                <table>
+                  <thead><tr><th>Cliente</th><th>Hito</th><th className="num">Monto</th><th>Estado</th></tr></thead>
+                  <tbody>
+                    {c.filas.map((f, i) => (
+                      <tr key={`${f.clienteId}-${f.hito}-${i}`}>
+                        <td><Link href={`/cs/clientes/${f.clienteId}`} className="link-cliente">{f.clienteNombre}</Link></td>
+                        <td><span className="hito-chip">{f.hito}</span></td>
+                        <td className="num">{usd(f.monto)}</td>
+                        <td>{f.estado === "pagado" ? <span className="estado-pagado">✓ Pagado {fechaCorta(f.pagadoEn)}</span> : <span className="estado-pendiente">Pendiente</span>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
         </>
       )}
     </section>

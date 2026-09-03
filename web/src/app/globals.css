@@ -1046,6 +1046,15 @@ button.ck:hover { border-color: var(--muted); }
 .cf-erow .val { text-align: right; }
 .cf-erow .del { text-align: right; }
 
+/* Comisiones por corte (mes) */
+.corte-bloque { border: 1px solid var(--border); border-radius: 12px; margin-top: 12px; overflow: hidden; }
+.corte-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--bg); border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 8px; }
+.corte-mes { font-weight: 700; }
+.corte-montos { display: inline-flex; gap: 10px; font-weight: 700; font-size: 0.85rem; }
+.corte-bloque .table-scroll { padding: 0; }
+.corte-bloque table { margin: 0; }
+.estado-programado { color: var(--muted); font-weight: 700; }
+
 /* Switch de moneda + tabla de costos (nómina / herramientas) */
 .cf-money-switch { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
 .cf-money-switch button { border: none; background: var(--panel); color: var(--muted); font-weight: 700; font-size: 0.7rem; padding: 3px 10px; cursor: pointer; font-family: inherit; }
