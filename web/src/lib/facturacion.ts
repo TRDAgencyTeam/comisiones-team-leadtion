@@ -222,6 +222,24 @@ export async function obtenerFactura(id: number): Promise<FacturaRow | null> {
   return rows.length ? mapRow(rows[0]!) : null;
 }
 
+export interface FacturaItem { id: number | null; servicioClave: string | null; concepto: string; monto: number }
+
+/** Servicios (líneas) de una factura. Si no tiene ítems, devuelve uno sintético
+ *  a partir de la propia factura (para editarla y crear los ítems reales). */
+export async function itemsDeFactura(f: FacturaRow): Promise<FacturaItem[]> {
+  const rows = await consulta(
+    `select id, servicio_clave, concepto, monto from public.factura_item where factura_id = $1 order by orden, id`,
+    [f.id],
+  );
+  if (rows.length > 0) {
+    return rows.map((r: Record<string, unknown>) => ({
+      id: Number(r.id), servicioClave: (r.servicio_clave as string) ?? null,
+      concepto: String(r.concepto), monto: num(r.monto),
+    }));
+  }
+  return [{ id: null, servicioClave: f.servicioClave, concepto: f.servicios ?? "Servicio", monto: f.facturado }];
+}
+
 /** Historial de todas las facturas de un cliente (por nombre), viejo→nuevo. */
 export async function historialCliente(nombre: string): Promise<FacturaRow[]> {
   const rows = await consulta(

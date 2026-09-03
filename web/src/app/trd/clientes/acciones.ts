@@ -202,6 +202,44 @@ export async function eliminarIngreso(formData: FormData) {
   revalidatePath("/trd/clientes");
 }
 
+/**
+ * Reemplaza los servicios (líneas) de una factura y recalcula su total y texto.
+ * Los servicios se eligen de la lista (catálogo), varios por cliente/mes.
+ */
+export async function guardarServiciosFactura(formData: FormData) {
+  await soloAdmin();
+  const facturaId = Number(formData.get("facturaId"));
+  const claves = formData.getAll("itemClave").map((v) => String(v));
+  const conceptos = formData.getAll("itemConcepto").map((v) => String(v).trim());
+  const montos = formData.getAll("itemMonto").map((v) => n(v));
+
+  await consulta(`delete from public.factura_item where factura_id = $1`, [facturaId]);
+  let total = 0; const nombres: string[] = []; let primerClave: string | null = null;
+  for (let i = 0; i < conceptos.length; i++) {
+    const concepto = conceptos[i] || "";
+    const monto = montos[i] ?? 0;
+    if (!concepto && !monto) continue;
+    const clave = claves[i] || null;
+    if (!primerClave && clave) primerClave = clave;
+    total += monto;
+    if (concepto) nombres.push(concepto);
+    await consulta(
+      `insert into public.factura_item (factura_id, servicio_clave, concepto, monto, orden) values ($1,$2,$3,$4,$5)`,
+      [facturaId, clave, concepto || "Servicio", monto, i],
+    );
+  }
+  await consulta(
+    `update public.factura_mensual
+        set facturado = $2, servicios = $3,
+            servicio_clave = coalesce($4, servicio_clave), actualizado_en = now()
+      where id = $1`,
+    [facturaId, total, nombres.join(" + ") || null, primerClave],
+  );
+  revalidatePath("/trd/clientes");
+  revalidatePath("/trd/clientes/facturacion");
+  redirect(`/trd/clientes/${facturaId}`);
+}
+
 /** Cambia solo el estado (semáforo) de una factura. */
 export async function cambiarEstadoFactura(formData: FormData) {
   await soloAdmin();

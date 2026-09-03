@@ -2,10 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { soloAdmin } from "@/lib/sesion";
 import { tasaUsdCop } from "@/lib/fx";
-import { obtenerFactura, historialCliente, catalogoServicios, netoUsdDeFactura } from "@/lib/facturacion";
-import { calcLLC, MEDIOS, ESTADOS } from "@/lib/facturacion-calc";
+import { obtenerFactura, historialCliente, catalogoServicios, itemsDeFactura, netoUsdDeFactura } from "@/lib/facturacion";
+import { MEDIOS, ESTADOS } from "@/lib/facturacion-calc";
 import { ClientesHeader } from "@/components/ClientesHeader";
 import { EstadoFactura } from "@/components/EstadoFactura";
+import { ServiciosEditor } from "@/components/ServiciosEditor";
 import { editarFactura } from "../acciones";
 
 export const metadata = { title: "Ficha de cliente" };
@@ -21,7 +22,7 @@ export default async function FichaClientePage({ params }: { params: Promise<{ i
   const { id } = await params;
   const factura = await obtenerFactura(Number(id));
   if (!factura) notFound();
-  const [fx, historial, catalogo] = await Promise.all([tasaUsdCop(), historialCliente(factura.clienteNombre), catalogoServicios()]);
+  const [fx, historial, catalogo, items] = await Promise.all([tasaUsdCop(), historialCliente(factura.clienteNombre), catalogoServicios(), itemsDeFactura(factura)]);
   const tasa = fx.cop;
   const mes = factura.mes;
   const esLLC = factura.entidad === "LLC";
@@ -47,10 +48,18 @@ export default async function FichaClientePage({ params }: { params: Promise<{ i
         <div className="cf-kpi"><div className="lbl">Último pago</div><div className="big" style={{ fontSize: "1.2rem" }}>{ultimoPago ?? "—"}</div><div className="sub">fecha de pago más reciente</div></div>
       </div>
 
-      <div className="cf-sec-head"><h2>Servicios contratados</h2></div>
-      <div className="cf-card">
-        {servicios.length ? servicios.map((s, i) => <span key={i} className="cf-chip llc" style={{ marginRight: 6, marginBottom: 6, display: "inline-block" }}>{s}</span>) : <span className="cf-hint">Sin servicios registrados.</span>}
-      </div>
+      <div className="cf-sec-head"><h2>Servicios de este mes ({nombreMes(mes)})</h2></div>
+      <p className="cf-hint" style={{ margin: "0 0 8px" }}>Elige los servicios de la lista. Puedes sumar varios (ej. plan recurrente + una grabación). El total de la factura se recalcula solo.</p>
+      <ServiciosEditor facturaId={factura.id} entidad={factura.entidad} tasa={tasa} catalogo={catalogo} iniciales={items} />
+
+      {servicios.length > 0 && (
+        <div className="cf-sec-head" style={{ marginBottom: 6 }}><h2 style={{ fontSize: "0.95rem" }}>Historial de servicios (todos los meses)</h2></div>
+      )}
+      {servicios.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {servicios.map((s, i) => <span key={i} className="cf-chip col">{s}</span>)}
+        </div>
+      )}
 
       <div className="cf-sec-head"><h2>Historial de facturación <span className="count">{historial.length}</span></h2></div>
       <div className="cf-table-wrap">
@@ -71,7 +80,7 @@ export default async function FichaClientePage({ params }: { params: Promise<{ i
         </table>
       </div>
 
-      <div className="cf-sec-head"><h2>Editar esta factura ({nombreMes(mes)})</h2></div>
+      <div className="cf-sec-head"><h2>Datos de la factura ({nombreMes(mes)})</h2></div>
       <div className="cf-card">
         <form action={editarFactura} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <input type="hidden" name="id" value={factura.id} />
@@ -79,12 +88,14 @@ export default async function FichaClientePage({ params }: { params: Promise<{ i
           <input type="hidden" name="entidad" value={factura.entidad} />
           {factura.clienteId != null && <input type="hidden" name="clienteId" value={factura.clienteId} />}
           <input type="hidden" name="recurrente" value={factura.recurrente ? "1" : "0"} />
+          {/* Servicios y total los maneja el editor de arriba: aquí solo se preservan */}
+          <input type="hidden" name="servicios" value={factura.servicios ?? ""} />
+          <input type="hidden" name="precioDesglose" value={factura.precioDesglose ?? ""} />
+          <input type="hidden" name="facturado" value={factura.facturado} />
           <div className="cf-f"><label>Nombre del cliente</label><input name="clienteNombre" defaultValue={factura.clienteNombre} /></div>
-          <div className="cf-f"><label>Servicios</label><input name="servicios" defaultValue={factura.servicios ?? ""} /></div>
-          <div className="cf-f"><label>Desglose de precio</label><input name="precioDesglose" defaultValue={factura.precioDesglose ?? ""} /></div>
           <div className="cf-price-grid" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
-            <div className="cf-f"><label>{esLLC ? "Facturado (USD)" : "Facturado COP (antes de IVA)"}</label><input name="facturado" inputMode="decimal" defaultValue={factura.facturado} /></div>
             <div className="cf-f"><label>Medio de pago</label><select name="medio" defaultValue={factura.medio ?? "stripe"}>{MEDIOS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}</select></div>
+            <div className="cf-f"><label>Total actual</label><input value={esLLC ? usd(factura.facturado) : cop(factura.facturado)} disabled /></div>
           </div>
           {!esLLC && <div className="cf-f"><label>IVA %</label><input name="ivaPct" inputMode="decimal" defaultValue={factura.ivaPct} /></div>}
           <div className="cf-price-grid" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>

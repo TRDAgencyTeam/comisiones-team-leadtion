@@ -1038,6 +1038,12 @@ button.ck:hover { border-color: var(--muted); }
 .cf-erow .val { text-align: right; }
 .cf-erow .del { text-align: right; }
 
+/* Editor de servicios (líneas de factura) */
+.cf-item { display: grid; grid-template-columns: 1fr 140px 34px; gap: 8px; align-items: center; }
+.cf-item select, .cf-item input { padding: 9px 11px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; font-family: inherit; }
+.cf-item select:focus, .cf-item input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.cf-additem { align-self: flex-start; background: var(--accent-soft); color: var(--accent); border: none; border-radius: 10px; padding: 8px 14px; font-weight: 700; font-size: 0.82rem; cursor: pointer; font-family: inherit; }
+
 /* Modal Nuevo cliente / egreso */
 .cf-scrim { position: fixed; inset: 0; background: rgba(14,13,22,.5); display: grid; place-items: center; padding: 20px; z-index: 60; }
 .cf-modal { background: var(--panel); border: 1px solid var(--border); border-radius: 20px; width: 100%; max-width: 560px;
