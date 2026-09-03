@@ -34,7 +34,7 @@ function Tabla({ filas, tasa, entidad }: { filas: FacturaRow[]; tasa: number; en
           {filas.map((f) => {
             const pasarela = esLLC ? calcLLC(f.facturado, f.medio).pasarela : 0;
             return (
-              <tr key={f.id} className={f.estado === "pagado" ? "pagada" : f.estado === "anulado" ? "anulada" : ""}>
+              <tr key={f.id} className={`fila-${f.estado}`}>
                 <td className="nom">{f.clienteNombre}<small>{f.reserva ? "reserva · " : ""}{f.medio ?? ""}</small></td>
                 <td className="srv">{f.servicios ?? "—"}</td>
                 {esLLC && <td>{f.mesContrato ? `mes ${f.mesContrato}` : "—"}</td>}

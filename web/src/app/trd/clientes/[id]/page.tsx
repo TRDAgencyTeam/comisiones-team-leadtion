@@ -67,7 +67,7 @@ export default async function FichaClientePage({ params }: { params: Promise<{ i
           <thead><tr><th>Mes</th><th>Servicio</th><th className="r">Facturado</th><th className="r">Neto USD</th><th>F. pago</th><th>Estado</th></tr></thead>
           <tbody>
             {historial.map((f) => (
-              <tr key={f.id} className={f.estado === "pagado" ? "pagada" : f.estado === "anulado" ? "anulada" : ""}>
+              <tr key={f.id} className={`fila-${f.estado}`}>
                 <td className="nom">{nombreMes(f.mes)}</td>
                 <td className="srv">{f.servicios ?? "—"}</td>
                 <td className="r">{f.entidad === "LLC" ? usd(f.facturado) : cop(f.facturado)}</td>

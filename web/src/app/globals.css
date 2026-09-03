@@ -1013,9 +1013,17 @@ button.ck:hover { border-color: var(--muted); }
 .cf-table thead th.r, .cf-table tbody td.r { text-align: right; font-variant-numeric: tabular-nums; }
 .cf-table tbody td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .cf-table tbody tr:last-child td { border-bottom: none; }
-.cf-table tbody tr.pagada { background: color-mix(in srgb, var(--paid) 8%, transparent); }
-.cf-table tbody tr.pagada:hover { background: color-mix(in srgb, var(--paid) 13%, transparent); }
-.cf-table tbody tr.anulada { opacity: 0.5; }
+/* Color de fila por estado — identificar de un vistazo */
+.cf-table tbody tr.fila-pagado { background: color-mix(in srgb, var(--paid) 9%, transparent); }
+.cf-table tbody tr.fila-pagado:hover { background: color-mix(in srgb, var(--paid) 15%, transparent); }
+.cf-table tbody tr.fila-facturado { background: color-mix(in srgb, var(--info) 9%, transparent); }
+.cf-table tbody tr.fila-facturado:hover { background: color-mix(in srgb, var(--info) 15%, transparent); }
+.cf-table tbody tr.fila-por_facturar { background: color-mix(in srgb, var(--pending) 10%, transparent); }
+.cf-table tbody tr.fila-por_facturar:hover { background: color-mix(in srgb, var(--pending) 16%, transparent); }
+.cf-table tbody tr.fila-por_confirmar { background: color-mix(in srgb, #6d5ac0 12%, transparent); }
+.cf-table tbody tr.fila-por_confirmar:hover { background: color-mix(in srgb, #6d5ac0 18%, transparent); }
+.cf-table tbody tr.fila-programado { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.cf-table tbody tr.fila-anulado { background: color-mix(in srgb, var(--bad) 8%, transparent); opacity: 0.6; }
 .cf-table .nom { font-weight: 600; }
 .cf-table .nom small { display: block; color: var(--muted); font-weight: 500; font-size: 0.72rem; }
 .cf-table .srv { color: var(--muted); max-width: 200px; }
