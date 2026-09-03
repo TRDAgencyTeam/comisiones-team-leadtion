@@ -108,7 +108,7 @@ export async function renglonesDelMes(mes: string): Promise<RenglonReg[]> {
        from public.colaboradores c
        left join public.reg_pago p  on p.colaborador_id = c.id and p.mes = $1
        left join public.reg_pago pa on pa.colaborador_id = c.id and pa.mes = $2
-      where c.activo
+      where c.activo and coalesce(c.rol,'') <> 'freelance'
       order by (c.categoria is null), c.fecha_ingreso, c.nombre`,
     [primer, anterior],
   );

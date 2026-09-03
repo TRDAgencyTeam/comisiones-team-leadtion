@@ -74,7 +74,7 @@ export async function resumenGastosFijos(): Promise<ResumenGastosFijos> {
   const [gastos, fx, nominaRow, creditoRow] = await Promise.all([
     listarGastos(),
     tasaUsdCop(),
-    consulta(`select coalesce(sum(valor_nomina),0) as t from public.colaboradores where activo`),
+    consulta(`select coalesce(sum(valor_nomina),0) as t from public.colaboradores where activo and coalesce(valor_nomina,0) > 0`),
     consulta(`select coalesce(sum(cuota),0) as t from public.credito where activo`),
   ]);
   const tasa = fx.cop;
@@ -103,7 +103,7 @@ export async function resumenGastosFijos(): Promise<ResumenGastosFijos> {
 export async function nominaPorArea(): Promise<{ area: string; count: number; cop: number }[]> {
   const rows = await consulta(
     `select coalesce(area,'—') as area, count(*)::int as n, coalesce(sum(valor_nomina),0) as cop
-       from public.colaboradores where activo group by coalesce(area,'—') order by cop desc`,
+       from public.colaboradores where activo and coalesce(valor_nomina,0) > 0 group by coalesce(area,'—') order by cop desc`,
   );
   return rows.map((r: Record<string, unknown>) => ({ area: String(r.area), count: Number(r.n), cop: Number(r.cop) }));
 }
