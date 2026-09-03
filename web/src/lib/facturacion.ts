@@ -117,12 +117,16 @@ export async function asegurarRecurrentesDelMes(mes: string): Promise<number> {
   const res = await consulta(
     `insert into public.factura_mensual
        (mes, entidad, cliente_id, cliente_nombre, mrr, reserva, recurrente, servicios, precio_desglose,
-        facturado, medio, iva_pct, estado, mes_contrato, servicio_clave)
+        facturado, medio, iva_pct, estado, mes_contrato, servicio_clave, fecha_factura)
      select $1, f.entidad, f.cliente_id, f.cliente_nombre, f.mrr, f.reserva, true, f.servicios, f.precio_desglose,
         f.facturado, f.medio, f.iva_pct,
         case when coalesce(f.mes_contrato,1) + 1 = coalesce(sc.min_meses, 4) + 1
              then 'por_confirmar' else 'por_facturar' end,
-        coalesce(f.mes_contrato,1) + 1, f.servicio_clave
+        coalesce(f.mes_contrato,1) + 1, f.servicio_clave,
+        case when f.fecha_factura is not null
+             then make_date(extract(year from $1::date)::int, extract(month from $1::date)::int,
+                            least(extract(day from f.fecha_factura)::int, 28))
+             else null end
        from public.factura_mensual f
        left join public.clientes c on c.id = f.cliente_id
        left join public.servicio_catalogo sc on sc.clave = f.servicio_clave
