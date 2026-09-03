@@ -173,13 +173,14 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
   };
 }
 
-export interface FilaCaja { mes: string; utilidad: number; salidas: number; cajaMes: number; acumulada: number }
-export interface FlujoCaja { filas: FilaCaja[]; utilAcum: number; salidasAcum: number; cajaDisponible: number }
+export interface FilaCaja { mes: string; ingresos: number; egresos: number; utilidad: number; inversiones: number }
+export interface FlujoCaja { filas: FilaCaja[]; utilAcum: number; invAcum: number; cajaDisponible: number }
 
 /**
- * Flujo de caja LLC desde enero: la utilidad del mes (ingresos − egresos que
- * afectan utilidad) SUMA a caja; las salidas de caja (inversiones, diezmo…) la
- * consumen. Caja disponible = Σ utilidad − Σ salidas de caja.
+ * Caja LLC (espejo del cuadro del usuario). Por mes: ingresos, egresos,
+ * utilidad (ingresos−egresos) e inversiones (salidas de caja). Usa la tabla
+ * caja_mensual si el mes tiene fila; si no, lo calcula del sistema.
+ * Caja disponible = Σ utilidad − Σ inversiones (desde enero).
  */
 export async function flujoCaja(mesFin: string, desde = "2026-01"): Promise<FlujoCaja> {
   const [dy, dm] = desde.split("-").map(Number);
@@ -191,19 +192,28 @@ export async function flujoCaja(mesFin: string, desde = "2026-01"): Promise<Fluj
     m++; if (m > 12) { m = 1; y++; }
     if (++guard > 60) break;
   }
-  const filas: FilaCaja[] = [];
-  let acumulada = 0, utilAcum = 0, salidasAcum = 0;
-  for (const mm of meses) {
-    const r = await resumenDelMes(mm);
-    const utilidad = r.utilidadBruta;
-    const salidas = r.egresos.totalCaja;
-    const cajaMes = r2(utilidad - salidas);
-    acumulada = r2(acumulada + cajaMes);
-    utilAcum = r2(utilAcum + utilidad);
-    salidasAcum = r2(salidasAcum + salidas);
-    filas.push({ mes: mm, utilidad, salidas, cajaMes, acumulada });
+  const snap = await consulta(`select to_char(mes,'YYYY-MM') mes, ingresos, egresos, inversiones from public.caja_mensual`);
+  const porMes = new Map<string, { ingresos: number; egresos: number; inversiones: number }>();
+  for (const s of snap as Record<string, unknown>[]) {
+    porMes.set(String(s.mes), { ingresos: num(s.ingresos), egresos: num(s.egresos), inversiones: num(s.inversiones) });
   }
-  return { filas, utilAcum, salidasAcum, cajaDisponible: acumulada };
+
+  const filas: FilaCaja[] = [];
+  let utilAcum = 0, invAcum = 0;
+  for (const mm of meses) {
+    let ingresos: number, egresos: number, inversiones: number;
+    const s = porMes.get(mm);
+    if (s) { ingresos = s.ingresos; egresos = s.egresos; inversiones = s.inversiones; }
+    else {
+      const r = await resumenDelMes(mm);
+      ingresos = r.ingresos.total; egresos = r.egresos.totalAfectan; inversiones = r.egresos.totalCaja;
+    }
+    const utilidad = r2(ingresos - egresos);
+    utilAcum = r2(utilAcum + utilidad);
+    invAcum = r2(invAcum + inversiones);
+    filas.push({ mes: mm, ingresos, egresos, utilidad, inversiones });
+  }
+  return { filas, utilAcum, invAcum, cajaDisponible: r2(utilAcum - invAcum) };
 }
 
 export interface PuntoMes { mes: string; ingresos: number; neta: number; egresosTotal: number; egresosUtilidad: number }
