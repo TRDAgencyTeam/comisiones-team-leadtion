@@ -9,19 +9,21 @@ const money = (n: number, moneda: "USD" | "COP") =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: moneda, maximumFractionDigits: moneda === "COP" ? 0 : 2 }).format(n);
 
 export function NuevoClienteModal({
-  mes, tasa, catalogo, afiliados, colaboradores,
+  mes, tasa, catalogo, afiliados, colaboradores, clientes = [],
 }: {
   mes: string;
   tasa: number;
   catalogo: ServicioCatalogo[];
   afiliados: { ref: string; nombre: string; tipo: string }[];
   colaboradores: { id: number; nombre: string }[];
+  clientes?: { id: number; nombre: string }[];
 }) {
   const [open, setOpen] = useState(false);
   const [entidad, setEntidad] = useState<"LLC" | "COL">("LLC");
   const [clave, setClave] = useState(catalogo[0]?.clave ?? "");
   const [personas, setPersonas] = useState(1);
   const [precios, setPrecios] = useState<string[]>([]);
+  const [existenteId, setExistenteId] = useState("");
 
   const srv = useMemo(() => catalogo.find((c) => c.clave === clave), [catalogo, clave]);
   const moneda = entidad === "COL" ? "COP" : "USD";
@@ -77,10 +79,23 @@ export function NuevoClienteModal({
               <input type="hidden" name="servicioClave" value={clave} />
               {srv?.porPersona && <input type="hidden" name="personas" value={personas} />}
               <div className="cf-modal-body">
-                <div className="cf-f">
-                  <label>Nombre del cliente</label>
-                  <input name="nombre" required placeholder="Nombre del cliente" />
-                </div>
+                {clientes.length > 0 && (
+                  <div className="cf-f">
+                    <label>¿Cliente existente? (opcional)</label>
+                    <input type="hidden" name="clienteExistenteId" value={existenteId} />
+                    <select value={existenteId} onChange={(e) => setExistenteId(e.target.value)}>
+                      <option value="">— Es un cliente nuevo —</option>
+                      {clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                    </select>
+                    {existenteId && <span className="cf-hint">Se usará el cliente existente y se le agrega este plan (no se crea un duplicado).</span>}
+                  </div>
+                )}
+                {!existenteId && (
+                  <div className="cf-f">
+                    <label>Nombre del cliente</label>
+                    <input name="nombre" required placeholder="Nombre del cliente" />
+                  </div>
+                )}
 
                 <div className="cf-f">
                   <label>Entidad</label>

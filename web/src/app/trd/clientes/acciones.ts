@@ -85,8 +85,9 @@ export async function crearClienteCascada(formData: FormData) {
   await soloAdmin();
   const mes = primerDiaMes(String(formData.get("mes") ?? ""));
   const nombre = String(formData.get("nombre") ?? "").trim();
+  const eligioExistente = !!(Number(formData.get("clienteExistenteId")) || 0);
   const back = `/trd/clientes/facturacion?mes=${mes.slice(0, 7)}`;
-  if (!nombre) redirect(`${back}&error=` + encodeURIComponent("El nombre es obligatorio."));
+  if (!nombre && !eligioExistente) redirect(`${back}&error=` + encodeURIComponent("El nombre es obligatorio."));
 
   const entidad = String(formData.get("entidad") ?? "LLC") === "COL" ? "COL" : "LLC";
   const servicioClave = String(formData.get("servicioClave") ?? "").trim();
@@ -111,17 +112,48 @@ export async function crearClienteCascada(formData: FormData) {
   const reserva = Boolean(c?.aplica_reserva) && String(formData.get("reserva")) === "1";
   const planLeadtion = ["agente_ai", "reactivacion", "level_up"].includes(servicioClave) ? servicioClave : null;
 
-  const datos: NuevoClienteInput = {
-    nombre, fechaActivacion,
-    tipoCliente: planLeadtion ? "servicio" : esAgencia ? "agencia" : "estandar",
-    esAgencia, planTipo: planLeadtion,
-    soporteValor: null, apiEstado: "ninguna", apiValor: null, bono: null,
-    precioMes1: precios[0] || null,
-    reserva, fechaInicioReal: null,
-    valorLicencia: esAgencia ? 0 : 69,
-    asignados, afiliadoRef, origen: "Madre / Clientes",
-  };
-  const clienteId = await crearClienteCompleto(datos);
+  // ¿Reutilizar un cliente que ya existe? (evita duplicados como el caso Liliana).
+  // 1) si el usuario eligió uno del buscador; 2) si el nombre normalizado coincide.
+  let existenteId = Number(formData.get("clienteExistenteId")) || null;
+  if (!existenteId) {
+    const m = await consulta(
+      `select id from public.clientes where lower(trim(nombre)) = lower(trim($1)) and estado_actual <> 'cancelado' order by id limit 1`,
+      [nombre],
+    );
+    if (m.length) existenteId = Number(m[0]!.id);
+  }
+
+  let clienteId: number;
+  let nombreFactura = nombre;
+  if (existenteId) {
+    clienteId = existenteId;
+    const row = await consulta(`select nombre from public.clientes where id = $1`, [clienteId]);
+    if (row.length) nombreFactura = String(row[0]!.nombre); // usa el nombre ya guardado
+    if (esAgencia) {
+      await consulta(
+        `update public.clientes set es_agencia = true, incluye_crm_en_marketing = true,
+            agencia_desde = coalesce(agencia_desde, $2), estado_actualizado_en = now() where id = $1`,
+        [clienteId, fechaActivacion],
+      );
+    }
+    for (const colId of asignados) {
+      await consulta(`insert into public.cliente_colaboradores (cliente_id, colaborador_id) values ($1,$2) on conflict do nothing`, [clienteId, colId]);
+    }
+    revalidatePath("/membresias/clientes");
+    revalidatePath("/cs");
+  } else {
+    const datos: NuevoClienteInput = {
+      nombre, fechaActivacion,
+      tipoCliente: planLeadtion ? "servicio" : esAgencia ? "agencia" : "estandar",
+      esAgencia, planTipo: planLeadtion,
+      soporteValor: null, apiEstado: "ninguna", apiValor: null, bono: null,
+      precioMes1: precios[0] || null,
+      reserva, fechaInicioReal: null,
+      valorLicencia: esAgencia ? 0 : 69,
+      asignados, afiliadoRef, origen: "Madre / Clientes",
+    };
+    clienteId = await crearClienteCompleto(datos);
+  }
 
   // Primera factura del mes (facturado = precio mes 1; desglose con los 4 meses).
   const facturado = precios[0] ?? 0;
@@ -136,7 +168,7 @@ export async function crearClienteCascada(formData: FormData) {
        (mes, entidad, cliente_id, cliente_nombre, reserva, recurrente, servicios, precio_desglose,
         facturado, medio, iva_pct, estado, mes_contrato, servicio_clave, tasa)
      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,1,$13,$14)`,
-    [mes, entidad, clienteId, nombre, reserva, recurrente, nombreServicio, desglose,
+    [mes, entidad, clienteId, nombreFactura, reserva, recurrente, nombreServicio, desglose,
      facturado, medio, ivaPct, estado, servicioClave, tasaVal],
   );
 

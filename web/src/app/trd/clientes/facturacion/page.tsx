@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { soloAdmin } from "@/lib/sesion";
-import { vistaFacturacion, catalogoServicios, netoUsdDeFactura, type FacturaRow } from "@/lib/facturacion";
+import { vistaFacturacion, catalogoServicios, clientesParaFactura, netoUsdDeFactura, type FacturaRow } from "@/lib/facturacion";
 import { calcLLC } from "@/lib/facturacion-calc";
 import { otrosIngresosDelMes } from "@/lib/egresos";
 import { opcionesFormulario } from "@/lib/membresias";
@@ -64,7 +64,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
   await soloAdmin();
   const sp = await searchParams;
   const mes = sp.mes && /^\d{4}-\d{2}$/.test(sp.mes) ? sp.mes : mesISO();
-  const [v, catalogo, opciones, otros] = await Promise.all([vistaFacturacion(mes), catalogoServicios(), opcionesFormulario(), otrosIngresosDelMes(mes)]);
+  const [v, catalogo, opciones, otros, clientes] = await Promise.all([vistaFacturacion(mes), catalogoServicios(), opcionesFormulario(), otrosIngresosDelMes(mes), clientesParaFactura()]);
 
   const recLLC = v.recurrentes.filter((f) => f.entidad === "LLC");
   const recCOL = v.recurrentes.filter((f) => f.entidad === "COL");
@@ -78,7 +78,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
       <div className="cf-sec-head">
         <h2>Clientes recurrentes · USA (LLC) <span className="count">{recLLC.length}</span></h2>
         <div style={{ display: "inline-flex", gap: 10 }}>
-          <NuevoClienteModal mes={mes} tasa={v.tasa} catalogo={catalogo} afiliados={opciones.afiliados} colaboradores={opciones.colaboradores} />
+          <NuevoClienteModal mes={mes} tasa={v.tasa} catalogo={catalogo} afiliados={opciones.afiliados} colaboradores={opciones.colaboradores} clientes={clientes} />
           <Link href={`/trd/clientes/nuevo?mes=${mes}`} className="cf-btn cf-btn-ghost">+ Nueva factura</Link>
         </div>
       </div>
