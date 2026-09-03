@@ -130,8 +130,10 @@ export async function crearClienteCascada(formData: FormData) {
     const row = await consulta(`select nombre from public.clientes where id = $1`, [clienteId]);
     if (row.length) nombreFactura = String(row[0]!.nombre); // usa el nombre ya guardado
     if (esAgencia) {
+      // Agencia incluye la licencia/soporte de Leadtion → se ponen en $0 (no doble cobro).
       await consulta(
         `update public.clientes set es_agencia = true, incluye_crm_en_marketing = true,
+            valor_licencia_general = 0, soporte_valor = 0,
             agencia_desde = coalesce(agencia_desde, $2), estado_actualizado_en = now() where id = $1`,
         [clienteId, fechaActivacion],
       );

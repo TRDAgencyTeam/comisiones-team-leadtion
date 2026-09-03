@@ -65,6 +65,8 @@ export async function marcarAgencia(formData: FormData) {
     `update public.clientes
         set es_agencia = $2,
             incluye_crm_en_marketing = $2,
+            valor_licencia_general = case when $2 then 0 else valor_licencia_general end,
+            soporte_valor = case when $2 then 0 else soporte_valor end,
             agencia_desde = case when $2 then coalesce(agencia_desde, current_date) else agencia_desde end,
             estado_actualizado_en = now()
       where id = $1`,
