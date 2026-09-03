@@ -173,6 +173,39 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
   };
 }
 
+export interface FilaCaja { mes: string; utilidad: number; salidas: number; cajaMes: number; acumulada: number }
+export interface FlujoCaja { filas: FilaCaja[]; utilAcum: number; salidasAcum: number; cajaDisponible: number }
+
+/**
+ * Flujo de caja LLC desde enero: la utilidad del mes (ingresos − egresos que
+ * afectan utilidad) SUMA a caja; las salidas de caja (inversiones, diezmo…) la
+ * consumen. Caja disponible = Σ utilidad − Σ salidas de caja.
+ */
+export async function flujoCaja(mesFin: string, desde = "2026-01"): Promise<FlujoCaja> {
+  const [dy, dm] = desde.split("-").map(Number);
+  const [fy, fm] = mesFin.split("-").map(Number);
+  const meses: string[] = [];
+  let y = dy!, m = dm!, guard = 0;
+  while ((y < fy!) || (y === fy && m <= fm!)) {
+    meses.push(`${y}-${String(m).padStart(2, "0")}`);
+    m++; if (m > 12) { m = 1; y++; }
+    if (++guard > 60) break;
+  }
+  const filas: FilaCaja[] = [];
+  let acumulada = 0, utilAcum = 0, salidasAcum = 0;
+  for (const mm of meses) {
+    const r = await resumenDelMes(mm);
+    const utilidad = r.utilidadBruta;
+    const salidas = r.egresos.totalCaja;
+    const cajaMes = r2(utilidad - salidas);
+    acumulada = r2(acumulada + cajaMes);
+    utilAcum = r2(utilAcum + utilidad);
+    salidasAcum = r2(salidasAcum + salidas);
+    filas.push({ mes: mm, utilidad, salidas, cajaMes, acumulada });
+  }
+  return { filas, utilAcum, salidasAcum, cajaDisponible: acumulada };
+}
+
 export interface PuntoMes { mes: string; ingresos: number; neta: number; egresosTotal: number; egresosUtilidad: number }
 
 /** Serie por mes (últimos n) para las tendencias de ingresos y de egresos. */

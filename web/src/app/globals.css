@@ -1046,6 +1046,10 @@ button.ck:hover { border-color: var(--muted); }
 .cf-erow .val { text-align: right; }
 .cf-erow .del { text-align: right; }
 
+/* Caja */
+.cf-caja-pos { color: var(--paid); font-weight: 700; }
+.cf-caja-neg { color: var(--bad); font-weight: 700; }
+
 /* Editor de servicios (líneas de factura) */
 .cf-item { display: grid; grid-template-columns: 1fr 140px 34px; gap: 8px; align-items: center; }
 .cf-item select, .cf-item input { padding: 9px 11px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; font-family: inherit; }

@@ -11,13 +11,14 @@ const TABS = [
   { key: "resumen", label: "Resumen del mes", href: "/trd/clientes" },
   { key: "facturacion", label: "Facturación", href: "/trd/clientes/facturacion" },
   { key: "egresos", label: "Egresos", href: "/trd/clientes/egresos" },
+  { key: "caja", label: "Caja", href: "/trd/clientes/caja" },
 ];
 
 /** Encabezado común de las 3 pestañas: eyebrow + título + selector de mes + tasa + tabs. */
 export function ClientesHeader({
   mes, activo, tasa, titulo,
-}: { mes: string; activo: "resumen" | "facturacion" | "egresos"; tasa: number; titulo?: string }) {
-  const tituloTab = { resumen: `Resumen de ${nombreMes(mes)}`, facturacion: `Facturación de ${nombreMes(mes)}`, egresos: `Egresos de ${nombreMes(mes)}` };
+}: { mes: string; activo: "resumen" | "facturacion" | "egresos" | "caja"; tasa: number; titulo?: string }) {
+  const tituloTab = { resumen: `Resumen de ${nombreMes(mes)}`, facturacion: `Facturación de ${nombreMes(mes)}`, egresos: `Egresos de ${nombreMes(mes)}`, caja: "Caja LLC" };
   return (
     <>
       <div className="cf-top">
