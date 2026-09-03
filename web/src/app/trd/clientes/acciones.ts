@@ -37,6 +37,21 @@ function parse(formData: FormData) {
   return { entidad, clienteId, clienteNombre, mrr, reserva, recurrente, servicios, precioDesglose, facturado, medio, fechaFactura, fechaPago, ivaPct, estado };
 }
 
+/** Si el servicio tiene costo de tercerización por unidad, genera el egreso del
+ *  mes (ej. grabación: $100/hora × horas). afecta la utilidad del mes. */
+async function registrarCostoTercerizacion(mes: string, servicioClave: string | null, cantidad: number) {
+  if (!servicioClave || cantidad <= 0) return;
+  const rows = await consulta(`select nombre, costo_persona from public.servicio_catalogo where clave = $1`, [servicioClave]);
+  const c = rows[0] as Record<string, unknown> | undefined;
+  const costo = c?.costo_persona != null ? Number(c.costo_persona) : 0;
+  if (costo <= 0) return;
+  await consulta(
+    `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, afecta_utilidad, categoria)
+     values ($1,$2,'TRD',$3,true,'variable')`,
+    [mes, `Tercerización ${String(c?.nombre ?? "servicio")} (${cantidad} × $${costo})`, Math.round(costo * cantidad * 100) / 100],
+  );
+}
+
 export async function crearFactura(formData: FormData) {
   await soloAdmin();
   const mes = primerDiaMes(String(formData.get("mes") ?? ""));
@@ -53,6 +68,7 @@ export async function crearFactura(formData: FormData) {
     [mes, d.entidad, d.clienteId, d.clienteNombre, d.mrr, d.reserva, d.recurrente, d.servicios, d.precioDesglose,
      d.facturado, d.medio, d.fechaFactura, d.fechaPago, d.ivaPct, d.estado, servicioClave, tasaVal, d.recurrente ? 1 : null],
   );
+  await registrarCostoTercerizacion(mes, servicioClave, Number(formData.get("personas") ?? 0));
   revalidatePath("/trd/clientes");
   revalidatePath("/trd/clientes/facturacion");
   redirect(back);
@@ -173,6 +189,7 @@ export async function crearClienteCascada(formData: FormData) {
     [mes, entidad, clienteId, nombreFactura, reserva, recurrente, nombreServicio, desglose,
      facturado, medio, ivaPct, estado, servicioClave, tasaVal],
   );
+  await registrarCostoTercerizacion(mes, servicioClave, personas);
 
   revalidatePath("/trd/clientes");
   revalidatePath("/trd/clientes/facturacion");
@@ -228,11 +245,27 @@ export async function crearIngreso(formData: FormData) {
   redirect(back);
 }
 
+export async function editarIngreso(formData: FormData) {
+  await soloAdmin();
+  const id = Number(formData.get("id"));
+  const concepto = String(formData.get("concepto") ?? "").trim();
+  const valorUsd = n(formData.get("valorUsd"));
+  const categoria = txt(formData.get("categoria"));
+  if (!concepto) return;
+  await consulta(
+    `update public.ingreso_mensual set concepto=$2, valor_usd=$3, categoria=$4 where id=$1`,
+    [id, concepto, valorUsd, categoria],
+  );
+  revalidatePath("/trd/clientes/facturacion");
+  revalidatePath("/trd/clientes");
+}
+
 export async function eliminarIngreso(formData: FormData) {
   await soloAdmin();
   const id = Number(formData.get("id"));
   await consulta(`delete from public.ingreso_mensual where id=$1`, [id]);
   revalidatePath("/trd/clientes/egresos");
+  revalidatePath("/trd/clientes/facturacion");
   revalidatePath("/trd/clientes");
 }
 

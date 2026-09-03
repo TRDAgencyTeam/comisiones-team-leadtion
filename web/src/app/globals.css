@@ -1046,6 +1046,18 @@ button.ck:hover { border-color: var(--muted); }
 .cf-erow .val { text-align: right; }
 .cf-erow .del { text-align: right; }
 
+/* Switch de moneda + tabla de costos (nómina / herramientas) */
+.cf-money-switch { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+.cf-money-switch button { border: none; background: var(--panel); color: var(--muted); font-weight: 700; font-size: 0.7rem; padding: 3px 10px; cursor: pointer; font-family: inherit; }
+.cf-money-switch button.on { background: var(--accent); color: #fff; }
+.cf-costos { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.cf-costos thead th { text-align: left; font-size: 0.66rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); font-weight: 700; padding: 8px 16px; border-bottom: 1px solid var(--border); }
+.cf-costos thead th.r, .cf-costos tbody td.r { text-align: right; font-variant-numeric: tabular-nums; }
+.cf-costos tbody td { padding: 8px 16px; border-bottom: 1px solid var(--border); }
+.cf-costos .nom { font-weight: 600; }
+.cf-costos .nom small { display: block; color: var(--faint); font-weight: 500; font-size: 0.72rem; }
+.cf-costos-total td { border-top: 2px solid var(--border); border-bottom: none; font-weight: 800; background: var(--bg); }
+
 /* Caja */
 .cf-caja-pos { color: var(--paid); font-weight: 700; }
 .cf-caja-neg { color: var(--bad); font-weight: 700; }

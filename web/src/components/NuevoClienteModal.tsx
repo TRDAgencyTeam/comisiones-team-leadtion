@@ -107,7 +107,7 @@ export function NuevoClienteModal({
 
                 <div className="cf-f">
                   <label>Servicio</label>
-                  <select value={clave} onChange={(e) => { setClave(e.target.value); setPersonas(1); }}>
+                  <select value={clave} onChange={(e) => { const v = e.target.value; setClave(v); setPersonas(catalogo.find((c) => c.clave === v)?.unidad === "hora" ? 3 : 1); }}>
                     {Object.entries(grupos).map(([cat, items]) => (
                       <optgroup key={cat} label={CATEGORIA_LABEL[cat] ?? cat}>
                         {items.map((i) => <option key={i.clave} value={i.clave}>{i.nombre}</option>)}

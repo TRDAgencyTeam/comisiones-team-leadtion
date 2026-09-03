@@ -40,6 +40,7 @@ export function NuevaFacturaForm({ mes, tasa, catalogo }: { mes: string; tasa: n
         <input type="hidden" name="entidad" value={entidad} />
         <input type="hidden" name="servicioClave" value={clave} />
         <input type="hidden" name="recurrente" value={srv?.recurrente ? "1" : "0"} />
+        {srv?.porPersona && <input type="hidden" name="personas" value={personas} />}
 
         <div className="cf-f"><label>Nombre del cliente</label><input name="clienteNombre" required placeholder="Cliente existente o puntual" /></div>
 
@@ -53,7 +54,7 @@ export function NuevaFacturaForm({ mes, tasa, catalogo }: { mes: string; tasa: n
 
         <div className="cf-f">
           <label>Servicio</label>
-          <select value={clave} onChange={(e) => { setClave(e.target.value); setPersonas(1); }}>
+          <select value={clave} onChange={(e) => { const v = e.target.value; setClave(v); setPersonas(catalogo.find((c) => c.clave === v)?.unidad === "hora" ? 3 : 1); }}>
             {Object.entries(grupos).map(([cat, items]) => (
               <optgroup key={cat} label={CATEGORIA_LABEL[cat] ?? cat}>{items.map((i) => <option key={i.clave} value={i.clave}>{i.nombre}</option>)}</optgroup>
             ))}

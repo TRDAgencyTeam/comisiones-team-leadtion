@@ -103,7 +103,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
                 <td className="nom">{o.concepto}</td>
                 <td><span className="cf-tag caja">{o.categoria ?? "otro"}</span></td>
                 <td className="r neto">{usd(o.valorUsd)}</td>
-                <td><form action={eliminarIngreso}><input type="hidden" name="id" value={o.id} /><button type="submit" className="btn-borrar" title="Eliminar">🗑️</button></form></td>
+                <td><span className="acc"><MovimientoModal mes={mes} tipo="ingreso" editar={{ id: o.id, concepto: o.concepto, valorUsd: o.valorUsd, categoria: o.categoria }} /><form action={eliminarIngreso}><input type="hidden" name="id" value={o.id} /><button type="submit" className="btn-borrar" title="Eliminar">🗑️</button></form></span></td>
               </tr>
             ))}
             {otros.length === 0 && <tr><td colSpan={4} className="cf-empty" style={{ padding: 24 }}>Sin otros ingresos. Agrega reselling, mantenimientos, API vendida, afiliaciones…</td></tr>}

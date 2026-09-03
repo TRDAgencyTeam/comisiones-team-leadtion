@@ -13,6 +13,7 @@ export interface ServicioCatalogo {
   aplicaReserva: boolean;
   porPersona: boolean;
   precioPersona: number | null;
+  costoPersona: number | null;
   unidad: string | null;
 }
 
