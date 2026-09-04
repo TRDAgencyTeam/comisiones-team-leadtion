@@ -61,9 +61,13 @@ export default async function ResumenPage({ searchParams }: { searchParams: Prom
   const rec = Number(cnt[0]?.rec ?? 0), mom = Number(cnt[0]?.mom ?? 0);
   const prev = tendencia.length >= 2 ? tendencia[tendencia.length - 2]! : null;
   const dIng = prev ? delta(r.ingresos.total, prev.ingresos) : null;
-  const dNeta = prev ? delta(r.utilidadNeta, prev.neta) : null;
+  // Utilidad del mes = ingresos − egresos (columna "Utilidad" del cuadro, antes del diezmo).
+  const prevBruta = prev ? prev.ingresos - prev.egresosUtilidad : 0;
+  const dUtil = prev ? delta(r.utilidadBruta, prevBruta) : null;
+  const margenBruto = r.ingresos.total > 0 ? Math.round((r.utilidadBruta / r.ingresos.total) * 100) : 0;
+  const aporteCaja = Math.round((r.utilidadBruta - r.cajaOficial) * 100) / 100;
   const gruposGasto = agruparGastos(r.egresos.afectanUtilidad);
-  const egresosTotales = r.egresos.totalAfectan + r.egresos.totalCaja;
+  const egresosTotales = r.egresos.totalAfectan + r.cajaOficial;
 
   return (
     <main className="cf">
@@ -76,8 +80,8 @@ export default async function ResumenPage({ searchParams }: { searchParams: Prom
           <div className="sub">USD · {new Intl.NumberFormat("es-CO", { notation: "compact", maximumFractionDigits: 1 }).format(r.ingresos.total * r.tasa)} COP</div>
           {dIng && <div className="cf-delta">{dIng.txt} vs. mes anterior</div>}
         </div>
-        <div className="cf-kpi"><div className="lbl">Egresos totales del mes</div><div className="big">{usd(egresosTotales)}</div><div className="sub">afectan utilidad {usd(r.egresos.totalAfectan)} · caja {usd(r.egresos.totalCaja)}</div></div>
-        <div className="cf-kpi"><div className="lbl">Utilidad neta</div><div className="big">{usd(r.utilidadNeta)}</div><div className="sub">bruta {usd(r.utilidadBruta)} · {r.margen}% margen</div>{dNeta && <div className={`cf-delta${dNeta.dn ? " dn" : ""}`}>{dNeta.txt}</div>}</div>
+        <div className="cf-kpi"><div className="lbl">Egresos del mes</div><div className="big">{usd(r.egresos.totalAfectan)}</div><div className="sub">gastos que afectan la utilidad</div></div>
+        <div className="cf-kpi"><div className="lbl">Utilidad del mes</div><div className="big">{usd(r.utilidadBruta)}</div><div className="sub">ingresos − egresos · {margenBruto}% margen</div>{dUtil && <div className={`cf-delta${dUtil.dn ? " dn" : ""}`}>{dUtil.txt} vs. mes anterior</div>}</div>
         <div className="cf-kpi"><div className="lbl">Clientes activos</div><div className="big">{rec + mom}</div><div className="sub" style={{ display: "flex", gap: 6, marginTop: 6 }}><span className="cf-chip llc">{rec} recurrentes</span><span className="cf-chip col">{mom} del momento</span></div></div>
       </div>
 
@@ -97,16 +101,16 @@ export default async function ResumenPage({ searchParams }: { searchParams: Prom
           {r.ingresos.otros.map((o) => (<div key={o.id} className="cf-li"><span>{o.concepto}</span><b>{usd2(o.valorUsd)}</b></div>))}
           <div className="cf-li tot"><span>Total ingresos</span><b>{usd2(r.ingresos.total)}</b></div>
         </div>
-        <ResumenGastos grupos={gruposGasto} totalAfectan={r.egresos.totalAfectan} totalCaja={r.egresos.totalCaja} egresosTotales={egresosTotales} tasa={r.tasa} />
+        <ResumenGastos grupos={gruposGasto} totalAfectan={r.egresos.totalAfectan} totalCaja={r.cajaOficial} egresosTotales={egresosTotales} tasa={r.tasa} />
       </div>
 
       <div className="cf-util-strip">
-        <div className="cf-util"><div className="lbl">Utilidad bruta</div><div className="v">{usd2(r.utilidadBruta)}</div></div>
-        <div className="cf-util"><div className="lbl">Diezmo (10%)</div><div className="v">−{usd2(r.diezmo)}</div></div>
-        <div className="cf-util net"><div className="lbl">Utilidad neta</div><div className="v">{usd2(r.utilidadNeta)}</div></div>
+        <div className="cf-util"><div className="lbl">Utilidad del mes</div><div className="v">{usd2(r.utilidadBruta)}</div></div>
+        <div className="cf-util"><div className="lbl">− Inversiones y gastos (incl. diezmo {usd(r.diezmo)})</div><div className="v">−{usd2(r.cajaOficial)}</div></div>
+        <div className="cf-util net"><div className="lbl">= Aporte a caja del mes</div><div className="v">{usd2(aporteCaja)}</div></div>
       </div>
 
-      <p className="cf-nota">El diezmo (10% de la utilidad) es automático y sale de caja. Los egresos que “salen de caja” no bajan la utilidad del mes; los ves en la pestaña Egresos.</p>
+      <p className="cf-nota">La utilidad del mes es ingresos − egresos. De esa utilidad salen las inversiones y gastos (incluido el diezmo del 10%); lo que queda es el aporte a la caja. La caja disponible acumulada la ves en la pestaña Caja.</p>
     </main>
   );
 }

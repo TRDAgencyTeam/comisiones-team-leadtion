@@ -137,6 +137,9 @@ export interface ResumenMes {
   diezmo: number;
   utilidadNeta: number;
   margen: number;
+  /** Inversiones y gastos con la utilidad (incluye diezmo) según el cuadro oficial
+   *  (caja_mensual) si el mes tiene fila; si no, el total de caja computado. */
+  cajaOficial: number;
 }
 
 const DIEZMO_PCT = 0.1;
@@ -150,11 +153,12 @@ const DIEZMO_PCT = 0.1;
 export async function resumenDelMes(mes: string): Promise<ResumenMes> {
   await asegurarEgresosFijosDelMes(mes); // fijos del mes en curso/futuro (idempotente)
   const primer = primerDiaMes(mes);
-  const [facturas, fx, otros, egresos] = await Promise.all([
+  const [facturas, fx, otros, egresos, cajaSnap] = await Promise.all([
     consulta(`select entidad, facturado, medio, iva_pct, estado, tasa from public.factura_mensual where mes = $1`, [primer]),
     tasaUsdCop(),
     otrosIngresosDelMes(mes),
     egresosDelMes(mes),
+    consulta(`select inversiones from public.caja_mensual where mes = $1`, [primer]),
   ]);
   const tasa = fx.cop;
 
@@ -183,6 +187,8 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
     fecha: null, valorUsd: diezmo, valorCop: null, afectaUtilidad: false, categoria: "diezmo", subcategoria: null, automatico: true,
   };
   const totalCaja = r2(caja.reduce((s, e) => s + e.valorUsd, 0) + diezmo);
+  const cajaOficial = (cajaSnap as Record<string, unknown>[]).length
+    ? num((cajaSnap as Record<string, unknown>[])[0]!.inversiones) : totalCaja;
 
   return {
     tasa,
@@ -195,7 +201,7 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
       ].filter((x) => x.valor > 0),
     },
     egresos: { afectanUtilidad: afectan, saleDeCaja: [diezmoRow, ...caja], totalAfectan, totalCaja },
-    utilidadBruta, diezmo, utilidadNeta, margen,
+    utilidadBruta, diezmo, utilidadNeta, margen, cajaOficial,
   };
 }
 
