@@ -83,8 +83,8 @@ export default async function ResumenPage({ searchParams }: { searchParams: Prom
 
       <div className="cf-charts">
         <div className="cf-card">
-          <h3>Tendencia de ingresos vs egresos <span className="cf-legend">· pasa el cursor</span></h3>
-          <TendenciaChart datos={tendencia.map((t) => ({ mes: t.mes, ingresos: t.ingresos, neta: t.neta, egresos: t.egresosTotal }))} />
+          <h3>Tendencia de ingresos vs egresos <span className="cf-legend">· egresos que afectan la utilidad · pasa el cursor</span></h3>
+          <TendenciaChart datos={tendencia.map((t) => ({ mes: t.mes, ingresos: t.ingresos, neta: t.neta, egresos: t.egresosUtilidad }))} />
         </div>
         <div className="cf-card"><h3>Ingresos por fuente</h3><DonutChart fuentes={r.ingresos.porFuente} total={r.ingresos.total} /></div>
       </div>

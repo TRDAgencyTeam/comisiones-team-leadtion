@@ -75,9 +75,9 @@ export function TendenciaChart({
           fontWeight: 600, whiteSpace: "nowrap", pointerEvents: "none", boxShadow: "0 4px 14px rgba(0,0,0,.25)",
         }}>
           {etiquetaMes(hp.mes)}: {full(hp.ingresos)}
-          {deltaPct != null && <span style={{ color: deltaPct >= 0 ? "#5bd6a8" : "#f2a", marginLeft: 6 }}>{deltaPct >= 0 ? "▲" : "▼"}{Math.abs(deltaPct)}%</span>}
+          {deltaPct != null && <span style={{ color: deltaPct >= 0 ? "#16a34a" : "#dc2626", marginLeft: 6 }}>{deltaPct >= 0 ? "▲" : "▼"}{Math.abs(deltaPct)}%</span>}
           {hayEgresos
-            ? <span style={{ opacity: 0.85, marginLeft: 6, color: "#ffb4ae" }}>· egresos {abbr(hp.egresos ?? 0)}</span>
+            ? <span style={{ marginLeft: 6, color: ROJO, fontWeight: 700 }}>· egresos {abbr(hp.egresos ?? 0)}</span>
             : <span style={{ opacity: 0.7, marginLeft: 6 }}>· {secundarioLabel} {abbr(hp.neta)}</span>}
         </div>
       )}
