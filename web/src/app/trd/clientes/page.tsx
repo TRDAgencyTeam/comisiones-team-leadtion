@@ -5,6 +5,7 @@ import { resumenDelMes, tendenciaMensual } from "@/lib/egresos";
 import { ClientesHeader } from "@/components/ClientesHeader";
 import { TendenciaChart } from "@/components/TendenciaChart";
 import { DonutChart } from "@/components/DonutChart";
+import { ResumenGastos } from "@/components/ResumenGastos";
 
 export const metadata = { title: "Resumen del mes" };
 export const dynamic = "force-dynamic";
@@ -82,8 +83,8 @@ export default async function ResumenPage({ searchParams }: { searchParams: Prom
 
       <div className="cf-charts">
         <div className="cf-card">
-          <h3>Tendencia de ingresos <span className="cf-legend"><i style={{ display: "inline-block", width: 9, height: 9, borderRadius: 3, background: "#6d5ac0" }} /> pasa el cursor</span></h3>
-          <TendenciaChart datos={tendencia} />
+          <h3>Tendencia de ingresos vs egresos <span className="cf-legend">· pasa el cursor</span></h3>
+          <TendenciaChart datos={tendencia.map((t) => ({ mes: t.mes, ingresos: t.ingresos, neta: t.neta, egresos: t.egresosTotal }))} />
         </div>
         <div className="cf-card"><h3>Ingresos por fuente</h3><DonutChart fuentes={r.ingresos.porFuente} total={r.ingresos.total} /></div>
       </div>
@@ -96,19 +97,7 @@ export default async function ResumenPage({ searchParams }: { searchParams: Prom
           {r.ingresos.otros.map((o) => (<div key={o.id} className="cf-li"><span>{o.concepto}</span><b>{usd2(o.valorUsd)}</b></div>))}
           <div className="cf-li tot"><span>Total ingresos</span><b>{usd2(r.ingresos.total)}</b></div>
         </div>
-        <div className="cf-card">
-          <h3>Gastos por categoría <span className="cf-legend">(afectan la utilidad)</span></h3>
-          {gruposGasto.map((g) => (
-            <div key={g.label} className="cf-li">
-              <span>{g.label} {g.label === "Nómina" || g.label === "Herramientas & Hosting" ? <small style={{ color: "var(--faint)" }}>· {g.count} {g.unidad}</small> : null}</span>
-              <b>{usd2(g.total)}</b>
-            </div>
-          ))}
-          {gruposGasto.length === 0 && <div className="cf-li"><span>Sin gastos registrados</span><b>—</b></div>}
-          <div className="cf-li tot"><span>Total que afecta utilidad</span><b>{usd2(r.egresos.totalAfectan)}</b></div>
-          <div className="cf-li"><span>+ Sale de caja (inversiones, diezmo)</span><b>{usd2(r.egresos.totalCaja)}</b></div>
-          <div className="cf-li tot"><span>Egresos totales del mes</span><b>{usd2(egresosTotales)}</b></div>
-        </div>
+        <ResumenGastos grupos={gruposGasto} totalAfectan={r.egresos.totalAfectan} totalCaja={r.egresos.totalCaja} egresosTotales={egresosTotales} tasa={r.tasa} />
       </div>
 
       <div className="cf-util-strip">
