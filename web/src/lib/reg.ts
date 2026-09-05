@@ -86,22 +86,46 @@ export async function uvtDeMes(mes: string): Promise<number> {
   return rows.length ? Number(rows[0]!.valor) : uvtDeAnio(anio);
 }
 
+export interface TasaCorte {
+  /** Tasa USD→COP a usar en el mes de REG. */
+  cop: number;
+  /** true si es una tasa pactada guardada (reg_tasa_mes); false si es la del día. */
+  manual: boolean;
+  /** Solo aplica cuando NO es manual: la del día vino de la API (true) o del respaldo (false). */
+  enVivo: boolean;
+  /** Fecha de referencia (YYYY-MM-DD). */
+  fecha: string;
+}
+
+/**
+ * Tasa para convertir las comisiones del mes de REG: la PACTADA (reg_tasa_mes) si
+ * existe; si no, la del día en vivo. Con ella se previsualizan las comisiones NO
+ * pagadas y se congela el COP al marcar Pagado.
+ */
+export async function tasaCorte(mes: string): Promise<TasaCorte> {
+  const primer = primerDiaMes(mes);
+  const rows = await consulta(`select cop from public.reg_tasa_mes where mes = $1`, [primer]);
+  if (rows.length) return { cop: Number(rows[0]!.cop), manual: true, enVivo: false, fecha: primer.slice(0, 10) };
+  const fx = await tasaUsdCop();
+  return { cop: fx.cop, manual: false, enVivo: fx.enVivo, fecha: fx.fecha };
+}
+
 /** Comisión CS pendiente por colaborador (COP) para el corte del mes. */
 async function comisionesCopDelMes(mes: string): Promise<{ mapa: Map<number, number>; tasa: number }> {
   const corte = corteCerrado(mes);
-  const [resultados, fx] = await Promise.all([cargarResultados(corte), tasaUsdCop()]);
+  const [resultados, t] = await Promise.all([cargarResultados(corte), tasaCorte(mes)]);
   const mapa = new Map<number, number>();
   for (const r of resultados) {
-    mapa.set(r.colaboradorId, Math.round(r.totalPendiente * fx.cop));
+    mapa.set(r.colaboradorId, Math.round(r.totalPendiente * t.cop));
   }
-  return { mapa, tasa: fx.cop };
+  return { mapa, tasa: t.cop };
 }
 
 /** Comisión CS pendiente (COP) de un colaborador para el corte del mes. */
 export async function comisionPendienteCop(colaboradorId: number, mes: string): Promise<number> {
   const corte = corteCerrado(mes);
-  const [res, fx] = await Promise.all([resultadoDeColaborador(colaboradorId, corte), tasaUsdCop()]);
-  return res ? Math.round(res.totalPendiente * fx.cop) : 0;
+  const [res, t] = await Promise.all([resultadoDeColaborador(colaboradorId, corte), tasaCorte(mes)]);
+  return res ? Math.round(res.totalPendiente * t.cop) : 0;
 }
 
 export async function renglonesDelMes(mes: string): Promise<RenglonReg[]> {

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { soloAdmin } from "@/lib/sesion";
-import { primerDiaMes, uvtDeMes, recalcular, corteCerrado, comisionPendienteCop } from "@/lib/reg";
+import { primerDiaMes, uvtDeMes, recalcular, corteCerrado, comisionPendienteCop, tasaCorte } from "@/lib/reg";
 import { TARIFA_ICA_DEFAULT } from "@/lib/retenciones";
 import { enviarEmail, plantillaCorreoPago, REPLY_TO } from "@/lib/email";
 import { pagarCiclo, deshacerCiclo } from "@/lib/comisiones-pago";
@@ -88,15 +88,15 @@ export async function toggleCheck(formData: FormData) {
       if (valor) {
         // Antes de bloquear el pago, refresca la comisión al corte cerrado (por si
         // el valor guardado era un acumulado viejo) y recalcula el total del renglón.
-        const comision = await comisionPendienteCop(colaboradorId, mesISO);
+        const [comision, t] = await Promise.all([comisionPendienteCop(colaboradorId, mesISO), tasaCorte(mesISO)]);
         const prow = await consulta(`select pago_fijo, adicional from public.reg_pago where id=$1`, [pagoId]);
         const pagoFijo = num(prow[0]?.pago_fijo), adicional = num(prow[0]?.adicional);
         const total = pagoFijo + adicional + comision;
         const uvt = await uvtDeMes(mesISO);
         const { reteIca, reteRenta, valorGirar } = recalcular(total, TARIFA_ICA_DEFAULT, 0, 0, uvt);
         await consulta(
-          `update public.reg_pago set comision=$2, valor_cuenta_cobro=$3, rete_ica=$4, rete_renta=$5, valor_girar=$6, actualizado_en=now() where id=$1`,
-          [pagoId, comision, total, reteIca, reteRenta, valorGirar],
+          `update public.reg_pago set comision=$2, valor_cuenta_cobro=$3, rete_ica=$4, rete_renta=$5, valor_girar=$6, tasa_comision=$7, actualizado_en=now() where id=$1`,
+          [pagoId, comision, total, reteIca, reteRenta, valorGirar, comision > 0 ? t.cop : null],
         );
         await pagarCiclo(colaboradorId, corte);
       } else {
@@ -185,6 +185,44 @@ export async function enviarCorreoPago(formData: FormData) {
   await consulta(`update public.reg_pago set ck_correo = true, actualizado_en = now() where id = $1`, [pagoId]);
   revalidatePath("/trd/reg");
   redirect(`${back}&ok=` + encodeURIComponent(`Correo enviado a ${r!.nombre}.`));
+}
+
+// Tasa: acepta "3.161,50" (COL) o "3161.50" (US). Con coma → coma decimal; si no, punto decimal.
+const numTasa = (v: FormDataEntryValue | null): number => {
+  let s = String(v ?? "").trim();
+  if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
+  const x = Number(s.replace(/[^\d.]/g, ""));
+  return Number.isFinite(x) ? x : 0;
+};
+
+/**
+ * Fija una tasa pactada para el mes de REG. Con ella se convierten las comisiones
+ * NO pagadas y se congela el COP al marcar Pagado. Las ya pagadas no cambian.
+ */
+export async function guardarTasaCorte(formData: FormData) {
+  await soloAdmin();
+  const mes = primerDiaMes(String(formData.get("mes") ?? ""));
+  const cop = numTasa(formData.get("cop"));
+  const back = `/trd/reg?mes=${mes.slice(0, 7)}`;
+  if (cop < 500 || cop > 20000) {
+    redirect(`${back}&error=` + encodeURIComponent("La tasa debe ser un valor razonable (COP por USD)."));
+  }
+  await consulta(
+    `insert into public.reg_tasa_mes (mes, cop) values ($1,$2)
+       on conflict (mes) do update set cop = excluded.cop, actualizado_en = now()`,
+    [mes, cop],
+  );
+  revalidatePath("/trd/reg");
+  redirect(`${back}&ok=` + encodeURIComponent(`Tasa pactada fijada: ${new Intl.NumberFormat("es-CO").format(cop)} COP/USD.`));
+}
+
+/** Vuelve a usar la tasa del día (borra la tasa pactada del mes). */
+export async function usarTasaEnVivo(formData: FormData) {
+  await soloAdmin();
+  const mes = primerDiaMes(String(formData.get("mes") ?? ""));
+  await consulta(`delete from public.reg_tasa_mes where mes = $1`, [mes]);
+  revalidatePath("/trd/reg");
+  redirect(`/trd/reg?mes=${mes.slice(0, 7)}&ok=` + encodeURIComponent("Volviste a la tasa del día."));
 }
 
 /** Elimina un renglón de pago (freelance o el del colaborador ese mes). */

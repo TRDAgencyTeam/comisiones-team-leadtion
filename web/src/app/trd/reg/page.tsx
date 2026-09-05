@@ -1,6 +1,8 @@
 import { soloAdmin } from "@/lib/sesion";
-import { renglonesDelMes, totalizar, uvtDeMes, primerDiaMes } from "@/lib/reg";
+import { renglonesDelMes, totalizar, uvtDeMes, primerDiaMes, tasaCorte } from "@/lib/reg";
+import { historialFx, snapshotTasaHoy, backfillFx } from "@/lib/fx-historial";
 import { RegFila } from "@/components/RegFila";
+import { RegTasaWidget } from "@/components/RegTasaWidget";
 import { FreelanceForm } from "@/components/RegFreelance";
 
 export const metadata = { title: "Registro contable" };
@@ -27,7 +29,11 @@ export default async function RegPage({
   await soloAdmin();
   const sp = await searchParams;
   const mes = sp.mes && /^\d{4}-\d{2}$/.test(sp.mes) ? sp.mes : mesActualISO();
-  const [renglones, uvt] = await Promise.all([renglonesDelMes(mes), uvtDeMes(mes)]);
+  // Historial de la tasa (informativo): registra la de hoy y rellena días faltantes.
+  await Promise.all([snapshotTasaHoy(), backfillFx(4)]);
+  const [renglones, uvt, tasa, historial] = await Promise.all([
+    renglonesDelMes(mes), uvtDeMes(mes), tasaCorte(mes), historialFx(3),
+  ]);
   const totales = totalizar(renglones);
   const primer = primerDiaMes(mes);
 
@@ -40,11 +46,14 @@ export default async function RegPage({
             Pago a colaboradores de <strong>{nombreMes(mes)}</strong> · UVT {cop(uvt)} · ICA 8,66‰ · calcula solo.
           </p>
         </div>
-        <form method="get" className="reg-mes">
-          <label htmlFor="mes">Mes</label>
-          <input type="month" id="mes" name="mes" defaultValue={mes} />
-          <button type="submit" className="btn-secondary">Ver</button>
-        </form>
+        <div className="reg-head-right">
+          <RegTasaWidget mes={mes} tasa={tasa} historial={historial} />
+          <form method="get" className="reg-mes">
+            <label htmlFor="mes">Mes</label>
+            <input type="month" id="mes" name="mes" defaultValue={mes} />
+            <button type="submit" className="btn-secondary">Ver</button>
+          </form>
+        </div>
       </div>
 
       {sp.error && <p className="alerta">{decodeURIComponent(sp.error)}</p>}
