@@ -6,6 +6,12 @@ import { TendenciaChart } from "@/components/TendenciaChart";
 import { GrupoCostos } from "@/components/GrupoCostos";
 import { eliminarEgreso } from "../acciones";
 
+// Grupo del egreso → clave del selector de "Agregar egreso" (MovimientoModal).
+const ADD_KEY: Record<string, string> = {
+  nomina: "nomina", oper: "operativo", tools: "herramienta",
+  fijohist: "variable", lead: "leadtion", var: "variable", caja: "caja",
+};
+
 export const metadata = { title: "Egresos" };
 export const dynamic = "force-dynamic";
 
@@ -25,21 +31,30 @@ const GRUPOS: { key: string; t: string; ic: string; auto: boolean; hover?: boole
   { key: "var", t: "Gastos variables del mes", ic: "🧾", auto: false, f: (e) => e.afectaUtilidad && !inList(e.categoria, ["fijo", "comision", "api", "bono", "referido", "comision_banco"]) },
 ];
 
-function Grupo({ t, ic, auto, filas }: { t: string; ic: string; auto: boolean; filas: EgresoRow[] }) {
+function Grupo({ t, ic, auto, filas, mes, grupoAdd }: { t: string; ic: string; auto: boolean; filas: EgresoRow[]; mes: string; grupoAdd?: string }) {
   if (filas.length === 0) return null;
   const sub = filas.reduce((s, e) => s + e.valorUsd, 0);
   return (
     <div className="cf-egrupo">
       <div className="cf-egrupo-h">
         <span className="cf-egrupo-t"><span className="cf-egrupo-ic">{ic}</span><b>{t}</b><span className="count">({filas.length})</span></span>
-        <span className="cf-egrupo-r">{auto && <span className="cf-auto">auto mensual</span>}<b className="cf-mono">{usd0(sub)}</b></span>
+        <span className="cf-egrupo-r">
+          {auto && <span className="cf-auto">auto mensual</span>}
+          {grupoAdd && <MovimientoModal mes={mes} tipo="egreso" grupoInicial={grupoAdd} compact />}
+          <b className="cf-mono">{usd0(sub)}</b>
+        </span>
       </div>
       {filas.map((e) => (
         <div key={`${e.id}-${e.concepto}`} className="cf-erow">
           <span className="nom">{e.concepto}{e.marca ? <small>{e.marca}{e.fecha ? ` · ${fFecha(e.fecha)}` : ""}</small> : null}</span>
           <span className="cop">{e.valorCop != null ? cop(e.valorCop) : ""}</span>
           <span className="val"><span className="cf-mono">{usd(e.valorUsd)}</span></span>
-          <span className="del">{e.automatico ? <span className="cf-hint" title="Automático">🔒 auto</span> : e.id > 0 ? <form action={eliminarEgreso}><input type="hidden" name="id" value={e.id} /><button type="submit" className="btn-borrar" title="Eliminar">🗑️</button></form> : null}</span>
+          <span className="del">{e.automatico ? <span className="cf-hint" title="Automático">🔒 auto</span> : e.id > 0 ? (
+            <span className="cf-acc-btns">
+              <MovimientoModal mes={mes} tipo="egreso" editarEgresoData={{ id: e.id, concepto: e.concepto, marca: e.marca, valorUsd: e.valorUsd, valorCop: e.valorCop }} />
+              <form action={eliminarEgreso}><input type="hidden" name="id" value={e.id} /><button type="submit" className="btn-borrar" title="Eliminar">🗑️</button></form>
+            </span>
+          ) : null}</span>
         </div>
       ))}
     </div>
@@ -93,11 +108,11 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
       {GRUPOS.map((g) => {
         const filas = egresos.filter(g.f);
         if (g.key === "nomina" || g.key === "tools") {
-          return <GrupoCostos key={g.key} titulo={g.t} ic={g.ic} filas={filas} tasa={r.tasa} modo={g.key === "nomina" ? "nomina" : "tool"} />;
+          return <GrupoCostos key={g.key} titulo={g.t} ic={g.ic} filas={filas} tasa={r.tasa} modo={g.key === "nomina" ? "nomina" : "tool"} mes={mes} grupoAdd={ADD_KEY[g.key]!} />;
         }
-        return <Grupo key={g.key} t={g.t} ic={g.ic} auto={g.auto} filas={filas} />;
+        return <Grupo key={g.key} t={g.t} ic={g.ic} auto={g.auto} filas={filas} mes={mes} grupoAdd={ADD_KEY[g.key]} />;
       })}
-      <Grupo t="Sale de caja" ic="🏦" auto={false} filas={caja} />
+      <Grupo t="Sale de caja" ic="🏦" auto={false} filas={caja} mes={mes} grupoAdd="caja" />
 
       <p className="cf-nota">
         Los grupos <b>“auto mensual”</b> (nómina, operativos, herramientas) se snapshotean del módulo Gastos Fijos y se repiten cada mes; edítalos aquí para el mes (agregar/quitar) sin tocar los meses pasados.

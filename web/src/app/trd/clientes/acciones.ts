@@ -220,6 +220,22 @@ export async function crearEgreso(formData: FormData) {
   redirect(back);
 }
 
+export async function editarEgreso(formData: FormData) {
+  await soloAdmin();
+  const id = Number(formData.get("id"));
+  const concepto = String(formData.get("concepto") ?? "").trim();
+  if (!concepto) return;
+  const marca = txt(formData.get("marca"));
+  const valorUsd = n(formData.get("valorUsd"));
+  const valorCop = txt(formData.get("valorCop")) ? n(formData.get("valorCop")) : null;
+  await consulta(
+    `update public.egreso_mensual set concepto=$2, marca=$3, valor_usd=$4, valor_cop=$5 where id=$1`,
+    [id, concepto, marca, valorUsd, valorCop],
+  );
+  revalidatePath("/trd/clientes/egresos");
+  revalidatePath("/trd/clientes");
+}
+
 export async function eliminarEgreso(formData: FormData) {
   await soloAdmin();
   const id = Number(formData.get("id"));

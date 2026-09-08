@@ -1108,6 +1108,18 @@ button.ck:hover { border-color: var(--muted); }
 .cf-erow .cop { color: var(--muted); font-size: 0.78rem; font-variant-numeric: tabular-nums; text-align: right; }
 .cf-erow .val { text-align: right; }
 .cf-erow .del { text-align: right; }
+/* Acciones por línea (editar / eliminar) + agregar por grupo */
+.cf-acc-btns { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.cf-acc-btns .link-ver { font-size: 1rem; line-height: 1; }
+.cf-acc { white-space: nowrap; width: 1%; }
+.cf-acc-col { width: 1%; }
+.cf-costos tbody td.cf-acc { padding-right: 16px; }
+.cf-add-mini {
+  border: 1px dashed var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--accent); font-weight: 700; font-size: 0.7rem; padding: 3px 10px; border-radius: 999px;
+  cursor: pointer; font-family: inherit; white-space: nowrap;
+}
+.cf-add-mini:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
 
 /* Comisiones por corte (mes) */
 .corte-bloque { border: 1px solid var(--border); border-radius: 12px; margin-top: 12px; overflow: hidden; }
