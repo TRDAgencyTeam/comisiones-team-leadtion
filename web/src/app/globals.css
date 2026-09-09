@@ -627,6 +627,8 @@ a.btn-pagar { text-decoration: none; display: inline-block; }
 .trd-loading span { font-size: 0.82rem; letter-spacing: 0.04em; }
 @keyframes trd-pulse { 0%, 100% { transform: scale(0.92); opacity: 0.6; } 50% { transform: scale(1.05); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .trd-loading-badge { animation: none; } }
+.trd-action-scrim { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center;
+  background: rgba(8, 9, 12, 0.55); backdrop-filter: blur(2px); }
 .trd-side .side-sec { font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; color: #8f8da6; margin: 0 8px 8px; }
 .trd-side nav { display: flex; flex-direction: column; gap: 3px; }
 .trd-side nav a { display: flex; gap: 11px; align-items: center; padding: 10px 12px; border-radius: 10px;
@@ -1011,6 +1013,13 @@ button.ck:hover { border-color: var(--muted); }
   text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .cf-tab:hover { color: var(--text); }
 .cf-tab.on { color: var(--text); border-bottom-color: var(--accent); }
+/* Sub-pestañas internas (ej. Egresos: Resumen / Crédito) */
+.cf-subtabs { display: inline-flex; gap: 4px; margin: 16px 0 6px; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 3px; }
+.cf-subtab { padding: 6px 16px; font-size: 0.84rem; font-weight: 700; color: var(--muted); border-radius: 999px; text-decoration: none; }
+.cf-subtab:hover { color: var(--text); }
+.cf-subtab.on { background: var(--accent); color: #fff; }
+.cf-gestion { font-size: 0.72rem; font-weight: 700; color: var(--accent); text-decoration: none; border: 1px solid var(--border); padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.cf-gestion:hover { border-color: var(--accent); }
 
 .cf-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 20px; }
 @media (max-width: 900px) { .cf-kpis { grid-template-columns: repeat(2, 1fr); } }

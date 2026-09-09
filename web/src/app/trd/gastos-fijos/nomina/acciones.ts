@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { addMonths } from "comisiones-cs-engine/dates";
 import { consulta } from "@/lib/db";
 import { soloAdmin } from "@/lib/sesion";
+import { sincronizarFijoMesActual } from "@/lib/egresos";
 
 // Valores en COP se digitan con puntos de miles; se quitan para guardar el número.
 const numCO = (v: FormDataEntryValue | null): number => {
@@ -48,16 +49,20 @@ export async function crearPersona(formData: FormData) {
   if (!d.nombre) {
     redirect("/trd/gastos-fijos/nomina/nuevo?error=" + encodeURIComponent("El nombre es obligatorio."));
   }
-  await consulta(
+  const ins = await consulta(
     `insert into public.colaboradores
        (nombre, rol, categoria, activo, area, banco, email, identificacion,
         fecha_nacimiento, fecha_ingreso, fecha_inicio_contrato, duracion_contrato_meses,
         fecha_fin_contrato, valor_nomina)
-     values ($1,'cs',null,true,$2,$3,$4,$5,$6,$7,$7,$8,$9,$10)`,
+     values ($1,'cs',null,true,$2,$3,$4,$5,$6,$7,$7,$8,$9,$10) returning id`,
     [d.nombre, d.area, d.banco, d.email, d.identificacion, d.fechaNacimiento, d.fechaInicio,
      d.duracionMeses, d.fechaFin, d.valorNomina],
   );
+  // Refleja la persona en el mes en curso (Egresos). REG la toma en vivo.
+  if (ins[0]?.id != null) await sincronizarFijoMesActual("nomina", Number(ins[0].id));
   revalidatePath("/trd/gastos-fijos/nomina");
+  revalidatePath("/trd/clientes/egresos");
+  revalidatePath("/trd/reg");
   redirect("/trd/gastos-fijos/nomina");
 }
 

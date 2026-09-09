@@ -82,8 +82,9 @@ export function MovimientoModal({
                   </div>
                 )}
                 {esEgreso && !esEdit && <div className="cf-f"><label>Fecha</label><input type="date" name="fecha" defaultValue={`${mes}-01`} /></div>}
-                {esEgreso && <div className="cf-f"><label>Valor COP (opcional)</label><input name="valorCop" inputMode="decimal" defaultValue={editarEgresoData?.valorCop ?? ""} placeholder="—" /></div>}
-                <div className="cf-f"><label>Valor USD</label><input name="valorUsd" inputMode="decimal" defaultValue={editar?.valorUsd ?? editarEgresoData?.valorUsd ?? ""} placeholder="0" required /></div>
+                {esEgreso && <div className="cf-f"><label>Valor COP</label><input name="valorCop" inputMode="decimal" defaultValue={editarEgresoData?.valorCop ?? ""} placeholder="Ej. 40.000" /></div>}
+                <div className="cf-f"><label>Valor USD</label><input name="valorUsd" inputMode="decimal" defaultValue={editar?.valorUsd ?? editarEgresoData?.valorUsd ?? ""} placeholder="Ej. 12,71" required={!esEgreso} />
+                  {esEgreso && <span className="cf-hint">Pon <b>COP o USD</b> (el otro se calcula solo con la tasa del día).</span>}</div>
               </div>
               <div className="cf-modal-foot"><button type="button" className="cf-btn cf-btn-ghost" onClick={() => setOpen(false)}>Cancelar</button><button type="submit" className="cf-btn cf-btn-primary">Guardar</button></div>
             </form>

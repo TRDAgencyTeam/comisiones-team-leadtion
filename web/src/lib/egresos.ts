@@ -78,6 +78,43 @@ export async function asegurarEgresosFijosDelMes(mes: string): Promise<number> {
   }
   return 1;
 }
+/**
+ * Al agregar una persona (colaborador) o un gasto fijo (herramienta/operativo) en
+ * su catálogo madre, refleja esa línea en el MES EN CURSO si ese mes ya tiene el
+ * snapshot de fijos (para que aparezca de una en Egresos). No toca meses pasados;
+ * los meses futuros la toman solos al abrirse (asegurarEgresosFijosDelMes).
+ */
+export async function sincronizarFijoMesActual(tipo: "nomina" | "gasto", id: number): Promise<void> {
+  const primer = primerDiaMes(mesActualISO());
+  const ya = await consulta(`select 1 from public.egreso_mensual where mes = $1 and categoria = 'fijo' limit 1`, [primer]);
+  if (ya.length === 0) return; // el mes aún no tiene snapshot: lo tomará al abrir Egresos
+  const { cop: tasa } = await tasaUsdCop();
+  if (tipo === "nomina") {
+    await consulta(
+      `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
+       select $1, nombre, coalesce(area,'Equipo'), round((valor_nomina/$2)::numeric,2), valor_nomina, true, 'fijo', 'nomina'
+         from public.colaboradores where id = $3 and activo and coalesce(valor_nomina,0) > 0`,
+      [primer, tasa, id],
+    );
+  } else {
+    await consulta(
+      `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
+       select $1, nombre, 'TRD',
+          round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
+                  * (coalesce(porcentaje_reparto,100)/100.0) / case when moneda='COP' then $2 else 1 end )::numeric, 2),
+          case when moneda='COP'
+               then round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
+                            * (coalesce(porcentaje_reparto,100)/100.0) )::numeric, 2)
+               else null end,
+          true, 'fijo', categoria
+         from public.gasto_fijo
+        where id = $3 and activo and afecta_utilidad and categoria <> 'paso_dinero'
+          and (recurrencia='mensual' or (recurrencia='anual' and amortizar) or recurrencia='diario')`,
+      [primer, tasa, id],
+    );
+  }
+}
+
 export interface IngresoRow {
   id: number;
   mes: string;

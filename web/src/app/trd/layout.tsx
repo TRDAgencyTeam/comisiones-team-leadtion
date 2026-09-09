@@ -1,5 +1,6 @@
 import { soloAdmin } from "@/lib/sesion";
 import { TrdSidebar } from "@/components/TrdSidebar";
+import { ActionLoader } from "@/components/ActionLoader";
 
 export const metadata = { title: { template: "%s · TRD", default: "TRD Investment" } };
 
@@ -13,6 +14,7 @@ export default async function TrdLayout({ children }: { children: React.ReactNod
     <div className="trd-app">
       <TrdSidebar email={usuario?.email ?? null} />
       <div className="trd-main">{children}</div>
+      <ActionLoader />
     </div>
   );
 }

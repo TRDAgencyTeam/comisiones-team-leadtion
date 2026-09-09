@@ -205,8 +205,10 @@ export async function crearEgreso(formData: FormData) {
   if (!concepto) redirect(`${back}&error=` + encodeURIComponent("El concepto es obligatorio."));
   const marca = txt(formData.get("marca"));
   const fecha = txt(formData.get("fecha"));
-  const valorUsd = n(formData.get("valorUsd"));
+  let valorUsd = n(formData.get("valorUsd"));
   const valorCop = txt(formData.get("valorCop")) ? n(formData.get("valorCop")) : null;
+  // Se puede ingresar COP o USD; si solo hay COP, se calcula el USD con la tasa del día.
+  if (!valorUsd && valorCop) { const { cop: tasa } = await tasaUsdCop(); valorUsd = Math.round((valorCop / tasa) * 100) / 100; }
   const afectaUtilidad = String(formData.get("afectaUtilidad")) === "1";
   const categoria = txt(formData.get("categoria"));
   const subcategoria = txt(formData.get("subcategoria"));
@@ -226,8 +228,9 @@ export async function editarEgreso(formData: FormData) {
   const concepto = String(formData.get("concepto") ?? "").trim();
   if (!concepto) return;
   const marca = txt(formData.get("marca"));
-  const valorUsd = n(formData.get("valorUsd"));
+  let valorUsd = n(formData.get("valorUsd"));
   const valorCop = txt(formData.get("valorCop")) ? n(formData.get("valorCop")) : null;
+  if (!valorUsd && valorCop) { const { cop: tasa } = await tasaUsdCop(); valorUsd = Math.round((valorCop / tasa) * 100) / 100; }
   await consulta(
     `update public.egreso_mensual set concepto=$2, marca=$3, valor_usd=$4, valor_cop=$5 where id=$1`,
     [id, concepto, marca, valorUsd, valorCop],

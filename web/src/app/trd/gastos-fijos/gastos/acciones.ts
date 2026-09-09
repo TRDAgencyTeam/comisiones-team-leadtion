@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { soloAdmin } from "@/lib/sesion";
+import { sincronizarFijoMesActual } from "@/lib/egresos";
 
 const n = (v: FormDataEntryValue | null): number => {
   const x = Number(String(v ?? "").replace(/[^\d.-]/g, ""));
@@ -35,17 +36,20 @@ export async function crearGasto(formData: FormData) {
   await soloAdmin();
   const d = parse(formData);
   if (!d.nombre) redirect("/trd/gastos-fijos/gastos/nuevo?error=" + encodeURIComponent("El nombre es obligatorio."));
-  await consulta(
+  const ins = await consulta(
     `insert into public.gasto_fijo
        (categoria, nombre, moneda, valor, recurrencia, dia_cobro, metodo_pago,
         porcentaje_reparto, amortizar, afecta_utilidad, notas)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) returning id`,
     [d.categoria, d.nombre, d.moneda, d.valor, d.recurrencia, d.diaCobro, d.metodoPago,
      d.reparto, d.amortizar, d.afectaUtilidad, d.notas],
   );
+  // Reflejar de una en el mes en curso (Egresos), sin tocar meses pasados.
+  if (ins[0]?.id != null) await sincronizarFijoMesActual("gasto", Number(ins[0].id));
   revalidatePath("/trd/gastos-fijos/gastos");
-  revalidatePath("/trd/gastos-fijos");
-  redirect("/trd/gastos-fijos/gastos");
+  revalidatePath("/trd/gastos-fijos/herramientas");
+  revalidatePath("/trd/clientes/egresos");
+  redirect(d.categoria === "herramienta" || d.categoria === "hosting" ? "/trd/gastos-fijos/herramientas" : "/trd/gastos-fijos/gastos");
 }
 
 export async function actualizarGasto(formData: FormData) {
