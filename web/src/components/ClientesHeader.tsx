@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 const cop = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
 const nombreMes = (iso: string) => {
   const [a, m] = iso.split("-").map(Number);
@@ -7,14 +5,7 @@ const nombreMes = (iso: string) => {
   return s.charAt(0).toUpperCase() + s.slice(1);
 };
 
-const TABS = [
-  { key: "resumen", label: "Resumen del mes", href: "/trd/clientes" },
-  { key: "facturacion", label: "Facturación", href: "/trd/clientes/facturacion" },
-  { key: "egresos", label: "Egresos", href: "/trd/clientes/egresos" },
-  { key: "caja", label: "Caja", href: "/trd/clientes/caja" },
-];
-
-/** Encabezado común de las 3 pestañas: eyebrow + título + selector de mes + tasa + tabs. */
+/** Encabezado común de las vistas del módulo: eyebrow + título + selector de mes + tasa. */
 export function ClientesHeader({
   mes, activo, tasa, titulo,
 }: { mes: string; activo: "resumen" | "facturacion" | "egresos" | "caja"; tasa: number; titulo?: string }) {
@@ -34,11 +25,6 @@ export function ClientesHeader({
           <span className="cf-rate">Tasa USD→COP <b>{cop(tasa)}</b></span>
         </div>
       </div>
-      <nav className="cf-tabs">
-        {TABS.map((t) => (
-          <Link key={t.key} href={`${t.href}?mes=${mes}`} className={`cf-tab${activo === t.key ? " on" : ""}`}>{t.label}</Link>
-        ))}
-      </nav>
     </>
   );
 }
