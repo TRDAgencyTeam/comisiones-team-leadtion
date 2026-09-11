@@ -348,6 +348,62 @@ export async function cambiarEstadoFactura(formData: FormData) {
   revalidatePath("/trd/clientes/facturacion");
 }
 
+/**
+ * Cierre de cliente desde Facturación al anular una factura. Siempre anula la
+ * factura. Si el alcance es "cliente" (termina contrato): anula también los otros
+ * servicios marcados del mes, pone el cliente como cancelado/pausado (misma tabla
+ * `clientes` → se sincroniza con Membresías y CS al instante) y, como la
+ * auto-generación de recurrentes solo clona clientes 'activo', deja de facturarle
+ * los próximos meses. Registra el motivo en el historial de estado.
+ */
+export async function cerrarClienteDesdeFactura(formData: FormData) {
+  await soloAdmin();
+  const facturaId = Number(formData.get("facturaId"));
+  const clienteId = formData.get("clienteId") ? Number(formData.get("clienteId")) : null;
+  const alcance = String(formData.get("alcance")) === "cliente" ? "cliente" : "factura";
+  const estado = String(formData.get("estado")) === "pausado" ? "pausado" : "cancelado";
+  const motivo = txt(formData.get("motivo"));
+  const cerrarIds = formData.getAll("cerrar").map((v) => Number(v)).filter(Boolean);
+
+  await consulta(`update public.factura_mensual set estado='anulado', actualizado_en=now() where id=$1`, [facturaId]);
+
+  if (alcance === "cliente") {
+    // Cierra también los demás servicios del cliente este mes (para que no queden
+    // pendientes ni se vuelvan a generar). Se anulan por id (vienen de la propia vista).
+    if (cerrarIds.length) {
+      await consulta(
+        `update public.factura_mensual set estado='anulado', actualizado_en=now()
+          where id = any($1::int[]) and estado <> 'anulado'`,
+        [cerrarIds],
+      );
+    }
+    // Si el cliente existe en el maestro (es miembro Leadtion), sincroniza su estado
+    // con Membresías/CS. Si es de pura agencia (no está en `clientes`), basta con
+    // haber anulado sus facturas: la recurrencia no lo vuelve a clonar.
+    if (clienteId) {
+    await consulta(
+      `update public.clientes
+          set estado_actual=$2, motivo_estado=$3,
+              fecha_cancelacion = case when $2='cancelado' then current_date else fecha_cancelacion end,
+              estado_actualizado_en=now()
+        where id=$1`,
+      [clienteId, estado, motivo],
+    );
+    await consulta(
+      `insert into public.cliente_estado_historial (cliente_id, estado, motivo)
+       values ($1,$2,$3)`,
+      [clienteId, estado, motivo ?? "Cierre desde Facturación (madre)"],
+    );
+    revalidatePath("/membresias/clientes");
+    revalidatePath("/membresias/dashboard");
+    revalidatePath(`/membresias/${clienteId}`);
+    revalidatePath("/cs");
+    }
+  }
+  revalidatePath("/trd/clientes/facturacion");
+  revalidatePath("/trd/clientes");
+}
+
 export async function eliminarFactura(formData: FormData) {
   await soloAdmin();
   const id = Number(formData.get("id"));
