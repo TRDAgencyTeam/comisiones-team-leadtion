@@ -376,7 +376,14 @@ export async function analizarCierre(facturaId: number): Promise<AnalisisCierre 
 
   let cid = f.cliente_id != null ? Number(f.cliente_id) : null;
   if (!cid && f.cliente_nombre) {
-    const m = await consulta(`select id from public.clientes where lower(trim(nombre)) = lower(trim($1)) limit 1`, [f.cliente_nombre]);
+    // Match insensible a acentos/mayúsculas ("María José Río" == "Maria Jose Rio").
+    const m = await consulta(
+      `select id from public.clientes
+        where translate(lower(trim(nombre)), 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN')
+            = translate(lower(trim($1)),     'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN')
+        order by id limit 1`,
+      [f.cliente_nombre],
+    );
     if (m.length) cid = Number(m[0]!.id);
   }
   let leadtion: AnalisisCierre["leadtion"] = null;
