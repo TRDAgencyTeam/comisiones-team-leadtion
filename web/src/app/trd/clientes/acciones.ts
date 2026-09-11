@@ -348,39 +348,81 @@ export async function cambiarEstadoFactura(formData: FormData) {
   revalidatePath("/trd/clientes/facturacion");
 }
 
+export interface AnalisisCierre {
+  facturaId: number;
+  clienteNombre: string;
+  entidad: string;
+  agencia: { itemId: number | null; concepto: string; monto: number }[];
+  leadtion: { clienteId: number; estado: string; valorUsd: number; esAgencia: boolean } | null;
+}
+
 /**
- * Cierre de cliente desde Facturación al anular una factura. Siempre anula la
- * factura. Si el alcance es "cliente" (termina contrato): anula también los otros
- * servicios marcados del mes, pone el cliente como cancelado/pausado (misma tabla
- * `clientes` → se sincroniza con Membresías y CS al instante) y, como la
- * auto-generación de recurrentes solo clona clientes 'activo', deja de facturarle
- * los próximos meses. Registra el motivo en el historial de estado.
+ * Analiza una factura antes del cierre: sus servicios de agencia (ítems o el
+ * servicio combinado) y si el cliente está vinculado a una cuenta Leadtion
+ * (maestro `clientes`, resuelto por cliente_id o por nombre) con su estado y valor.
  */
-export async function cerrarClienteDesdeFactura(formData: FormData) {
+export async function analizarCierre(facturaId: number): Promise<AnalisisCierre | null> {
+  await soloAdmin();
+  const rows = await consulta(
+    `select id, cliente_id, cliente_nombre, servicios, facturado, entidad from public.factura_mensual where id = $1`,
+    [facturaId],
+  );
+  const f = rows[0] as Record<string, unknown> | undefined;
+  if (!f) return null;
+  const items = await consulta(`select id, concepto, monto from public.factura_item where factura_id = $1 order by orden, id`, [facturaId]);
+  const agencia = items.length
+    ? items.map((it: Record<string, unknown>) => ({ itemId: Number(it.id), concepto: String(it.concepto), monto: Number(it.monto) }))
+    : [{ itemId: null, concepto: String(f.servicios ?? "Servicio"), monto: Number(f.facturado ?? 0) }];
+
+  let cid = f.cliente_id != null ? Number(f.cliente_id) : null;
+  if (!cid && f.cliente_nombre) {
+    const m = await consulta(`select id from public.clientes where lower(trim(nombre)) = lower(trim($1)) limit 1`, [f.cliente_nombre]);
+    if (m.length) cid = Number(m[0]!.id);
+  }
+  let leadtion: AnalisisCierre["leadtion"] = null;
+  if (cid) {
+    const c = await consulta(`select estado_actual, valor_licencia_general, es_agencia from public.clientes where id = $1`, [cid]);
+    if (c.length) {
+      leadtion = {
+        clienteId: cid, estado: String(c[0]!.estado_actual),
+        valorUsd: c[0]!.valor_licencia_general != null ? Number(c[0]!.valor_licencia_general) : 0,
+        esAgencia: Boolean(c[0]!.es_agencia),
+      };
+    }
+  }
+  return { facturaId, clienteNombre: String(f.cliente_nombre), entidad: String(f.entidad), agencia, leadtion };
+}
+
+/**
+ * Confirma el cierre elegido en el popup: desactiva los servicios de agencia
+ * marcados (anula la factura si quedan 0; si no, la reescribe con lo que queda) y,
+ * si se desactivó Leadtion, cancela/pausa al cliente (→ Membresías y CS).
+ */
+export async function confirmarCierre(formData: FormData) {
   await soloAdmin();
   const facturaId = Number(formData.get("facturaId"));
+  const anularFactura = String(formData.get("anularFactura")) === "1";
+  const offItemIds = formData.getAll("offItem").map((v) => Number(v)).filter(Boolean);
+  const leadtionOff = String(formData.get("leadtionOff")) === "1";
   const clienteId = formData.get("clienteId") ? Number(formData.get("clienteId")) : null;
-  const alcance = String(formData.get("alcance")) === "cliente" ? "cliente" : "factura";
-  const estado = String(formData.get("estado")) === "pausado" ? "pausado" : "cancelado";
+  const estado = String(formData.get("estadoLeadtion")) === "pausado" ? "pausado" : "cancelado";
   const motivo = txt(formData.get("motivo"));
-  const cerrarIds = formData.getAll("cerrar").map((v) => Number(v)).filter(Boolean);
 
-  await consulta(`update public.factura_mensual set estado='anulado', actualizado_en=now() where id=$1`, [facturaId]);
-
-  if (alcance === "cliente") {
-    // Cierra también los demás servicios del cliente este mes (para que no queden
-    // pendientes ni se vuelvan a generar). Se anulan por id (vienen de la propia vista).
-    if (cerrarIds.length) {
-      await consulta(
-        `update public.factura_mensual set estado='anulado', actualizado_en=now()
-          where id = any($1::int[]) and estado <> 'anulado'`,
-        [cerrarIds],
-      );
+  if (anularFactura) {
+    await consulta(`update public.factura_mensual set estado='anulado', actualizado_en=now() where id=$1`, [facturaId]);
+  } else if (offItemIds.length) {
+    await consulta(`delete from public.factura_item where id = any($1::int[]) and factura_id=$2`, [offItemIds, facturaId]);
+    const rest = await consulta(`select concepto, monto from public.factura_item where factura_id=$1 order by orden, id`, [facturaId]);
+    if (rest.length === 0) {
+      await consulta(`update public.factura_mensual set estado='anulado', actualizado_en=now() where id=$1`, [facturaId]);
+    } else {
+      const total = rest.reduce((s, r) => s + Number(r.monto), 0);
+      const servicios = rest.map((r) => String(r.concepto)).join(" + ");
+      await consulta(`update public.factura_mensual set facturado=$2, servicios=$3, actualizado_en=now() where id=$1`, [facturaId, total, servicios]);
     }
-    // Si el cliente existe en el maestro (es miembro Leadtion), sincroniza su estado
-    // con Membresías/CS. Si es de pura agencia (no está en `clientes`), basta con
-    // haber anulado sus facturas: la recurrencia no lo vuelve a clonar.
-    if (clienteId) {
+  }
+
+  if (leadtionOff && clienteId) {
     await consulta(
       `update public.clientes
           set estado_actual=$2, motivo_estado=$3,
@@ -390,15 +432,13 @@ export async function cerrarClienteDesdeFactura(formData: FormData) {
       [clienteId, estado, motivo],
     );
     await consulta(
-      `insert into public.cliente_estado_historial (cliente_id, estado, motivo)
-       values ($1,$2,$3)`,
+      `insert into public.cliente_estado_historial (cliente_id, estado, motivo) values ($1,$2,$3)`,
       [clienteId, estado, motivo ?? "Cierre desde Facturación (madre)"],
     );
     revalidatePath("/membresias/clientes");
     revalidatePath("/membresias/dashboard");
     revalidatePath(`/membresias/${clienteId}`);
     revalidatePath("/cs");
-    }
   }
   revalidatePath("/trd/clientes/facturacion");
   revalidatePath("/trd/clientes");

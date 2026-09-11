@@ -18,11 +18,7 @@ const usd = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", c
 const mesISO = () => { const h = new Date(); return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}`; };
 const fFecha = (iso: string | null) => { if (!iso) return "—"; const [, m, d] = iso.split("-"); return `${d}/${m}`; };
 
-interface Hermana { id: number; label: string }
-function Tabla({ filas, tasa, entidad, hermanasDe, resolverId, esMiembroDe }: {
-  filas: FacturaRow[]; tasa: number; entidad: "LLC" | "COL";
-  hermanasDe: (f: FacturaRow) => Hermana[]; resolverId: (f: FacturaRow) => number | null; esMiembroDe: (f: FacturaRow) => boolean;
-}) {
+function Tabla({ filas, tasa, entidad }: { filas: FacturaRow[]; tasa: number; entidad: "LLC" | "COL" }) {
   const esLLC = entidad === "LLC";
   return (
     <div className="cf-table-wrap">
@@ -47,7 +43,7 @@ function Tabla({ filas, tasa, entidad, hermanasDe, resolverId, esMiembroDe }: {
                 <td className="r neto">{usd(netoUsdDeFactura(f, tasa))}</td>
                 <td>{fFecha(f.fechaFactura)}</td>
                 <td>{fFecha(f.fechaPago)}</td>
-                <td><EstadoFactura id={f.id} estado={f.estado} clienteId={resolverId(f)} clienteNombre={f.clienteNombre} esMiembro={esMiembroDe(f)} hermanas={hermanasDe(f)} /></td>
+                <td><EstadoFactura id={f.id} estado={f.estado} /></td>
                 <td>
                   <span className="acc">
                     <Link href={`/trd/clientes/${f.id}`} className="link-ver">Ver</Link>
@@ -74,27 +70,6 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
   const recCOL = v.recurrentes.filter((f) => f.entidad === "COL");
   const otrosTotal = otros.reduce((s, o) => s + o.valorUsd, 0);
 
-  // Muchas facturas no tienen cliente_id: se resuelve el cliente por NOMBRE contra
-  // el maestro `clientes`. Si existe → es miembro Leadtion (se sincroniza estado);
-  // si no → cliente de agencia (solo se detiene su facturación).
-  const norm = (s: string) => s.trim().toLowerCase();
-  const nameToId = new Map<string, number>();
-  for (const c of clientes) nameToId.set(norm(c.nombre), c.id);
-  const resolverId = (f: FacturaRow) => f.clienteId ?? nameToId.get(norm(f.clienteNombre)) ?? null;
-  const esMiembroDe = (f: FacturaRow) => resolverId(f) != null;
-
-  // Servicios (facturas) del mismo cliente este mes (por nombre), para el popup.
-  const porNombre = new Map<string, Hermana[]>();
-  for (const f of [...v.recurrentes, ...v.delMomento]) {
-    if (!f.clienteNombre || f.estado === "anulado") continue;
-    const k = norm(f.clienteNombre);
-    const arr = porNombre.get(k) ?? [];
-    arr.push({ id: f.id, label: f.servicios ?? "Servicio" });
-    porNombre.set(k, arr);
-  }
-  const hermanasDe = (f: FacturaRow): Hermana[] =>
-    (porNombre.get(norm(f.clienteNombre)) ?? []).filter((h) => h.id !== f.id);
-
   return (
     <main className="cf">
       <ClientesHeader mes={mes} activo="facturacion" tasa={v.tasa} />
@@ -107,13 +82,13 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
           <Link href={`/trd/clientes/nuevo?mes=${mes}`} className="cf-btn cf-btn-ghost">+ Nueva factura</Link>
         </div>
       </div>
-      <Tabla filas={recLLC} tasa={v.tasa} entidad="LLC" hermanasDe={hermanasDe} resolverId={resolverId} esMiembroDe={esMiembroDe} />
+      <Tabla filas={recLLC} tasa={v.tasa} entidad="LLC" />
 
       <div className="cf-sec-head"><h2>Clientes recurrentes · Colombia (COP) <span className="count">{recCOL.length}</span></h2></div>
-      <Tabla filas={recCOL} tasa={v.tasa} entidad="COL" hermanasDe={hermanasDe} resolverId={resolverId} esMiembroDe={esMiembroDe} />
+      <Tabla filas={recCOL} tasa={v.tasa} entidad="COL" />
 
       <div className="cf-sec-head"><h2>Servicios del momento <span className="count">{v.delMomento.length}</span></h2></div>
-      <Tabla filas={v.delMomento} tasa={v.tasa} entidad="LLC" hermanasDe={hermanasDe} resolverId={resolverId} esMiembroDe={esMiembroDe} />
+      <Tabla filas={v.delMomento} tasa={v.tasa} entidad="LLC" />
 
       <div className="cf-sec-head">
         <h2>Otros ingresos del mes <span className="count">{usd(otrosTotal)}</span></h2>

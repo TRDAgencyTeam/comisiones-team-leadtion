@@ -3,16 +3,14 @@
 import { useState, useTransition } from "react";
 import { ESTADOS } from "@/lib/facturacion-calc";
 import { cambiarEstadoFactura } from "@/app/trd/clientes/acciones";
-import { CierreClienteModal, type Hermana } from "@/components/CierreClienteModal";
+import { CierreClienteModal } from "@/components/CierreClienteModal";
 
 /**
- * Selector de estado (semáforo) CONTROLADO. Al elegir "Anulado" en una factura de
- * un cliente, abre el popup de cierre (anular solo la factura o terminar contrato
- * y sincronizar con Membresías). Los demás estados se aplican al instante.
+ * Selector de estado (semáforo) CONTROLADO. Al elegir "Anulado" abre el popup de
+ * cierre (analiza los servicios del cliente y permite desactivarlos por separado).
+ * Los demás estados se aplican al instante.
  */
-export function EstadoFactura({
-  id, estado, clienteId = null, clienteNombre = "", esMiembro = false, hermanas = [],
-}: { id: number; estado: string; clienteId?: number | null; clienteNombre?: string; esMiembro?: boolean; hermanas?: Hermana[] }) {
+export function EstadoFactura({ id, estado }: { id: number; estado: string }) {
   const [val, setVal] = useState(estado);
   const [prev, setPrev] = useState(estado);
   const [modal, setModal] = useState(false);
@@ -43,10 +41,6 @@ export function EstadoFactura({
       {modal && (
         <CierreClienteModal
           facturaId={id}
-          clienteId={clienteId}
-          clienteNombre={clienteNombre}
-          esMiembro={esMiembro}
-          hermanas={hermanas}
           onCancel={() => { setModal(false); setVal(prev); }}
           onConfirm={() => { setModal(false); }}
         />

@@ -1,77 +1,98 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cerrarClienteDesdeFactura } from "@/app/trd/clientes/acciones";
-
-export interface Hermana { id: number; label: string }
+import { analizarCierre, confirmarCierre, type AnalisisCierre } from "@/app/trd/clientes/acciones";
 
 /**
- * Popup al anular una factura: decide si es solo esa factura/servicio o si el
- * cliente termina contrato (cancelar/pausar), qué otros servicios del mes cerrar
- * y el motivo. Al confirmar, sincroniza el estado del cliente con Membresías/CS.
+ * Popup de anulación/cierre: al abrir analiza los servicios del cliente (agencia y
+ * membresía Leadtion) y deja desactivar cada uno por separado. Minimalista.
  */
-export function CierreClienteModal({
-  facturaId, clienteId, clienteNombre, esMiembro, hermanas, onCancel, onConfirm,
-}: {
-  facturaId: number; clienteId: number | null; clienteNombre: string; esMiembro: boolean; hermanas: Hermana[];
-  onCancel: () => void; onConfirm: () => void;
-}) {
-  const [alcance, setAlcance] = useState<"cliente" | "factura">("cliente");
+export function CierreClienteModal({ facturaId, onCancel, onConfirm }: { facturaId: number; onCancel: () => void; onConfirm: () => void }) {
+  const [data, setData] = useState<AnalisisCierre | null>(null);
+  const [err, setErr] = useState(false);
+  const [agOff, setAgOff] = useState<Record<string, boolean>>({});
+  const [ltOff, setLtOff] = useState(false);
   const [estado, setEstado] = useState<"cancelado" | "pausado">("cancelado");
+
+  useEffect(() => { document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = ""; }; }, []);
   useEffect(() => {
-    const p = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = p; };
-  }, []);
+    let vivo = true;
+    (async () => {
+      try {
+        const d = await analizarCierre(facturaId);
+        if (!vivo) return;
+        if (!d) { setErr(true); return; }
+        const init: Record<string, boolean> = {};
+        d.agencia.forEach((a) => { init[String(a.itemId ?? "single")] = true; }); // agencia OFF por defecto (se anula)
+        setAgOff(init);
+        setData(d);
+      } catch { if (vivo) setErr(true); }
+    })();
+    return () => { vivo = false; };
+  }, [facturaId]);
+
+  const moneda = data?.entidad === "COL" ? "COP" : "USD";
+  const money = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: moneda, maximumFractionDigits: 0 }).format(n);
+  const keyOf = (a: AnalisisCierre["agencia"][number]) => String(a.itemId ?? "single");
+  const isSingle = !!data && data.agencia.length === 1 && data.agencia[0]!.itemId == null;
+  const allAgOff = !!data && data.agencia.every((a) => agOff[keyOf(a)]);
+  const anularFactura = isSingle ? !!agOff.single : allAgOff;
+  const offItemIds = data && !isSingle ? data.agencia.filter((a) => agOff[keyOf(a)]).map((a) => a.itemId!) : [];
 
   return (
     <div className="cf-scrim" onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
-      <div className="cf-modal" style={{ maxWidth: 480 }}>
-        <div className="cf-modal-head"><h3>Anular factura de {clienteNombre}</h3><button type="button" className="x" onClick={onCancel}>✕</button></div>
-        <form action={cerrarClienteDesdeFactura} onSubmit={onConfirm}>
-          <input type="hidden" name="facturaId" value={facturaId} />
-          {clienteId != null && <input type="hidden" name="clienteId" value={clienteId} />}
-          <input type="hidden" name="alcance" value={alcance} />
-          <input type="hidden" name="estado" value={estado} />
+      <div className="cf-modal" style={{ maxWidth: 440 }}>
+        <div className="cf-modal-head"><h3>Anular — {data?.clienteNombre ?? "…"}</h3><button type="button" className="x" onClick={onCancel}>✕</button></div>
+
+        {!data && !err && (
           <div className="cf-modal-body">
-            <p className="cf-hint" style={{ marginTop: 0 }}>¿Qué pasó con este cliente?</p>
-            <label className="cf-radio"><input type="radio" name="_alc" checked={alcance === "cliente"} onChange={() => setAlcance("cliente")} /> <span>El cliente <b>termina contrato</b> (cierra todo y sincroniza con Membresías)</span></label>
-            <label className="cf-radio"><input type="radio" name="_alc" checked={alcance === "factura"} onChange={() => setAlcance("factura")} /> <span>Solo anular <b>esta factura / servicio</b> (el cliente sigue activo; ese servicio no se vuelve a generar)</span></label>
-
-            {alcance === "cliente" && (
-              <>
-                {esMiembro && (
-                  <div className="cf-f" style={{ marginTop: 12 }}>
-                    <label>Estado del cliente</label>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button type="button" className={`cf-chipbtn${estado === "cancelado" ? " on" : ""}`} onClick={() => setEstado("cancelado")}>Cancelado</button>
-                      <button type="button" className={`cf-chipbtn${estado === "pausado" ? " on" : ""}`} onClick={() => setEstado("pausado")}>Pausado</button>
-                    </div>
-                  </div>
-                )}
-                {hermanas.length > 0 && (
-                  <div className="cf-f">
-                    <label>Otros servicios de este mes a cerrar</label>
-                    {hermanas.map((h) => (
-                      <label key={h.id} className="cf-radio"><input type="checkbox" name="cerrar" value={h.id} defaultChecked /> <span>{h.label}</span></label>
-                    ))}
-                  </div>
-                )}
-                <p className="cf-hint">
-                  {esMiembro
-                    ? <>Se marcará como <b>{estado}</b> en <b>Membresías</b> y <b>CS</b>, y no se le generarán cobros los próximos meses.</>
-                    : <>Cliente de agencia (no es miembro Leadtion): se <b>detiene su facturación</b> (no se le generan cobros los próximos meses).</>}
-                </p>
-              </>
-            )}
-
-            <div className="cf-f"><label>Motivo (opcional)</label><input name="motivo" placeholder="Ej. terminó contrato, no renovó…" /></div>
+            <div className="trd-loading" style={{ minHeight: 130 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <div className="trd-loading-badge"><img src="/brand/trd/trd-symbol-white.png" alt="" width={34} height={34} /></div>
+              <span>Analizando servicios…</span>
+            </div>
           </div>
-          <div className="cf-modal-foot">
-            <button type="button" className="cf-btn cf-btn-ghost" onClick={onCancel}>Cancelar</button>
-            <button type="submit" className="cf-btn cf-btn-primary">Confirmar</button>
-          </div>
-        </form>
+        )}
+
+        {err && <div className="cf-modal-body"><p className="cf-hint">No se pudo analizar la factura. Intenta de nuevo.</p><div className="cf-modal-foot"><button type="button" className="cf-btn cf-btn-ghost" onClick={onCancel}>Cerrar</button></div></div>}
+
+        {data && (
+          <form action={confirmarCierre} onSubmit={onConfirm}>
+            <input type="hidden" name="facturaId" value={facturaId} />
+            <input type="hidden" name="anularFactura" value={anularFactura ? "1" : "0"} />
+            {offItemIds.map((id) => <input key={id} type="hidden" name="offItem" value={id} />)}
+            {ltOff && data.leadtion && <><input type="hidden" name="leadtionOff" value="1" /><input type="hidden" name="clienteId" value={data.leadtion.clienteId} /><input type="hidden" name="estadoLeadtion" value={estado} /></>}
+            <div className="cf-modal-body">
+              <div className="cf-svc-label">Servicios identificados</div>
+              {data.agencia.map((a) => {
+                const k = keyOf(a); const off = !!agOff[k];
+                return (
+                  <div key={k} className="cf-svc-row">
+                    <span className="nm">{a.concepto}<small>{money(a.monto)}</small></span>
+                    <button type="button" className={`cf-toggle ${off ? "off" : "on"}`} onClick={() => setAgOff((s) => ({ ...s, [k]: !off }))}>{off ? "Desactivado" : "Activo"}</button>
+                  </div>
+                );
+              })}
+              {data.leadtion && (
+                <div className="cf-svc-row">
+                  <span className="nm">Leadtion · Membresía<small>{data.leadtion.esAgencia || data.leadtion.valorUsd === 0 ? "incluida" : money(data.leadtion.valorUsd)}</small></span>
+                  <button type="button" className={`cf-toggle ${ltOff ? "off" : "on"}`} onClick={() => setLtOff((v) => !v)}>{ltOff ? "Desactivado" : "Activo"}</button>
+                </div>
+              )}
+              {ltOff && data.leadtion && (
+                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                  <button type="button" className={`cf-chipbtn${estado === "cancelado" ? " on" : ""}`} onClick={() => setEstado("cancelado")}>Cancelar</button>
+                  <button type="button" className={`cf-chipbtn${estado === "pausado" ? " on" : ""}`} onClick={() => setEstado("pausado")}>Pausar</button>
+                </div>
+              )}
+              <div className="cf-f" style={{ marginTop: 12 }}><input name="motivo" placeholder="Motivo (opcional)" /></div>
+            </div>
+            <div className="cf-modal-foot">
+              <button type="button" className="cf-btn cf-btn-ghost" onClick={onCancel}>Cancelar</button>
+              <button type="submit" className="cf-btn cf-btn-primary">Confirmar</button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
