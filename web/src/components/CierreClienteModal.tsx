@@ -3,16 +3,25 @@
 import { useEffect, useState } from "react";
 import { analizarCierre, confirmarCierre, type AnalisisCierre } from "@/app/trd/clientes/acciones";
 
+const LT_OPCIONES = [
+  { v: "igual", label: "Sigue igual" },
+  { v: "licencia", label: "Solo licencia ($69)" },
+  { v: "soporte", label: "Plan de soporte" },
+  { v: "pausar", label: "Pausar cuenta" },
+  { v: "cancelar", label: "Cancelar cuenta" },
+];
+
 /**
- * Popup de anulación/cierre: al abrir analiza los servicios del cliente (agencia y
- * membresía Leadtion) y deja desactivar cada uno por separado. Minimalista.
+ * Popup de anulación/cierre: al abrir analiza los servicios del cliente. Los de
+ * agencia se desactivan por separado; para la membresía Leadtion se elige el
+ * resultado (sigue / solo licencia / soporte / pausar / cancelar). Minimalista.
  */
 export function CierreClienteModal({ facturaId, onCancel, onConfirm }: { facturaId: number; onCancel: () => void; onConfirm: () => void }) {
   const [data, setData] = useState<AnalisisCierre | null>(null);
   const [err, setErr] = useState(false);
   const [agOff, setAgOff] = useState<Record<string, boolean>>({});
-  const [ltOff, setLtOff] = useState(false);
-  const [estado, setEstado] = useState<"cancelado" | "pausado">("cancelado");
+  const [ltRes, setLtRes] = useState("igual");
+  const [ltValor, setLtValor] = useState("");
 
   useEffect(() => { document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = ""; }; }, []);
   useEffect(() => {
@@ -23,7 +32,7 @@ export function CierreClienteModal({ facturaId, onCancel, onConfirm }: { factura
         if (!vivo) return;
         if (!d) { setErr(true); return; }
         const init: Record<string, boolean> = {};
-        d.agencia.forEach((a) => { init[String(a.itemId ?? "single")] = true; }); // agencia OFF por defecto (se anula)
+        d.agencia.forEach((a) => { init[String(a.itemId ?? "single")] = true; }); // agencia OFF por defecto
         setAgOff(init);
         setData(d);
       } catch { if (vivo) setErr(true); }
@@ -61,7 +70,7 @@ export function CierreClienteModal({ facturaId, onCancel, onConfirm }: { factura
             <input type="hidden" name="facturaId" value={facturaId} />
             <input type="hidden" name="anularFactura" value={anularFactura ? "1" : "0"} />
             {offItemIds.map((id) => <input key={id} type="hidden" name="offItem" value={id} />)}
-            {ltOff && data.leadtion && <><input type="hidden" name="leadtionOff" value="1" /><input type="hidden" name="clienteId" value={data.leadtion.clienteId} /><input type="hidden" name="estadoLeadtion" value={estado} /></>}
+            {data.leadtion && <><input type="hidden" name="clienteId" value={data.leadtion.clienteId} /><input type="hidden" name="leadtionResultado" value={ltRes} /><input type="hidden" name="leadtionValor" value={ltValor} /></>}
             <div className="cf-modal-body">
               <div className="cf-svc-label">Servicios identificados</div>
               {data.agencia.map((a) => {
@@ -76,14 +85,13 @@ export function CierreClienteModal({ facturaId, onCancel, onConfirm }: { factura
               {data.leadtion && (
                 <div className="cf-svc-row">
                   <span className="nm">Leadtion · Membresía<small>{data.leadtion.esAgencia || data.leadtion.valorUsd === 0 ? "incluida" : money(data.leadtion.valorUsd)}</small></span>
-                  <button type="button" className={`cf-toggle ${ltOff ? "off" : "on"}`} onClick={() => setLtOff((v) => !v)}>{ltOff ? "Desactivado" : "Activo"}</button>
+                  <select className="cf-lt-sel" value={ltRes} onChange={(e) => setLtRes(e.target.value)}>
+                    {LT_OPCIONES.map((o) => <option key={o.v} value={o.v}>{o.label}</option>)}
+                  </select>
                 </div>
               )}
-              {ltOff && data.leadtion && (
-                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                  <button type="button" className={`cf-chipbtn${estado === "cancelado" ? " on" : ""}`} onClick={() => setEstado("cancelado")}>Cancelar</button>
-                  <button type="button" className={`cf-chipbtn${estado === "pausado" ? " on" : ""}`} onClick={() => setEstado("pausado")}>Pausar</button>
-                </div>
+              {data.leadtion && ltRes === "soporte" && (
+                <div className="cf-f"><input inputMode="decimal" value={ltValor} onChange={(e) => setLtValor(e.target.value)} placeholder={`Valor del soporte / mes (${moneda})`} /></div>
               )}
               <div className="cf-f" style={{ marginTop: 12 }}><input name="motivo" placeholder="Motivo (opcional)" /></div>
             </div>

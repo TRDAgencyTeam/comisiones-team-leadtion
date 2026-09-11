@@ -1038,6 +1038,8 @@ button.ck:hover { border-color: var(--muted); }
   cursor: pointer; font-family: inherit; white-space: nowrap; }
 .cf-toggle.on { background: var(--paid-soft); color: var(--paid); border-color: transparent; }
 .cf-toggle.off { background: color-mix(in srgb, var(--pending) 16%, transparent); color: var(--pending); border-color: transparent; }
+.cf-lt-sel { border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px; background: var(--bg); color: var(--text); font: inherit; font-size: 0.78rem; font-weight: 600; }
+.cf-lt-sel:focus { outline: none; border-color: var(--accent); }
 
 .cf-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 20px; }
 @media (max-width: 900px) { .cf-kpis { grid-template-columns: repeat(2, 1fr); } }

@@ -111,7 +111,7 @@ function mesesEntre(desdeYYYYMM: string, hastaYYYYMM: string): string[] {
  * (licencia/importados) no se tocan. Si un mes tiene servicio y soporte, gana el
  * SERVICIO (su ventana ya define ese mes). Así todo se mantiene consistente.
  */
-async function recomputarPagosDeCliente(clienteId: number) {
+export async function recomputarPagosDeCliente(clienteId: number) {
   await consulta(`delete from public.pagos_mensuales where cliente_id=$1 and origen in ('servicio','soporte')`, [clienteId]);
 
   const hoyMes = new Date().toISOString().slice(0, 7);

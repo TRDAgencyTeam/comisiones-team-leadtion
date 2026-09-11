@@ -6,7 +6,7 @@ import { consulta } from "@/lib/db";
 import { soloAdmin } from "@/lib/sesion";
 import { primerDiaMes } from "@/lib/facturacion";
 import { tasaUsdCop } from "@/lib/fx";
-import { crearClienteCompleto, type NuevoClienteInput } from "@/app/membresias/acciones";
+import { crearClienteCompleto, recomputarPagosDeCliente, type NuevoClienteInput } from "@/app/membresias/acciones";
 
 const n = (v: FormDataEntryValue | null): number => {
   const x = Number(String(v ?? "").replace(/[^\d.-]/g, ""));
@@ -403,9 +403,10 @@ export async function confirmarCierre(formData: FormData) {
   const facturaId = Number(formData.get("facturaId"));
   const anularFactura = String(formData.get("anularFactura")) === "1";
   const offItemIds = formData.getAll("offItem").map((v) => Number(v)).filter(Boolean);
-  const leadtionOff = String(formData.get("leadtionOff")) === "1";
   const clienteId = formData.get("clienteId") ? Number(formData.get("clienteId")) : null;
-  const estado = String(formData.get("estadoLeadtion")) === "pausado" ? "pausado" : "cancelado";
+  // Resultado de la cuenta Leadtion: igual | licencia | soporte | pausar | cancelar
+  const ltRes = String(formData.get("leadtionResultado") ?? "igual");
+  const ltValor = n(formData.get("leadtionValor"));
   const motivo = txt(formData.get("motivo"));
 
   if (anularFactura) {
@@ -422,19 +423,41 @@ export async function confirmarCierre(formData: FormData) {
     }
   }
 
-  if (leadtionOff && clienteId) {
-    await consulta(
-      `update public.clientes
-          set estado_actual=$2, motivo_estado=$3,
-              fecha_cancelacion = case when $2='cancelado' then current_date else fecha_cancelacion end,
-              estado_actualizado_en=now()
-        where id=$1`,
-      [clienteId, estado, motivo],
-    );
-    await consulta(
-      `insert into public.cliente_estado_historial (cliente_id, estado, motivo) values ($1,$2,$3)`,
-      [clienteId, estado, motivo ?? "Cierre desde Facturación (madre)"],
-    );
+  if (clienteId && ltRes !== "igual") {
+    if (ltRes === "cancelar" || ltRes === "pausar") {
+      const estado = ltRes === "pausar" ? "pausado" : "cancelado";
+      await consulta(
+        `update public.clientes
+            set estado_actual=$2, motivo_estado=$3,
+                fecha_cancelacion = case when $2='cancelado' then current_date else fecha_cancelacion end,
+                estado_actualizado_en=now()
+          where id=$1`,
+        [clienteId, estado, motivo],
+      );
+      await consulta(`insert into public.cliente_estado_historial (cliente_id, estado, motivo) values ($1,$2,$3)`,
+        [clienteId, estado, motivo ?? "Cierre desde Facturación (madre)"]);
+    } else if (ltRes === "licencia" || ltRes === "soporte") {
+      // Baja agencia y queda como miembro que paga: licencia $69 o soporte $X/mes.
+      const valorMes = ltRes === "licencia" ? 69 : (ltValor > 0 ? ltValor : 69);
+      await consulta(
+        `update public.clientes
+            set estado_actual='activo', es_agencia=false, incluye_crm_en_marketing=false,
+                valor_licencia_general=69,
+                soporte_valor = case when $2='soporte' then $3 else 0 end,
+                estado_actualizado_en=now()
+          where id=$1`,
+        [clienteId, ltRes, ltRes === "soporte" ? valorMes : 0],
+      );
+      // Cobro mensual de ahí en adelante (mecanismo de Membresías: período de soporte indefinido).
+      const desde = `${new Date().toISOString().slice(0, 7)}-01`;
+      await consulta(
+        `insert into public.cliente_soportes (cliente_id, valor, desde, hasta, nota) values ($1,$2,$3,null,$4)`,
+        [clienteId, valorMes, desde, ltRes === "licencia" ? "Solo licencia (cierre de agencia)" : "Plan de soporte (cierre de agencia)"],
+      );
+      await recomputarPagosDeCliente(clienteId);
+      await consulta(`insert into public.cliente_estado_historial (cliente_id, estado, motivo) values ($1,'activo',$2)`,
+        [clienteId, motivo ?? (ltRes === "licencia" ? "Queda solo con licencia $69" : `Queda con plan de soporte $${valorMes}`)]);
+    }
     revalidatePath("/membresias/clientes");
     revalidatePath("/membresias/dashboard");
     revalidatePath(`/membresias/${clienteId}`);
