@@ -6,6 +6,9 @@ export const dynamic = "force-dynamic";
 
 const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 const antiguedad = (m: number) => (m <= 0 ? "nuevo" : m === 1 ? "1 mes" : m < 12 ? `${m} meses` : `${Math.floor(m / 12)}a ${m % 12}m`);
+const MES3 = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+const fechaCorta = (iso: string | null) => { if (!iso) return "—"; const [y, m, d] = iso.split("-").map(Number); return `${d} ${MES3[(m! - 1) % 12]} ${String(y).slice(2)}`; };
+const corteDia = (iso: string | null) => (iso ? Number(iso.slice(8, 10)) : null);
 
 const ESTADO_BADGE: Record<string, { txt: string; cls: string }> = {
   activo: { txt: "Activo", cls: "estado-pagado" },
@@ -98,7 +101,7 @@ export default async function ClientesMembresiasPage({
         <div className="table-scroll">
           <table>
             <thead>
-              <tr><th>Cliente</th><th>Plan</th><th>Tipo</th><th>Estado</th><th className="num">Antigüedad</th><th className="num">LTV</th><th></th></tr>
+              <tr><th>Cliente</th><th>Activó · corte</th><th>Plan</th><th>Tipo</th><th>Estado</th><th className="num">Antigüedad</th><th className="num">LTV</th><th></th></tr>
             </thead>
             <tbody>
               {lista.map((c) => {
@@ -108,6 +111,7 @@ export default async function ClientesMembresiasPage({
                 return (
                   <tr key={c.id}>
                     <td><Link href={`/membresias/${c.id}`} className="link-cliente">{c.nombre}</Link></td>
+                    <td>{fechaCorta(c.fechaActivacion)}{corteDia(c.fechaActivacion) != null && <small className="td-concepto" style={{ display: "block" }}>corte día {corteDia(c.fechaActivacion)}</small>}</td>
                     <td>{plan}{soporte}</td>
                     <td>{c.esAgencia
                       ? <><span className="tag-agencia">Agencia</span>{c.tipoCliente === "servicio" && <span className="td-concepto" style={{ marginLeft: 6 }}>+ Leadtion</span>}</>
@@ -119,7 +123,7 @@ export default async function ClientesMembresiasPage({
                   </tr>
                 );
               })}
-              {lista.length === 0 && <tr><td colSpan={7} className="empty">Sin clientes que coincidan.</td></tr>}
+              {lista.length === 0 && <tr><td colSpan={8} className="empty">Sin clientes que coincidan.</td></tr>}
             </tbody>
           </table>
         </div>

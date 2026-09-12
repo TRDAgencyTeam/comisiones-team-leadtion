@@ -1230,3 +1230,15 @@ button.ck:hover { border-color: var(--muted); }
 .cf-hint { font-size: 0.72rem; color: var(--muted); }
 .cf-modal-foot { padding: 14px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
 .cf-off { display: none !important; }
+
+/* --- Vista de Cobros próximos (Membresías) --- */
+.cobros-tabla { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.cobros-tabla th, .cobros-tabla td { padding: 9px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.cobros-tabla th { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 700; text-align: left; }
+.cobros-tabla th.num, .cobros-tabla td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.cobros-tabla .nom { font-weight: 600; }
+.cobros-tabla .col-hoy { background: var(--accent-soft); }
+.cobros-tabla td.cobro-cell { color: var(--text); }
+.cobros-tabla td.cobro-cell.proy { color: var(--muted); font-style: italic; }
+.cobros-tabla tfoot .fila-total td { font-weight: 800; border-top: 2px solid var(--border); border-bottom: none; }
+.cobro-proy-lbl { color: var(--muted); font-style: italic; font-weight: 600; }

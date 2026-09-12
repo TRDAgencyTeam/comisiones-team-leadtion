@@ -117,12 +117,15 @@ export async function crearClienteCascada(formData: FormData) {
 
   // Deriva reglas del catálogo (no confiamos en flags del cliente).
   const cat = await consulta(
-    `select nombre, categoria, recurrente, aplica_reserva from public.servicio_catalogo where clave = $1`,
+    `select nombre, categoria, recurrente, aplica_reserva, incluye_leadtion from public.servicio_catalogo where clave = $1`,
     [servicioClave],
   );
   const c = cat[0] as Record<string, unknown> | undefined;
   const categoria = String(c?.categoria ?? "agencia");
-  const esAgencia = categoria === "agencia";
+  const incluyeLeadtion = Boolean(c?.incluye_leadtion);
+  // "Agencia" (Leadtion incluida) SOLO si el servicio realmente lleva Leadtion
+  // (ej. Plan Marketing Ads+IA+CRM). Social media/SEO/Canva → NO es cuenta Leadtion.
+  const esAgencia = categoria === "agencia" && incluyeLeadtion;
   const recurrente = Boolean(c?.recurrente);
   const nombreServicio = String(c?.nombre ?? servicioClave);
   const reserva = Boolean(c?.aplica_reserva) && String(formData.get("reserva")) === "1";
@@ -154,6 +157,8 @@ export async function crearClienteCascada(formData: FormData) {
         [clienteId, fechaActivacion],
       );
     }
+    // Marca Leadtion si el servicio lo lleva (nunca lo quita a un miembro existente).
+    if (incluyeLeadtion) await consulta(`update public.clientes set es_leadtion = true where id = $1`, [clienteId]);
     for (const colId of asignados) {
       await consulta(`insert into public.cliente_colaboradores (cliente_id, colaborador_id) values ($1,$2) on conflict do nothing`, [clienteId, colId]);
     }
@@ -169,6 +174,7 @@ export async function crearClienteCascada(formData: FormData) {
       reserva, fechaInicioReal: null,
       valorLicencia: esAgencia ? 0 : 69,
       asignados, afiliadoRef, origen: "Madre / Clientes",
+      esLeadtion: incluyeLeadtion,
     };
     clienteId = await crearClienteCompleto(datos);
   }

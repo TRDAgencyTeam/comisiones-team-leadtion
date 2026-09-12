@@ -389,6 +389,8 @@ export interface NuevoClienteInput {
   planTipo: string | null; soporteValor: number | null; apiEstado: string; apiValor: number | null;
   bono: number | null; precioMes1: number | null; reserva: boolean; fechaInicioReal: string | null;
   valorLicencia: number; asignados: number[]; afiliadoRef: string | null; origen?: string;
+  /** ¿El cliente tiene cuenta Leadtion? (si no, no aparece en Membresías). Default true. */
+  esLeadtion?: boolean;
 }
 
 /**
@@ -403,11 +405,11 @@ export async function crearClienteCompleto(d: NuevoClienteInput): Promise<number
     `insert into public.clientes
        (nombre, fecha_activacion, estado_actual, incluye_crm_en_marketing, es_agencia, plan_tipo,
         soporte_valor, valor_licencia_general, api_estado, api_valor,
-        bono_reactivacion, reserva, fecha_inicio_real, tipo_cliente, creado_por_rol, estado_actualizado_en)
-     values ($1,$2,'activo',$3,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'admin',now())
+        bono_reactivacion, reserva, fecha_inicio_real, tipo_cliente, es_leadtion, creado_por_rol, estado_actualizado_en)
+     values ($1,$2,'activo',$3,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'admin',now())
      returning id`,
     [d.nombre, d.fechaActivacion, d.esAgencia, d.planTipo, d.soporteValor, d.valorLicencia,
-     d.apiEstado, d.apiValor, d.bono, d.reserva, d.fechaInicioReal, d.tipoCliente],
+     d.apiEstado, d.apiValor, d.bono, d.reserva, d.fechaInicioReal, d.tipoCliente, d.esLeadtion !== false],
   );
   const id = Number(rows[0]!.id);
   await consulta(
@@ -487,8 +489,8 @@ export async function crearMembresia(formData: FormData) {
     `insert into public.clientes
        (nombre, fecha_activacion, estado_actual, incluye_crm_en_marketing, es_agencia, plan_tipo,
         soporte_valor, valor_licencia_general, api_estado, api_valor,
-        bono_reactivacion, reserva, fecha_inicio_real, tipo_cliente, creado_por_rol, estado_actualizado_en)
-     values ($1,$2,'activo',$3,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'admin',now())
+        bono_reactivacion, reserva, fecha_inicio_real, tipo_cliente, es_leadtion, creado_por_rol, estado_actualizado_en)
+     values ($1,$2,'activo',$3,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,true,'admin',now())
      returning id`,
     [nombre, fechaActivacion, esAgencia, planTipo, soporteValor, valorLicencia,
      apiEstado, apiValor, bono, reserva, fechaInicioReal, tipoCliente],

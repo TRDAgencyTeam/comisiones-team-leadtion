@@ -70,7 +70,7 @@ export async function listarMembresias(
     consulta(
       `select id, nombre, plan, plan_tipo, soporte_valor, incluye_crm_en_marketing, es_agencia,
               tipo_cliente, estado_actual, fecha_activacion, api_estado
-         from public.clientes`,
+         from public.clientes where es_leadtion`,
     ),
     ltvPorCliente(),
   ]);
@@ -176,7 +176,7 @@ export async function statsMembresias(): Promise<StatsMembresias> {
             count(*) filter (where es_agencia and estado_actual='activo')::int agencia,
             count(*) filter (where not es_agencia and tipo_cliente='servicio' and estado_actual='activo')::int servicio,
             count(*) filter (where not es_agencia and coalesce(tipo_cliente,'estandar')<>'servicio' and estado_actual='activo')::int estandar
-       from public.clientes`,
+       from public.clientes where es_leadtion`,
   );
   const c = r[0]!;
   return {
