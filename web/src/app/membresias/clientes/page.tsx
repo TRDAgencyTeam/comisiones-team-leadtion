@@ -144,6 +144,18 @@ export default async function ClientesMembresiasPage({
                 })}
                 {lista.length === 0 && <tr><td colSpan={cobros!.meses.length + 4} className="empty">Sin clientes que coincidan.</td></tr>}
               </tbody>
+              {lista.length > 0 && (
+                <tfoot>
+                  <tr className="fila-total">
+                    <td>Total ({lista.length})</td><td></td><td></td>
+                    {cobros!.meses.map((_, i) => {
+                      const t = lista.reduce((s, c) => s + (cobros!.porCliente.get(c.id)?.[i]?.valor ?? 0), 0);
+                      return <td key={i} className="num">{usd0(t)}</td>;
+                    })}
+                    <td className="num">{usd0(lista.reduce((s, c) => s + (cobros!.porCliente.get(c.id) ?? []).reduce((a, x) => a + x.valor, 0), 0))}</td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           ) : (
             <table>

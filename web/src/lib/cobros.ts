@@ -33,7 +33,11 @@ export async function cobrosPorCliente(ids: number[], nFuturo = 3): Promise<Cobr
   const finVentana = meses[meses.length - 1]!;
   if (ids.length === 0) return { meses, porCliente: new Map() };
 
-  const [servicios, soportes, pagos] = await Promise.all([
+  const [clientes, servicios, soportes, pagos] = await Promise.all([
+    consulta(`select id, estado_actual, es_agencia,
+                     coalesce(valor_licencia_general,0) lic, coalesce(soporte_valor,0) sop,
+                     to_char(fecha_activacion,'YYYY-MM') act
+                from public.clientes where id = any($1::int[])`, [ids]),
     consulta(`select cliente_id, tipo_servicio, to_char(mes_inicio,'YYYY-MM') mes_inicio, soporte_valor, precio_mes1
                 from public.cliente_servicios where cliente_id = any($1::int[])`, [ids]),
     consulta(`select cliente_id, valor, to_char(desde,'YYYY-MM') desde, to_char(hasta,'YYYY-MM') hasta
@@ -42,6 +46,17 @@ export async function cobrosPorCliente(ids: number[], nFuturo = 3): Promise<Cobr
                where cliente_id = any($1::int[]) and mes >= $2 and mes <= $3 and valor is not null`,
       [ids, `${meses[0]}-01`, `${finVentana}-01`]),
   ]);
+
+  // Mensualidad base de cada miembro ACTIVO: su soporte si lo tiene, si no su
+  // licencia, si no $69 (excepto agencia con Leadtion incluida → 0). Con esto los
+  // meses "vacíos" se llenan con la membresía, para un total con sentido.
+  interface Info { activo: boolean; base: number; act: string | null }
+  const infoDe = new Map<number, Info>();
+  for (const c of clientes) {
+    const lic = Number(c.lic), sop = Number(c.sop);
+    const base = sop > 0 ? sop : lic > 0 ? lic : Boolean(c.es_agencia) ? 0 : 69;
+    infoDe.set(Number(c.id), { activo: String(c.estado_actual) === "activo", base, act: c.act ? String(c.act) : null });
+  }
 
   const pagoDe = new Map<string, number>();
   for (const p of pagos) pagoDe.set(`${p.cliente_id}|${p.mes}`, Number(p.valor));
@@ -63,10 +78,18 @@ export async function cobrosPorCliente(ids: number[], nFuturo = 3): Promise<Cobr
 
   const porCliente = new Map<number, CeldaCobro[]>();
   for (const id of ids) {
+    const info = infoDe.get(id);
     porCliente.set(id, meses.map((mes) => {
       const real = pagoDe.get(`${id}|${mes}`);
       const esp = espDe.get(`${id}|${mes}`) ?? 0;
-      return { mes, valor: round2(real != null ? real : esp), proyectado: real == null && mes > hoyYM };
+      // Cobro real > 0 = confirmado (sólido). Un 0 guardado (garantía/sin datos) NO
+      // cuenta: se rellena con el servicio/soporte proyectado o con la mensualidad
+      // base del miembro activo, para que no queden huecos ni totales incompletos.
+      let valor = 0; let confirmado = false;
+      if (real != null && real > 0) { valor = real; confirmado = true; }
+      else if (esp > 0) valor = esp;
+      else if (info?.activo && (info.act == null || mes >= info.act)) valor = info.base;
+      return { mes, valor: round2(valor), proyectado: !confirmado };
     }));
   }
   return { meses, porCliente };
