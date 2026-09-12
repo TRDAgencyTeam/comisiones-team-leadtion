@@ -3,23 +3,17 @@ import { consulta } from "@/lib/db";
 import { calendarioServicio, type TipoServicio } from "@/lib/servicios";
 
 /**
- * Proyección de cobros mensuales por cliente (vista tipo Excel): para el mes en
- * curso y los próximos, cuánto se le cobra a cada miembro Leadtion. Usa los pagos
- * ya generados (pagos_mensuales) para el pasado/actual y proyecta hacia adelante
- * con la misma lógica de servicios + soportes de Membresías.
+ * Cobros mensuales por cliente para la VISTA de cobros de la lista de clientes:
+ * mes en curso + próximos, cuánto se le cobra a cada uno. Usa pagos_mensuales para
+ * lo real y proyecta hacia adelante con servicios + soportes (misma lógica de
+ * Membresías). Devuelve un mapa por id para alinearlo con la lista ya filtrada.
  */
 
 export interface CeldaCobro { mes: string; valor: number; proyectado: boolean }
-export interface FilaCobro {
-  id: number; nombre: string; estado: string; corteDia: number | null;
-  celdas: CeldaCobro[]; total: number;
-}
-export interface Proyeccion { meses: string[]; filas: FilaCobro[]; totalesPorMes: number[] }
+export interface CobrosMatriz { meses: string[]; porCliente: Map<number, CeldaCobro[]> }
 
-const toYM = (v: unknown): string => (v instanceof Date ? v.toISOString() : String(v)).slice(0, 7);
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
-/** 'YYYY-MM' + n meses → 'YYYY-MM'. */
 function mesMas(ym: string, n: number): string {
   const [y, m] = ym.split("-").map(Number);
   const d = new Date(Date.UTC(y!, (m! - 1) + n, 1));
@@ -32,26 +26,26 @@ function mesesEntre(desdeYM: string, hastaYM: string): string[] {
   return out;
 }
 
-export async function proyeccionCobros(nFuturo = 3): Promise<Proyeccion> {
+export async function cobrosPorCliente(ids: number[], nFuturo = 3): Promise<CobrosMatriz> {
   const hoyYM = new Date().toISOString().slice(0, 7);
   const meses: string[] = [];
   for (let i = 0; i <= nFuturo; i++) meses.push(mesMas(hoyYM, i));
   const finVentana = meses[meses.length - 1]!;
+  if (ids.length === 0) return { meses, porCliente: new Map() };
 
-  const [clientes, servicios, soportes, pagos] = await Promise.all([
-    consulta(`select id, nombre, estado_actual, fecha_activacion from public.clientes
-               where es_leadtion and estado_actual <> 'cancelado' order by nombre`),
-    consulta(`select cliente_id, tipo_servicio, to_char(mes_inicio,'YYYY-MM') mes_inicio, soporte_valor, precio_mes1 from public.cliente_servicios`),
-    consulta(`select cliente_id, valor, to_char(desde,'YYYY-MM') desde, to_char(hasta,'YYYY-MM') hasta from public.cliente_soportes`),
+  const [servicios, soportes, pagos] = await Promise.all([
+    consulta(`select cliente_id, tipo_servicio, to_char(mes_inicio,'YYYY-MM') mes_inicio, soporte_valor, precio_mes1
+                from public.cliente_servicios where cliente_id = any($1::int[])`, [ids]),
+    consulta(`select cliente_id, valor, to_char(desde,'YYYY-MM') desde, to_char(hasta,'YYYY-MM') hasta
+                from public.cliente_soportes where cliente_id = any($1::int[])`, [ids]),
     consulta(`select cliente_id, to_char(mes,'YYYY-MM') mes, valor from public.pagos_mensuales
-               where mes >= $1 and mes <= $2 and valor is not null`, [`${meses[0]}-01`, `${finVentana}-01`]),
+               where cliente_id = any($1::int[]) and mes >= $2 and mes <= $3 and valor is not null`,
+      [ids, `${meses[0]}-01`, `${finVentana}-01`]),
   ]);
 
-  // pagos reales por cliente/mes
   const pagoDe = new Map<string, number>();
   for (const p of pagos) pagoDe.set(`${p.cliente_id}|${p.mes}`, Number(p.valor));
 
-  // proyección esperada por cliente/mes (soportes + servicios; servicio pisa soporte)
   const espDe = new Map<string, number>();
   for (const s of soportes) {
     const desde = String(s.desde); const hasta = s.hasta ? String(s.hasta) : finVentana;
@@ -67,23 +61,13 @@ export async function proyeccionCobros(nFuturo = 3): Promise<Proyeccion> {
     }
   }
 
-  const totalesPorMes = meses.map(() => 0);
-  const filas: FilaCobro[] = clientes.map((c) => {
-    const id = Number(c.id);
-    const fa = c.fecha_activacion ? (c.fecha_activacion instanceof Date ? c.fecha_activacion.toISOString() : String(c.fecha_activacion)) : null;
-    const celdas: CeldaCobro[] = meses.map((mes, i) => {
+  const porCliente = new Map<number, CeldaCobro[]>();
+  for (const id of ids) {
+    porCliente.set(id, meses.map((mes) => {
       const real = pagoDe.get(`${id}|${mes}`);
       const esp = espDe.get(`${id}|${mes}`) ?? 0;
-      const valor = real != null ? real : esp;
-      totalesPorMes[i]! += valor;
-      return { mes, valor: round2(valor), proyectado: real == null && mes > hoyYM };
-    });
-    return {
-      id, nombre: String(c.nombre), estado: String(c.estado_actual),
-      corteDia: fa ? Number(fa.slice(8, 10)) : null,
-      celdas, total: round2(celdas.reduce((s, x) => s + x.valor, 0)),
-    };
-  }).filter((f) => f.total > 0);
-
-  return { meses, filas, totalesPorMes: totalesPorMes.map(round2) };
+      return { mes, valor: round2(real != null ? real : esp), proyectado: real == null && mes > hoyYM };
+    }));
+  }
+  return { meses, porCliente };
 }

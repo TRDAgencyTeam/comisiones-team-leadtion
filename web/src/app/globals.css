@@ -1242,3 +1242,8 @@ button.ck:hover { border-color: var(--muted); }
 .cobros-tabla td.cobro-cell.proy { color: var(--muted); font-style: italic; }
 .cobros-tabla tfoot .fila-total td { font-weight: 800; border-top: 2px solid var(--border); border-bottom: none; }
 .cobro-proy-lbl { color: var(--muted); font-style: italic; font-weight: 600; }
+
+/* Toggle de vista Lista / Cobros en la lista de clientes */
+.vista-toggle { display: inline-flex; gap: 2px; background: var(--panel); border: 1px solid var(--border); border-radius: 999px; padding: 3px; margin: 4px 0 10px; }
+.vista-toggle a { padding: 6px 16px; border-radius: 999px; text-decoration: none; color: var(--muted); font-weight: 700; font-size: 0.84rem; }
+.vista-toggle a.on { background: var(--accent); color: #fff; }

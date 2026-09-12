@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { listarMembresias, statsMembresias, PLAN_LABEL, TIPO_LABEL, type MembresiaRow } from "@/lib/membresias";
+import { cobrosPorCliente } from "@/lib/cobros";
 import { BotonEliminar } from "../BotonEliminar";
 
 export const dynamic = "force-dynamic";
 
 const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+const usd0 = (n: number) => (n > 0 ? n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }) : "—");
 const antiguedad = (m: number) => (m <= 0 ? "nuevo" : m === 1 ? "1 mes" : m < 12 ? `${m} meses` : `${Math.floor(m / 12)}a ${m % 12}m`);
 const MES3 = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 const fechaCorta = (iso: string | null) => { if (!iso) return "—"; const [y, m, d] = iso.split("-").map(Number); return `${d} ${MES3[(m! - 1) % 12]} ${String(y).slice(2)}`; };
 const corteDia = (iso: string | null) => (iso ? Number(iso.slice(8, 10)) : null);
+const etiquetaMes = (ym: string) => { const [y, m] = ym.split("-").map(Number); return `${MES3[(m! - 1) % 12]} ${String(y).slice(2)}`; };
 
 const ESTADO_BADGE: Record<string, { txt: string; cls: string }> = {
   activo: { txt: "Activo", cls: "estado-pagado" },
@@ -19,9 +22,10 @@ const ESTADO_BADGE: Record<string, { txt: string; cls: string }> = {
 export default async function ClientesMembresiasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; estado?: string; orden?: string; tipo?: string }>;
+  searchParams: Promise<{ q?: string; estado?: string; orden?: string; tipo?: string; vista?: string }>;
 }) {
-  const { q, estado = "activo", orden = "nuevo", tipo = "todos" } = await searchParams;
+  const { q, estado = "activo", orden = "nuevo", tipo = "todos", vista = "lista" } = await searchParams;
+  const esCobros = vista === "cobros";
 
   let lista: MembresiaRow[] = [];
   let stats = null;
@@ -31,6 +35,14 @@ export default async function ClientesMembresiasPage({
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
+
+  const hoyYM = new Date().toISOString().slice(0, 7);
+  const cobros = esCobros ? await cobrosPorCliente(lista.map((c) => c.id), 3) : null;
+  const vistaHref = (v: string) => {
+    const p = new URLSearchParams();
+    p.set("estado", estado); p.set("tipo", tipo); if (orden) p.set("orden", orden); if (q) p.set("q", q); p.set("vista", v);
+    return `/membresias/clientes?${p.toString()}`;
+  };
 
   // Href de un filtro rápido (mini-stat), conservando búsqueda y orden.
   const href = (est: string, tp: string) => {
@@ -97,35 +109,71 @@ export default async function ClientesMembresiasPage({
         <button type="submit">Aplicar</button>
       </form>
 
+      <div className="vista-toggle">
+        <Link href={vistaHref("lista")} className={!esCobros ? "on" : ""}>Lista</Link>
+        <Link href={vistaHref("cobros")} className={esCobros ? "on" : ""}>Cobros</Link>
+      </div>
+
       <section className="card">
         <div className="table-scroll">
-          <table>
-            <thead>
-              <tr><th>Cliente</th><th>Activó · corte</th><th>Plan</th><th>Tipo</th><th>Estado</th><th className="num">Antigüedad</th><th className="num">LTV</th><th></th></tr>
-            </thead>
-            <tbody>
-              {lista.map((c) => {
-                const b = ESTADO_BADGE[c.estado] ?? { txt: c.estado, cls: "" };
-                const plan = c.planTipo ? PLAN_LABEL[c.planTipo] : "Estándar";
-                const soporte = c.soporteValor ? ` · Soporte ${usd(c.soporteValor)}` : "";
-                return (
-                  <tr key={c.id}>
-                    <td><Link href={`/membresias/${c.id}`} className="link-cliente">{c.nombre}</Link></td>
-                    <td>{fechaCorta(c.fechaActivacion)}{corteDia(c.fechaActivacion) != null && <small className="td-concepto" style={{ display: "block" }}>corte día {corteDia(c.fechaActivacion)}</small>}</td>
-                    <td>{plan}{soporte}</td>
-                    <td>{c.esAgencia
-                      ? <><span className="tag-agencia">Agencia</span>{c.tipoCliente === "servicio" && <span className="td-concepto" style={{ marginLeft: 6 }}>+ Leadtion</span>}</>
-                      : <span className="td-concepto">{TIPO_LABEL[c.tipoCliente ?? "estandar"] ?? "Estándar"}</span>}</td>
-                    <td><span className={b.cls}>{b.txt}</span></td>
-                    <td className="num">{antiguedad(c.tiempoMeses)}</td>
-                    <td className="num">{c.ltv > 0 ? usd(c.ltv) : "—"}</td>
-                    <td className="col-accion"><BotonEliminar id={c.id} nombre={c.nombre} /></td>
-                  </tr>
-                );
-              })}
-              {lista.length === 0 && <tr><td colSpan={8} className="empty">Sin clientes que coincidan.</td></tr>}
-            </tbody>
-          </table>
+          {esCobros ? (
+            <table className="cobros-tabla">
+              <thead>
+                <tr>
+                  <th>Cliente</th><th className="num">Corte</th><th>Estado</th>
+                  {cobros!.meses.map((m) => <th key={m} className={`num${m === hoyYM ? " col-hoy" : ""}`}>{etiquetaMes(m)}{m === hoyYM ? " ·hoy" : ""}</th>)}
+                  <th className="num">Total 3m</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lista.map((c) => {
+                  const b = ESTADO_BADGE[c.estado] ?? { txt: c.estado, cls: "" };
+                  const celdas = cobros!.porCliente.get(c.id) ?? [];
+                  const total = celdas.reduce((s, x) => s + x.valor, 0);
+                  return (
+                    <tr key={c.id}>
+                      <td className="nom"><Link href={`/membresias/${c.id}`} className="link-cliente">{c.nombre}</Link></td>
+                      <td className="num">{corteDia(c.fechaActivacion) ?? "—"}</td>
+                      <td><span className={b.cls}>{b.txt}</span></td>
+                      {celdas.map((cel) => (
+                        <td key={cel.mes} className={`num cobro-cell${cel.proyectado ? " proy" : ""}${cel.mes === hoyYM ? " col-hoy" : ""}`}>{usd0(cel.valor)}</td>
+                      ))}
+                      <td className="num strong">{usd0(total)}</td>
+                    </tr>
+                  );
+                })}
+                {lista.length === 0 && <tr><td colSpan={cobros!.meses.length + 4} className="empty">Sin clientes que coincidan.</td></tr>}
+              </tbody>
+            </table>
+          ) : (
+            <table>
+              <thead>
+                <tr><th>Cliente</th><th>Activó · corte</th><th>Plan</th><th>Tipo</th><th>Estado</th><th className="num">Antigüedad</th><th className="num">LTV</th><th></th></tr>
+              </thead>
+              <tbody>
+                {lista.map((c) => {
+                  const b = ESTADO_BADGE[c.estado] ?? { txt: c.estado, cls: "" };
+                  const plan = c.planTipo ? PLAN_LABEL[c.planTipo] : "Estándar";
+                  const soporte = c.soporteValor ? ` · Soporte ${usd(c.soporteValor)}` : "";
+                  return (
+                    <tr key={c.id}>
+                      <td><Link href={`/membresias/${c.id}`} className="link-cliente">{c.nombre}</Link></td>
+                      <td>{fechaCorta(c.fechaActivacion)}{corteDia(c.fechaActivacion) != null && <small className="td-concepto" style={{ display: "block" }}>corte día {corteDia(c.fechaActivacion)}</small>}</td>
+                      <td>{plan}{soporte}</td>
+                      <td>{c.esAgencia
+                        ? <><span className="tag-agencia">Agencia</span>{c.tipoCliente === "servicio" && <span className="td-concepto" style={{ marginLeft: 6 }}>+ Leadtion</span>}</>
+                        : <span className="td-concepto">{TIPO_LABEL[c.tipoCliente ?? "estandar"] ?? "Estándar"}</span>}</td>
+                      <td><span className={b.cls}>{b.txt}</span></td>
+                      <td className="num">{antiguedad(c.tiempoMeses)}</td>
+                      <td className="num">{c.ltv > 0 ? usd(c.ltv) : "—"}</td>
+                      <td className="col-accion"><BotonEliminar id={c.id} nombre={c.nombre} /></td>
+                    </tr>
+                  );
+                })}
+                {lista.length === 0 && <tr><td colSpan={8} className="empty">Sin clientes que coincidan.</td></tr>}
+              </tbody>
+            </table>
+          )}
         </div>
       </section>
     </main>
