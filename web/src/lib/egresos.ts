@@ -1,9 +1,11 @@
 import "server-only";
+import { cache } from "react";
 import { consulta } from "@/lib/db";
 import { tasaUsdCop } from "@/lib/fx";
 import { calcLLC, calcCOL } from "@/lib/facturacion-calc";
 import { primerDiaMes, mesActualISO } from "@/lib/facturacion";
 import { comisionesAfiliadosDelMes } from "@/lib/afiliados";
+import { comisionCsCopDelMes } from "@/lib/reg";
 
 export interface EgresoRow {
   id: number;
@@ -20,52 +22,72 @@ export interface EgresoRow {
 }
 
 /**
- * SNAPSHOT de egresos fijos del mes (idempotente): si el mes en curso/futuro no
- * tiene fijos, los copia desde Nómina (colaboradores) y Gastos Fijos (gasto_fijo).
- * Así se repiten cada mes y quedan EDITABLES por mes (sin tocar el histórico).
- * No hace backfill de meses pasados (esos conservan lo que ya tienen).
+ * Egresos automáticos del mes en curso/futuro. Dos partes:
+ *  1) FIJOS (nómina + gastos): snapshot 1 sola vez (editable después; `resyncFijos
+ *     MesActual` los refresca cuando cambias los catálogos).
+ *  2) AUTO LEADTION (comisiones CS, referidos, API WhatsApp): se REFRESCAN en cada
+ *     lectura desde su fuente (motor de comisiones, afiliados, clientes) para que
+ *     estén siempre al día. No hace backfill de meses pasados.
  */
-export async function asegurarEgresosFijosDelMes(mes: string): Promise<number> {
+export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<number> => {
   const primer = primerDiaMes(mes);
   if (primer < primerDiaMes(mesActualISO())) return 0; // no backfill histórico
-  const ya = await consulta(`select 1 from public.egreso_mensual where mes = $1 and categoria = 'fijo' limit 1`, [primer]);
-  if (ya.length > 0) return 0;
   const { cop: tasa } = await tasaUsdCop();
 
-  await consulta(
-    `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
-     select $1, nombre, coalesce(area,'Equipo'), round((valor_nomina/$2)::numeric,2), valor_nomina, true, 'fijo', 'nomina'
-       from public.colaboradores where activo and coalesce(valor_nomina,0) > 0`,
-    [primer, tasa],
-  );
-  // "share" = valor mensual × % que asume la empresa. valor_cop y valor_usd usan
-  // ese share (no el valor full), así seguridad social 60% se ve bien en ambas.
-  await consulta(
-    `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
-     select $1, nombre, 'TRD',
-        round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
-                * (coalesce(porcentaje_reparto,100)/100.0)
-                / case when moneda='COP' then $2 else 1 end )::numeric, 2),
-        case when moneda='COP'
-             then round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
-                          * (coalesce(porcentaje_reparto,100)/100.0) )::numeric, 2)
-             else null end,
-        true, 'fijo', categoria
-       from public.gasto_fijo
-      where activo and afecta_utilidad and categoria <> 'paso_dinero'
-        and (recurrencia='mensual' or (recurrencia='anual' and amortizar) or recurrencia='diario')`,
-    [primer, tasa],
-  );
+  // 1) FIJOS: snapshot 1 vez.
+  const yaFijo = await consulta(`select 1 from public.egreso_mensual where mes = $1 and categoria = 'fijo' limit 1`, [primer]);
+  if (yaFijo.length === 0) {
+    await consulta(
+      `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
+       select $1, nombre, coalesce(area,'Equipo'), round((valor_nomina/$2)::numeric,2), valor_nomina, true, 'fijo', 'nomina'
+         from public.colaboradores where activo and coalesce(valor_nomina,0) > 0`,
+      [primer, tasa],
+    );
+    // "share" = valor mensual × % que asume la empresa (seg. social 60%, etc.).
+    await consulta(
+      `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
+       select $1, nombre, 'TRD',
+          round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
+                  * (coalesce(porcentaje_reparto,100)/100.0)
+                  / case when moneda='COP' then $2 else 1 end )::numeric, 2),
+          case when moneda='COP'
+               then round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
+                            * (coalesce(porcentaje_reparto,100)/100.0) )::numeric, 2)
+               else null end,
+          true, 'fijo', categoria
+         from public.gasto_fijo
+        where activo and afecta_utilidad and categoria <> 'paso_dinero'
+          and (recurrencia='mensual' or (recurrencia='anual' and amortizar) or recurrencia='diario')`,
+      [primer, tasa],
+    );
+  }
 
-  // Comisiones CS del mes (de reg_pago; COP → USD). Solo si hay monto.
-  await consulta(
-    `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria)
-     select $1, 'Comisiones CS Team', 'Leadtion',
-            round((sum(comision)/$2)::numeric,2), sum(comision), true, 'comision'
-       from public.reg_pago where to_char(mes,'YYYY-MM') = $3
-      having coalesce(sum(comision),0) > 0`,
-    [primer, tasa, mes.slice(0, 7)],
+  // 2) AUTO LEADTION: refrescar siempre (comisión CS del motor, referidos, API).
+  await consulta(`delete from public.egreso_mensual where mes = $1 and categoria in ('comision','referido','api')`, [primer]);
+
+  // Comisiones CS del equipo: del MOTOR (corte cerrado), igual que REG. COP → USD.
+  const comisionCsCop = await comisionCsCopDelMes(mes);
+  if (comisionCsCop > 0) {
+    await consulta(
+      `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria)
+       values ($1, 'Comisiones CS Team', 'Leadtion', $2, $3, true, 'comision')`,
+      [primer, Math.round((comisionCsCop / tasa) * 100) / 100, comisionCsCop],
+    );
+  }
+
+  // API WhatsApp: costo que TRD asume = cuentas "incluidas" activas × $10. (Las
+  // "vendidas" las paga el cliente aparte → van como ingreso, no egreso.)
+  const apiRows = await consulta(
+    `select count(*)::int n from public.clientes where estado_actual='activo' and api_estado='incluida'`,
   );
+  const nApi = Number((apiRows[0] as Record<string, unknown> | undefined)?.n ?? 0);
+  if (nApi > 0) {
+    await consulta(
+      `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, afecta_utilidad, categoria)
+       values ($1, $2, 'Leadtion', $3, true, 'api')`,
+      [primer, `API WhatsApp (${nApi} incluidas × $10)`, nApi * 10],
+    );
+  }
 
   // Referidos Leadtion del mes (motor de afiliados; USD). Solo si hay monto.
   const refUsd = await comisionesAfiliadosDelMes(mes.slice(0, 7));
@@ -77,7 +99,7 @@ export async function asegurarEgresosFijosDelMes(mes: string): Promise<number> {
     );
   }
   return 1;
-}
+});
 /**
  * Al agregar una persona (colaborador) o un gasto fijo (herramienta/operativo) en
  * su catálogo madre, refleja esa línea en el MES EN CURSO si ese mes ya tiene el

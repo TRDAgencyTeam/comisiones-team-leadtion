@@ -128,6 +128,14 @@ export async function comisionPendienteCop(colaboradorId: number, mes: string): 
   return res ? Math.round(res.totalPendiente * t.cop) : 0;
 }
 
+/** Comisión CS TOTAL del equipo para el mes (COP), tal como la muestra REG:
+ *  motor de comisiones, corte cerrado; estable (las filas ya pagadas conservan su
+ *  valor). La usa el egreso automático "Comisiones CS Team" en Egresos. */
+export async function comisionCsCopDelMes(mes: string): Promise<number> {
+  const rs = await renglonesDelMes(mes);
+  return rs.reduce((s, r) => s + (r.comision || 0), 0);
+}
+
 export async function renglonesDelMes(mes: string): Promise<RenglonReg[]> {
   const primer = primerDiaMes(mes);
   const anterior = primerDiaMesAnterior(mes);
