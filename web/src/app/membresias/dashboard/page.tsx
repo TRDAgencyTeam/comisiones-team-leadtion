@@ -3,7 +3,6 @@ import { calcularPnL } from "@/lib/pnl";
 import { ingresosPorMes, type IngresoMes } from "@/lib/clientes";
 import { SERVICIO_LABEL } from "@/lib/servicios";
 import { BarChart } from "@/components/BarChart";
-import { guardarReselling } from "../acciones";
 
 export const dynamic = "force-dynamic";
 
@@ -111,13 +110,7 @@ export default async function PnLDashboard() {
                 <tr><td>API vendida · ganancia $2 c/u <span className="td-sub">({pnl.ingresos.apiVendidaCuentas} cuentas)</span></td><td className="num">{usd(pnl.ingresos.apiVendida)}</td></tr>
                 <tr><td>Reselling reportado</td><td className="num">{usd(pnl.ingresos.reselling)}</td></tr>
               </tbody></table>
-              <form action={guardarReselling} className="reselling-form">
-                <input type="hidden" name="mes" value={pnl.mes} />
-                <label>Reportar reselling del mes ($)
-                  <input type="number" step="0.01" name="monto" defaultValue={pnl.ingresos.reselling} />
-                </label>
-                <button type="submit" className="btn-primary">Guardar</button>
-              </form>
+              <p className="foot" style={{ marginTop: 8 }}>El <b>reselling</b> se reporta en <b>Facturación → otros ingresos</b> (categoría “reselling”) del mes; aquí se refleja solo.</p>
             </section>
 
             <section className="card">

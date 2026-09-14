@@ -4,8 +4,7 @@ import { consulta } from "@/lib/db";
 import { tasaUsdCop } from "@/lib/fx";
 import { calcLLC, calcCOL } from "@/lib/facturacion-calc";
 import { primerDiaMes, mesActualISO } from "@/lib/facturacion";
-import { comisionesAfiliadosDelMes } from "@/lib/afiliados";
-import { comisionCsCopDelMes } from "@/lib/reg";
+import { calcularPnL } from "@/lib/pnl";
 
 export interface EgresoRow {
   id: number;
@@ -62,41 +61,34 @@ export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<num
     );
   }
 
-  // 2) AUTO LEADTION: refrescar siempre (comisión CS del motor, referidos, API).
+  // 2) AUTO LEADTION (solo mes en curso): comisiones CS, comisiones afiliados y API
+  //    incluida se toman del P&L NATIVO de Leadtion (calcularPnL), así Egresos cuadra
+  //    con el dashboard de Leadtion. NO se toma GoHighLevel (ya está en Herramientas)
+  //    ni la nómina de pnl (la madre tiene la suya). Se refrescan en cada lectura.
   await consulta(`delete from public.egreso_mensual where mes = $1 and categoria in ('comision','referido','api')`, [primer]);
-
-  // Comisiones CS del equipo: del MOTOR (corte cerrado), igual que REG. COP → USD.
-  const comisionCsCop = await comisionCsCopDelMes(mes);
-  if (comisionCsCop > 0) {
-    await consulta(
-      `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria)
-       values ($1, 'Comisiones CS Team', 'Leadtion', $2, $3, true, 'comision')`,
-      [primer, Math.round((comisionCsCop / tasa) * 100) / 100, comisionCsCop],
-    );
-  }
-
-  // API WhatsApp: costo que TRD asume = cuentas "incluidas" activas × $10. (Las
-  // "vendidas" las paga el cliente aparte → van como ingreso, no egreso.)
-  const apiRows = await consulta(
-    `select count(*)::int n from public.clientes where estado_actual='activo' and api_estado='incluida'`,
-  );
-  const nApi = Number((apiRows[0] as Record<string, unknown> | undefined)?.n ?? 0);
-  if (nApi > 0) {
-    await consulta(
-      `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, afecta_utilidad, categoria)
-       values ($1, $2, 'Leadtion', $3, true, 'api')`,
-      [primer, `API WhatsApp (${nApi} incluidas × $10)`, nApi * 10],
-    );
-  }
-
-  // Referidos Leadtion del mes (motor de afiliados; USD). Solo si hay monto.
-  const refUsd = await comisionesAfiliadosDelMes(mes.slice(0, 7));
-  if (refUsd > 0) {
-    await consulta(
-      `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, afecta_utilidad, categoria)
-       values ($1, 'Referidos Leadtion (afiliados)', 'Leadtion', $2, true, 'referido')`,
-      [primer, refUsd],
-    );
+  if (mes.slice(0, 7) === mesActualISO()) {
+    const pnl = await calcularPnL();
+    if (pnl.costos.comisionesCS > 0) {
+      await consulta(
+        `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, afecta_utilidad, categoria)
+         values ($1, 'Comisiones CS Team', 'Leadtion', $2, true, 'comision')`,
+        [primer, pnl.costos.comisionesCS],
+      );
+    }
+    if (pnl.costos.comisionesAfiliados > 0) {
+      await consulta(
+        `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, afecta_utilidad, categoria)
+         values ($1, 'Comisiones afiliados (Leadtion)', 'Leadtion', $2, true, 'referido')`,
+        [primer, pnl.costos.comisionesAfiliados],
+      );
+    }
+    if (pnl.costos.apisIncluidas > 0) {
+      await consulta(
+        `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, afecta_utilidad, categoria)
+         values ($1, $2, 'Leadtion', $3, true, 'api')`,
+        [primer, `API WhatsApp (${pnl.costos.apisIncluidasCuentas} incluidas × $10)`, pnl.costos.apisIncluidas],
+      );
+    }
   }
   return 1;
 });
@@ -221,6 +213,8 @@ export interface ResumenMes {
     clientesUsa: number;
     clientesCol: number;
     otros: IngresoRow[];
+    /** Ingreso de Leadtion (membresías + servicios) que NO está en Facturación. */
+    leadtion: number;
     total: number;
     porFuente: { etiqueta: string; valor: number }[];
   };
@@ -267,7 +261,22 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
   }
   clientesUsa = r2(clientesUsa); clientesCol = r2(clientesCol);
   const otrosTotal = r2(otros.reduce((s, x) => s + x.valorUsd, 0));
-  const totalIngresos = r2(clientesUsa + clientesCol + otrosTotal);
+
+  // Ingreso de Leadtion que NO está en Facturación: cobros de pagos_mensuales de
+  // clientes SIN factura ese mes (membresías + servicios como reactivación mes 2/3).
+  // Solo mes en curso/futuro; los meses pasados quedan cuadrados al Excel oficial.
+  let leadtion = 0;
+  if (mes.slice(0, 7) >= mesActualISO()) {
+    const lt = await consulta(
+      `select coalesce(sum(p.valor),0) t from public.pagos_mensuales p
+        where to_char(p.mes,'YYYY-MM') = $1 and p.valor > 0
+          and not exists (select 1 from public.factura_mensual f
+               where f.cliente_id = p.cliente_id and to_char(f.mes,'YYYY-MM') = $1 and f.estado <> 'anulado')`,
+      [mes.slice(0, 7)],
+    );
+    leadtion = r2(num((lt[0] as Record<string, unknown>).t));
+  }
+  const totalIngresos = r2(clientesUsa + clientesCol + otrosTotal + leadtion);
 
   const afectan = egresos.filter((e) => e.afectaUtilidad);
   const caja = egresos.filter((e) => !e.afectaUtilidad);
@@ -290,10 +299,11 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
   return {
     tasa,
     ingresos: {
-      clientesUsa, clientesCol, otros, total: totalIngresos,
+      clientesUsa, clientesCol, otros, leadtion, total: totalIngresos,
       porFuente: [
         { etiqueta: "Clientes USA", valor: clientesUsa },
         { etiqueta: "Clientes Colombia", valor: clientesCol },
+        { etiqueta: "Leadtion (membresías)", valor: leadtion },
         ...otros.map((o) => ({ etiqueta: o.concepto, valor: o.valorUsd })),
       ].filter((x) => x.valor > 0),
     },

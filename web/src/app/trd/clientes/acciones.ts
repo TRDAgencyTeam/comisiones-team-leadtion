@@ -52,6 +52,30 @@ async function registrarCostoTercerizacion(mes: string, servicioClave: string | 
   );
 }
 
+const SERVICIOS_LEADTION = ["agente_ai", "reactivacion", "level_up"];
+
+/** Si el servicio facturado es de Leadtion y el cliente es del maestro, registra el
+ *  servicio en Membresías (cliente_servicios) para que corra su flujo de cobros
+ *  (mes 1/2/3) y aparezca en el módulo. Idempotente por (cliente, tipo, mes). */
+async function registrarServicioLeadtion(clienteId: number | null, servicioClave: string | null, mes: string, monto: number) {
+  if (!clienteId || !servicioClave || !SERVICIOS_LEADTION.includes(servicioClave)) return;
+  const mesIni = `${mes.slice(0, 7)}-01`;
+  const dup = await consulta(
+    `select 1 from public.cliente_servicios where cliente_id=$1 and tipo_servicio=$2 and mes_inicio=$3 limit 1`,
+    [clienteId, servicioClave, mesIni],
+  );
+  if (dup.length) return;
+  await consulta(
+    `insert into public.cliente_servicios (cliente_id, tipo_servicio, mes_inicio, fecha_compra, precio_mes1)
+     values ($1,$2,$3,$3,$4)`,
+    [clienteId, servicioClave, mesIni, monto > 0 ? monto : null],
+  );
+  await recomputarPagosDeCliente(clienteId);
+  revalidatePath(`/membresias/${clienteId}`);
+  revalidatePath("/membresias/clientes");
+  revalidatePath("/membresias/dashboard");
+}
+
 export async function crearFactura(formData: FormData) {
   await soloAdmin();
   const mes = primerDiaMes(String(formData.get("mes") ?? ""));
@@ -69,6 +93,8 @@ export async function crearFactura(formData: FormData) {
      d.facturado, d.medio, d.fechaFactura, d.fechaPago, d.ivaPct, d.estado, servicioClave, tasaVal, d.recurrente ? 1 : null],
   );
   await registrarCostoTercerizacion(mes, servicioClave, Number(formData.get("personas") ?? 0));
+  // Si es un servicio Leadtion de un cliente del maestro, sincroniza Membresías.
+  await registrarServicioLeadtion(d.clienteId, servicioClave, mes, d.facturado);
   revalidatePath("/trd/clientes");
   revalidatePath("/trd/clientes/facturacion");
   redirect(back);
@@ -327,6 +353,15 @@ export async function guardarServiciosFactura(formData: FormData) {
       where id = $1`,
     [facturaId, total, nombres.join(" + ") || null, primerClave],
   );
+  // Sincroniza a Membresías los ítems que sean servicios Leadtion.
+  const fr = await consulta(`select cliente_id, to_char(mes,'YYYY-MM') mes from public.factura_mensual where id=$1`, [facturaId]);
+  const cid = fr[0]?.cliente_id != null ? Number(fr[0]!.cliente_id) : null;
+  const fmes = fr[0]?.mes ? String(fr[0]!.mes) : "";
+  if (cid && fmes) {
+    for (let i = 0; i < conceptos.length; i++) {
+      if (SERVICIOS_LEADTION.includes(claves[i] || "")) await registrarServicioLeadtion(cid, claves[i]!, fmes, montos[i] ?? 0);
+    }
+  }
   revalidatePath("/trd/clientes");
   revalidatePath("/trd/clientes/facturacion");
   redirect(`/trd/clientes/${facturaId}`);

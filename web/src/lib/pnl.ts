@@ -48,12 +48,15 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
     // sin doble conteo cuando un cliente tiene varios servicios).
     consulta(`select cs.tipo_servicio, cs.mes_inicio, cs.soporte_valor, cs.precio_mes1, cl.nombre
                 from public.cliente_servicios cs join public.clientes cl on cl.id=cs.cliente_id`),
-    consulta(`select coalesce(sum(api_valor) filter (where api_estado='vendida' and estado_actual='activo'),0)::float vendida_ingreso,
-                     count(*) filter (where api_estado='vendida' and estado_actual='activo')::int vendida_n,
-                     count(*) filter (where api_estado='incluida' and estado_actual='activo')::int incluida
+    // API: toda cuenta Leadtion activa lleva la API incluida (costo $10) salvo las
+    // "vendidas" (el cliente la paga aparte). Por eso incluida = activas − vendidas.
+    consulta(`select coalesce(sum(api_valor) filter (where api_estado='vendida' and estado_actual='activo' and es_leadtion),0)::float vendida_ingreso,
+                     count(*) filter (where api_estado='vendida' and estado_actual='activo' and es_leadtion)::int vendida_n,
+                     count(*) filter (where estado_actual='activo' and es_leadtion and coalesce(api_estado,'ninguna')<>'vendida')::int incluida
                 from public.clientes`),
     consulta(`select clave, valor from public.config_negocio`),
-    consulta(`select monto from public.reselling_mensual where mes=$1`, [mes]),
+    // Reselling: ahora se reporta en Facturación → otros ingresos (categoría 'reselling').
+    consulta(`select coalesce(sum(valor_usd),0)::float monto from public.ingreso_mensual where categoria='reselling' and to_char(mes,'YYYY-MM')=$1`, [mes]),
     consulta(`select count(*) filter (where estado_actual='activo')::int n from public.clientes`),
     consulta(`select coalesce(sum(bono_reactivacion),0)::float t from public.clientes where bono_reactivacion is not null and to_char(fecha_activacion,'YYYY-MM')=$1`, [mes]),
     dashboardAfiliados(now),
