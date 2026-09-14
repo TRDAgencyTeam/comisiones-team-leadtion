@@ -4,7 +4,7 @@ import { consulta } from "@/lib/db";
 import { tasaUsdCop } from "@/lib/fx";
 import { calcLLC, calcCOL } from "@/lib/facturacion-calc";
 import { primerDiaMes, mesActualISO } from "@/lib/facturacion";
-import { calcularPnL } from "@/lib/pnl";
+import { calcularPnL, proyeccionLeadtionMes } from "@/lib/pnl";
 
 export interface EgresoRow {
   id: number;
@@ -262,19 +262,23 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
   clientesUsa = r2(clientesUsa); clientesCol = r2(clientesCol);
   const otrosTotal = r2(otros.reduce((s, x) => s + x.valorUsd, 0));
 
-  // Ingreso de Leadtion que NO está en Facturación: cobros de pagos_mensuales de
-  // clientes SIN factura ese mes (membresías + servicios como reactivación mes 2/3).
-  // Solo mes en curso/futuro; los meses pasados quedan cuadrados al Excel oficial.
+  // Ingreso de Leadtion que NO está en Facturación: proyección de licencias +
+  // servicios de cada cliente Leadtion ACTIVO que NO tiene factura ese mes (una
+  // licencia activa cuenta aunque su cobro aún no esté registrado). Así no se
+  // duplica con Facturación (los facturados se cuentan por ahí). Solo mes en
+  // curso/futuro; los meses pasados quedan cuadrados al Excel oficial.
   let leadtion = 0;
   if (mes.slice(0, 7) >= mesActualISO()) {
-    const lt = await consulta(
-      `select coalesce(sum(p.valor),0) t from public.pagos_mensuales p
-        where to_char(p.mes,'YYYY-MM') = $1 and p.valor > 0
-          and not exists (select 1 from public.factura_mensual f
-               where f.cliente_id = p.cliente_id and to_char(f.mes,'YYYY-MM') = $1 and f.estado <> 'anulado')`,
-      [mes.slice(0, 7)],
-    );
-    leadtion = r2(num((lt[0] as Record<string, unknown>).t));
+    const [lineas, facturados] = await Promise.all([
+      proyeccionLeadtionMes(mes.slice(0, 7)),
+      consulta(
+        `select distinct cliente_id from public.factura_mensual
+          where to_char(mes,'YYYY-MM') = $1 and estado <> 'anulado' and cliente_id is not null`,
+        [mes.slice(0, 7)],
+      ),
+    ]);
+    const conFactura = new Set(facturados.map((f) => Number((f as Record<string, unknown>).cliente_id)));
+    leadtion = r2(lineas.filter((l) => !conFactura.has(l.clienteId)).reduce((s, l) => s + l.valor, 0));
   }
   const totalIngresos = r2(clientesUsa + clientesCol + otrosTotal + leadtion);
 

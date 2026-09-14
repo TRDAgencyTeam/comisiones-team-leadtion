@@ -102,7 +102,9 @@ export default async function PnLDashboard() {
             <section className="card">
               <div className="card-head"><span className="who">Ingresos</span><span className="t-pagado"><b>{usd(pnl.ingresos.total)}</b></span></div>
               <table><tbody>
-                <tr><td><b>Licencias cobradas</b></td><td className="num"><b>{usd(pnl.ingresos.licencias)}</b></td></tr>
+                <tr><td><b>Licencias activas del mes</b></td><td className="num"><b>{usd(pnl.ingresos.licencias)}</b></td></tr>
+                <tr><td className="td-sub">— Puras ($69) <span className="td-sub">({pnl.ingresos.licenciasDetalle.puras.n} cuentas)</span></td><td className="num td-sub">{usd(pnl.ingresos.licenciasDetalle.puras.total)}</td></tr>
+                <tr><td className="td-sub">— Con soporte <span className="td-sub">({pnl.ingresos.licenciasDetalle.conSoporte.n} cuentas)</span></td><td className="num td-sub">{usd(pnl.ingresos.licenciasDetalle.conSoporte.total)}</td></tr>
                 <tr><td>Servicios Leadtion (mes) <Link href="/membresias/dashboard/servicios" className="link-ver">ver clientes →</Link></td><td className="num">{usd(pnl.ingresos.servicios.total)}</td></tr>
                 <tr><td className="td-sub">— Agente IA</td><td className="num td-sub">{usd(pnl.ingresos.servicios.agente_ai)}</td></tr>
                 <tr><td className="td-sub">— Reactivación</td><td className="num td-sub">{usd(pnl.ingresos.servicios.reactivacion)}</td></tr>

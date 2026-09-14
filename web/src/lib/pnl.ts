@@ -3,7 +3,7 @@ import { consulta } from "@/lib/db";
 import { tasaUsdCop } from "@/lib/fx";
 import { dashboardAfiliados } from "@/lib/afiliados";
 import { cargarResultados } from "@/lib/comisiones";
-import { calendarioServicio } from "@/lib/servicios";
+import { calendarioServicio, type TipoServicio } from "@/lib/servicios";
 
 /** P&L mensual del negocio Leadtion (ingresos vs costos, en USD). */
 
@@ -21,6 +21,11 @@ export interface PnL {
   tasa: { cop: number; enVivo: boolean };
   ingresos: {
     licencias: number;
+    /** Licencias activas del mes separadas: puras ($69) vs con soporte. */
+    licenciasDetalle: {
+      puras: { n: number; total: number };
+      conSoporte: { n: number; total: number };
+    };
     servicios: {
       agente_ai: number; reactivacion: number; level_up: number; total: number;
       detalle: { nombre: string; tipo: string; monto: number }[];
@@ -37,13 +42,83 @@ export interface PnL {
   cuentasActivas: number;
 }
 
+export type TipoLineaLeadtion = "pura" | "soporte" | "servicio" | "garantia";
+export interface LineaLeadtion {
+  clienteId: number;
+  nombre: string;
+  tipo: TipoLineaLeadtion;
+  valor: number;
+}
+
+/**
+ * Proyección del ingreso Leadtion del mes, por cada cliente ACTIVO.
+ *
+ * No depende de que el cobro esté registrado en `pagos_mensuales`: una licencia
+ * activa cuenta porque se cobrará tarde o temprano (según su fecha de corte),
+ * salvo que se desactive en Membresías. Es la ÚNICA fuente de la clasificación:
+ *  - dentro de una ventana de servicio → "servicio" (o "garantia" si es el mes $0);
+ *  - fuera de ventana, con soporte activo → "soporte" (su valor recurrente);
+ *  - fuera de ventana, sin soporte → "pura" ($69);
+ *  - agencia con Leadtion incluida ($0) → no genera línea (se cobra por marketing).
+ */
+export async function proyeccionLeadtionMes(mes: string): Promise<LineaLeadtion[]> {
+  const [clientes, servicios, soportesInd] = await Promise.all([
+    consulta(`select id, nombre, coalesce(es_agencia,false) es_agencia, coalesce(soporte_valor,0) sop,
+                to_char(fecha_activacion,'YYYY-MM') act
+                from public.clientes where estado_actual='activo' and es_leadtion`),
+    consulta(`select cliente_id, tipo_servicio, to_char(mes_inicio,'YYYY-MM') mes_inicio, soporte_valor, precio_mes1
+                from public.cliente_servicios`),
+    consulta(`select cliente_id, valor from public.cliente_soportes where hasta is null`),
+  ]);
+
+  const sopIndDe = new Map<number, number>();
+  for (const s of soportesInd) sopIndDe.set(Number(s.cliente_id), Number(s.valor));
+
+  // Valor del calendario de servicio que cae en `mes`, por cliente
+  // (0 = garantía; undefined = ese cliente no tiene servicio ese mes).
+  const svcDe = new Map<number, number>();
+  for (const sv of servicios) {
+    const cal = calendarioServicio(
+      String(sv.tipo_servicio) as TipoServicio,
+      sv.soporte_valor == null ? null : Number(sv.soporte_valor),
+      sv.precio_mes1 == null ? null : Number(sv.precio_mes1),
+    );
+    const inicio = (sv.mes_inicio instanceof Date ? sv.mes_inicio.toISOString() : String(sv.mes_inicio)).slice(0, 7);
+    for (const c of cal) {
+      if (mesConDesfaseMes(inicio, c.offset) === mes) {
+        const id = Number(sv.cliente_id);
+        svcDe.set(id, (svcDe.get(id) ?? 0) + c.valor);
+      }
+    }
+  }
+
+  const lineas: LineaLeadtion[] = [];
+  for (const c of clientes) {
+    const id = Number(c.id);
+    const nombre = String(c.nombre);
+    const act = c.act ? String(c.act) : null;
+    if (act != null && mes < act) continue; // aún no activo ese mes
+
+    const svc = svcDe.get(id);
+    if (svc !== undefined) {
+      lineas.push({ clienteId: id, nombre, tipo: svc > 0 ? "servicio" : "garantia", valor: round2(svc) });
+      continue;
+    }
+    const sop = Number(c.sop) > 0 ? Number(c.sop) : (sopIndDe.get(id) ?? 0);
+    if (sop > 0) lineas.push({ clienteId: id, nombre, tipo: "soporte", valor: round2(sop) });
+    else if (!c.es_agencia) lineas.push({ clienteId: id, nombre, tipo: "pura", valor: 69 });
+  }
+  return lineas;
+}
+
 export async function calcularPnL(now = new Date()): Promise<PnL> {
   const mes = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const finMes = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
 
-  const [fx, ingresoRows, servicioRows, apiRows, cfgRows, reselRows, activasRows, bonoRows, afil, cs] = await Promise.all([
+  const [fx, lineasLead, servicioRows, apiRows, cfgRows, reselRows, activasRows, bonoRows, afil, cs] = await Promise.all([
     tasaUsdCop(),
-    consulta(`select coalesce(sum(valor),0)::float t from public.pagos_mensuales where to_char(mes,'YYYY-MM')=$1 and valor>0`, [mes]),
+    // Licencias activas del mes (proyectadas, no dependen del cobro registrado).
+    proyeccionLeadtionMes(mes),
     // Servicios registrados (para atribuir el ingreso por tipo desde su calendario,
     // sin doble conteo cuando un cliente tiene varios servicios).
     consulta(`select cs.tipo_servicio, cs.mes_inicio, cs.soporte_valor, cs.precio_mes1, cl.nombre
@@ -87,7 +162,6 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
   const apisIncluidas = round2(apiIncluidaCount * 10);
   const comisionesAfiliados = round2((afil.dash.pendienteMes ?? 0) + (afil.dash.pagadoMes ?? 0));
 
-  const totalPagosMes = round2(Number(ingresoRows[0]?.t ?? 0));
   // Ingreso por servicios Leadtion del mes, por tipo, desde el CALENDARIO de cada
   // servicio (así un cliente con varios servicios no se cuenta doble).
   const serv = { agente_ai: 0, reactivacion: 0, level_up: 0 };
@@ -113,8 +187,14 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
   serv.reactivacion = round2(serv.reactivacion);
   serv.level_up = round2(serv.level_up);
   const serviciosTotal = round2(serv.agente_ai + serv.reactivacion + serv.level_up);
-  // Licencias = todo lo cobrado del mes que no es un servicio Leadtion.
-  const licencias = round2(totalPagosMes - serviciosTotal);
+  // Licencias activas del mes (proyectadas), separadas en puras ($69) y con soporte.
+  const purasLead = lineasLead.filter((l) => l.tipo === "pura");
+  const conSopLead = lineasLead.filter((l) => l.tipo === "soporte");
+  const licenciasDetalle = {
+    puras: { n: purasLead.length, total: round2(purasLead.reduce((s, l) => s + l.valor, 0)) },
+    conSoporte: { n: conSopLead.length, total: round2(conSopLead.reduce((s, l) => s + l.valor, 0)) },
+  };
+  const licencias = round2(licenciasDetalle.puras.total + licenciasDetalle.conSoporte.total);
   // Ganancia real de las APIs vendidas: precio cobrado − $10 de costo por cada una.
   const apiVendida = round2(apiVendidaIngreso - apiVendidaCuentas * 10);
   const reselling = round2(Number(reselRows[0]?.monto ?? 0));
@@ -127,6 +207,7 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
     tasa: { cop, enVivo: fx.enVivo },
     ingresos: {
       licencias,
+      licenciasDetalle,
       servicios: { ...serv, total: serviciosTotal, detalle: serviciosDetalle },
       apiVendida, apiVendidaCuentas, reselling, total: ingresosTotal,
     },
