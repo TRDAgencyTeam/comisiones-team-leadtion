@@ -62,7 +62,10 @@ export function ServiciosEditor({
       {items.map((it, i) => {
         const c = catDe(it.servicioClave);
         const porPersona = Boolean(c?.porPersona);
-        const conceptoEnvio = porPersona && it.personas ? `${it.concepto} (${it.personas} personas)` : it.concepto;
+        // El concepto que se guarda sale del servicio SELECCIONADO (catálogo), no de
+        // un texto viejo heredado; así al editar no se arrastran/duplican nombres.
+        const nombreCat = c?.nombre ?? it.concepto;
+        const conceptoEnvio = porPersona && it.personas ? `${nombreCat} (${it.personas} personas)` : nombreCat;
         return (
           <div key={i} className="cf-item">
             <select value={it.servicioClave ?? ""} onChange={(e) => pick(i, e.target.value)}>
