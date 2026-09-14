@@ -21,10 +21,10 @@ export interface PnL {
   tasa: { cop: number; enVivo: boolean };
   ingresos: {
     licencias: number;
-    /** Licencias activas del mes separadas: puras ($69) vs con soporte. */
+    /** Licencias activas del mes separadas: estándar ($69) vs con soporte. */
     licenciasDetalle: {
-      puras: { n: number; total: number };
-      conSoporte: { n: number; total: number };
+      puras: { n: number; total: number; clientes: { nombre: string }[] };
+      conSoporte: { n: number; total: number; clientes: { nombre: string; monto: number }[] };
     };
     servicios: {
       agente_ai: number; reactivacion: number; level_up: number; total: number;
@@ -188,11 +188,20 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
   serv.level_up = round2(serv.level_up);
   const serviciosTotal = round2(serv.agente_ai + serv.reactivacion + serv.level_up);
   // Licencias activas del mes (proyectadas), separadas en puras ($69) y con soporte.
-  const purasLead = lineasLead.filter((l) => l.tipo === "pura");
-  const conSopLead = lineasLead.filter((l) => l.tipo === "soporte");
+  const porNombre = (a: LineaLeadtion, b: LineaLeadtion) => a.nombre.localeCompare(b.nombre, "es");
+  const purasLead = lineasLead.filter((l) => l.tipo === "pura").sort(porNombre);
+  const conSopLead = lineasLead.filter((l) => l.tipo === "soporte").sort(porNombre);
   const licenciasDetalle = {
-    puras: { n: purasLead.length, total: round2(purasLead.reduce((s, l) => s + l.valor, 0)) },
-    conSoporte: { n: conSopLead.length, total: round2(conSopLead.reduce((s, l) => s + l.valor, 0)) },
+    puras: {
+      n: purasLead.length,
+      total: round2(purasLead.reduce((s, l) => s + l.valor, 0)),
+      clientes: purasLead.map((l) => ({ nombre: l.nombre })),
+    },
+    conSoporte: {
+      n: conSopLead.length,
+      total: round2(conSopLead.reduce((s, l) => s + l.valor, 0)),
+      clientes: conSopLead.map((l) => ({ nombre: l.nombre, monto: l.valor })),
+    },
   };
   const licencias = round2(licenciasDetalle.puras.total + licenciasDetalle.conSoporte.total);
   // Ganancia real de las APIs vendidas: precio cobrado − $10 de costo por cada una.

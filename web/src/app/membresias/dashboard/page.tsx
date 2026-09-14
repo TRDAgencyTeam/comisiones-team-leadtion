@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { calcularPnL } from "@/lib/pnl";
 import { ingresosPorMes, type IngresoMes } from "@/lib/clientes";
 import { SERVICIO_LABEL } from "@/lib/servicios";
 import { BarChart } from "@/components/BarChart";
+import { VerClientesPop } from "@/components/VerClientesPop";
 
 export const dynamic = "force-dynamic";
 
@@ -59,9 +59,9 @@ export default async function PnLDashboard() {
                     </ul>
                   )}
                   {pnl.ingresos.servicios.detalle.length > 5 && (
-                    <Link href="/membresias/dashboard/servicios" className="pop-vertodos">
-                      Ver todos ({pnl.ingresos.servicios.detalle.length}) →
-                    </Link>
+                    <p className="pop-vertodos" style={{ cursor: "default" }}>
+                      +{pnl.ingresos.servicios.detalle.length - 5} más · usa “ver clientes” abajo
+                    </p>
                   )}
                 </div>
               </div>
@@ -103,9 +103,9 @@ export default async function PnLDashboard() {
               <div className="card-head"><span className="who">Ingresos</span><span className="t-pagado"><b>{usd(pnl.ingresos.total)}</b></span></div>
               <table><tbody>
                 <tr><td><b>Licencias activas del mes</b></td><td className="num"><b>{usd(pnl.ingresos.licencias)}</b></td></tr>
-                <tr><td className="td-sub">— Puras ($69) <span className="td-sub">({pnl.ingresos.licenciasDetalle.puras.n} cuentas)</span></td><td className="num td-sub">{usd(pnl.ingresos.licenciasDetalle.puras.total)}</td></tr>
-                <tr><td className="td-sub">— Con soporte <span className="td-sub">({pnl.ingresos.licenciasDetalle.conSoporte.n} cuentas)</span></td><td className="num td-sub">{usd(pnl.ingresos.licenciasDetalle.conSoporte.total)}</td></tr>
-                <tr><td>Servicios Leadtion (mes) <Link href="/membresias/dashboard/servicios" className="link-ver">ver clientes →</Link></td><td className="num">{usd(pnl.ingresos.servicios.total)}</td></tr>
+                <tr><td className="td-sub">— Licencia estándar <VerClientesPop label="ver licencias" titulo="Licencia estándar ($69)" items={pnl.ingresos.licenciasDetalle.puras.clientes.map((c) => ({ nombre: c.nombre, monto: 69 }))} /></td><td className="num td-sub">{usd(pnl.ingresos.licenciasDetalle.puras.total)}</td></tr>
+                <tr><td className="td-sub">— Con soporte <VerClientesPop label="ver clientes" titulo="Licencias con soporte" items={pnl.ingresos.licenciasDetalle.conSoporte.clientes.map((c) => ({ nombre: c.nombre, monto: c.monto }))} /></td><td className="num td-sub">{usd(pnl.ingresos.licenciasDetalle.conSoporte.total)}</td></tr>
+                <tr><td>Servicios Leadtion (mes) <VerClientesPop titulo="Clientes con servicio este mes" items={pnl.ingresos.servicios.detalle.map((d) => ({ nombre: d.nombre, detalle: SERVICIO_LABEL[d.tipo as keyof typeof SERVICIO_LABEL] ?? d.tipo, monto: d.monto }))} /></td><td className="num">{usd(pnl.ingresos.servicios.total)}</td></tr>
                 <tr><td className="td-sub">— Agente IA</td><td className="num td-sub">{usd(pnl.ingresos.servicios.agente_ai)}</td></tr>
                 <tr><td className="td-sub">— Reactivación</td><td className="num td-sub">{usd(pnl.ingresos.servicios.reactivacion)}</td></tr>
                 <tr><td className="td-sub">— Level Up</td><td className="num td-sub">{usd(pnl.ingresos.servicios.level_up)}</td></tr>
