@@ -9,12 +9,14 @@ const money = (n: number, m: "USD" | "COP") => new Intl.NumberFormat("es-CO", { 
 
 /** Factura suelta del mes (cliente existente o servicio puntual), con la misma
  *  estética y el mismo selector de servicios que "Nuevo cliente". */
-export function NuevaFacturaForm({ mes, tasa, catalogo }: { mes: string; tasa: number; catalogo: ServicioCatalogo[] }) {
+export function NuevaFacturaForm({ mes, tasa, catalogo, clientes }: { mes: string; tasa: number; catalogo: ServicioCatalogo[]; clientes: { id: number; nombre: string }[] }) {
   const [entidad, setEntidad] = useState<"LLC" | "COL">("LLC");
   const [clave, setClave] = useState(catalogo[0]?.clave ?? "");
   const [personas, setPersonas] = useState(1);
   const [facturado, setFacturado] = useState("");
   const [servicios, setServicios] = useState("");
+  const [clienteId, setClienteId] = useState("");
+  const clienteNombre = clientes.find((c) => String(c.id) === clienteId)?.nombre ?? "";
 
   const srv = useMemo(() => catalogo.find((c) => c.clave === clave), [catalogo, clave]);
   const moneda = entidad === "COL" ? "COP" : "USD";
@@ -42,7 +44,16 @@ export function NuevaFacturaForm({ mes, tasa, catalogo }: { mes: string; tasa: n
         <input type="hidden" name="recurrente" value={srv?.recurrente ? "1" : "0"} />
         {srv?.porPersona && <input type="hidden" name="personas" value={personas} />}
 
-        <div className="cf-f"><label>Nombre del cliente</label><input name="clienteNombre" required placeholder="Cliente existente o puntual" /></div>
+        <input type="hidden" name="clienteId" value={clienteId} />
+        <input type="hidden" name="clienteNombre" value={clienteNombre} />
+        <div className="cf-f">
+          <label>Cliente</label>
+          <select value={clienteId} onChange={(e) => setClienteId(e.target.value)} required>
+            <option value="">— Elegir cliente —</option>
+            {clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+          </select>
+          <span className="cf-hint">La factura se suma a la cuenta de ese cliente. ¿No está? Créalo con <b>+ Nuevo cliente</b>.</span>
+        </div>
 
         <div className="cf-f">
           <label>Entidad</label>
