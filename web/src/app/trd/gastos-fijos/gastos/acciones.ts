@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { soloAdmin } from "@/lib/sesion";
-import { sincronizarFijoMesActual } from "@/lib/egresos";
+import { resyncFijosMesActual } from "@/lib/egresos";
 
 const n = (v: FormDataEntryValue | null): number => {
   const x = Number(String(v ?? "").replace(/[^\d.-]/g, ""));
@@ -45,10 +45,11 @@ export async function crearGasto(formData: FormData) {
      d.reparto, d.amortizar, d.afectaUtilidad, d.notas],
   );
   // Reflejar de una en el mes en curso (Egresos), sin tocar meses pasados.
-  if (ins[0]?.id != null) await sincronizarFijoMesActual("gasto", Number(ins[0].id));
+  await resyncFijosMesActual();
   revalidatePath("/trd/gastos-fijos/gastos");
   revalidatePath("/trd/gastos-fijos/herramientas");
   revalidatePath("/trd/clientes/egresos");
+  revalidatePath("/trd/clientes");
   redirect(d.categoria === "herramienta" || d.categoria === "hosting" ? "/trd/gastos-fijos/herramientas" : "/trd/gastos-fijos/gastos");
 }
 
@@ -65,15 +66,23 @@ export async function actualizarGasto(formData: FormData) {
     [id, d.categoria, d.nombre, d.moneda, d.valor, d.recurrencia, d.diaCobro, d.metodoPago,
      d.reparto, d.amortizar, d.afectaUtilidad, d.notas],
   );
+  await resyncFijosMesActual();
   revalidatePath("/trd/gastos-fijos/gastos");
+  revalidatePath("/trd/gastos-fijos/herramientas");
   revalidatePath("/trd/gastos-fijos");
-  redirect("/trd/gastos-fijos/gastos");
+  revalidatePath("/trd/clientes/egresos");
+  revalidatePath("/trd/clientes");
+  redirect(d.categoria === "herramienta" || d.categoria === "hosting" ? "/trd/gastos-fijos/herramientas" : "/trd/gastos-fijos/gastos");
 }
 
 export async function eliminarGasto(formData: FormData) {
   await soloAdmin();
   const id = Number(formData.get("id"));
   await consulta(`delete from public.gasto_fijo where id=$1`, [id]);
+  await resyncFijosMesActual();
   revalidatePath("/trd/gastos-fijos/gastos");
+  revalidatePath("/trd/gastos-fijos/herramientas");
   revalidatePath("/trd/gastos-fijos");
+  revalidatePath("/trd/clientes/egresos");
+  revalidatePath("/trd/clientes");
 }

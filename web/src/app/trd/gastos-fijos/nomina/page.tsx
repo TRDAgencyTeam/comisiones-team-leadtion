@@ -12,6 +12,7 @@ const cop = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", c
 const usd = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "USD", maximumFractionDigits: n < 100 ? 2 : 0 }).format(n);
 const fmt = (iso: string | null) => iso ? new Date(`${iso}T00:00:00`).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 const AREA_LABEL: Record<string, string> = Object.fromEntries(AREAS.map((a) => [a.value, a.label]));
+const DEPT_COLORS = ["#6d5ac0", "#00a0a0", "#1e5080", "#0f9d6b", "#b45309", "#c0504f", "#2e2a6e"];
 
 function ContratoTag({ fin }: { fin: string | null }) {
   const d = diasParaVencer(fin);
@@ -49,22 +50,25 @@ export default async function NominaPage() {
       </div>
 
       <h2 style={{ fontSize: "1rem", margin: "6px 0 10px" }}>Por departamento</h2>
-      <div className="reg-costos-grid">
-        {[...deptos.entries()].sort((a, b) => b[1].cop - a[1].cop).map(([area, d]) => (
-          <div key={area} className="kpi">
-            <span className="kpi-lbl">{AREA_LABEL[area] ?? area} · {d.count}</span>
-            <span className="kpi-num">{cop(d.cop)}</span>
-            <span className="kpi-lbl">{usd(mesUsd(d.cop))} / mes</span>
+      <div className="nom-deptos">
+        {[...deptos.entries()].sort((a, b) => b[1].cop - a[1].cop).map(([area, d], i) => (
+          <div key={area} className="nom-dept" style={{ borderLeftColor: DEPT_COLORS[i % DEPT_COLORS.length] }}>
+            <div className="d-top">
+              <span className="d-name">{AREA_LABEL[area] ?? area}</span>
+              <span className="d-count">{d.count} {d.count === 1 ? "persona" : "personas"}</span>
+            </div>
+            <div className="d-usd">{usd(mesUsd(d.cop))}<small>/mes</small></div>
+            <div className="d-cop">{cop(d.cop)}</div>
           </div>
         ))}
       </div>
 
-      <div className="reg-tabla-wrap" style={{ marginTop: 16 }}>
+      <div className="nom-tabla-wrap" style={{ marginTop: 16 }}>
         <table className="reg-tabla">
           <thead>
             <tr>
               <th>Persona</th><th>Área</th>
-              <th className="right">COP / mes</th><th className="right">USD / mes</th><th className="right">USD / año</th>
+              <th className="right">USD / mes</th><th className="right">COP / mes</th><th className="right">USD / año</th>
               <th className="right">USD / día</th><th className="right">USD / hora</th>
               <th>Fin contrato</th><th>Estado</th><th></th>
             </tr>
@@ -79,8 +83,8 @@ export default async function NominaPage() {
                     {!p.activo && <span className="freelance-tag" style={{ marginLeft: 6 }}>inactiva</span>}
                   </td>
                   <td className="muted">{p.area ?? "—"}</td>
-                  <td className="right">{p.valorNomina ? cop(p.valorNomina) : "—"}</td>
-                  <td className="right">{p.valorNomina ? usd(m) : "—"}</td>
+                  <td className="right cf-mono" style={{ fontWeight: 700 }}>{p.valorNomina ? usd(m) : "—"}</td>
+                  <td className="right muted">{p.valorNomina ? cop(p.valorNomina) : "—"}</td>
                   <td className="right muted">{p.valorNomina ? usd(m * 12) : "—"}</td>
                   <td className="right muted">{p.valorNomina ? usd(m / 30) : "—"}</td>
                   <td className="right muted">{p.valorNomina ? usd(m / 30 / 8) : "—"}</td>

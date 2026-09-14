@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { addMonths } from "comisiones-cs-engine/dates";
 import { consulta } from "@/lib/db";
 import { soloAdmin } from "@/lib/sesion";
-import { sincronizarFijoMesActual } from "@/lib/egresos";
+import { resyncFijosMesActual } from "@/lib/egresos";
 
 // Valores en COP se digitan con puntos de miles; se quitan para guardar el número.
 const numCO = (v: FormDataEntryValue | null): number => {
@@ -59,9 +59,10 @@ export async function crearPersona(formData: FormData) {
      d.duracionMeses, d.fechaFin, d.valorNomina],
   );
   // Refleja la persona en el mes en curso (Egresos). REG la toma en vivo.
-  if (ins[0]?.id != null) await sincronizarFijoMesActual("nomina", Number(ins[0].id));
+  await resyncFijosMesActual();
   revalidatePath("/trd/gastos-fijos/nomina");
   revalidatePath("/trd/clientes/egresos");
+  revalidatePath("/trd/clientes");
   revalidatePath("/trd/reg");
   redirect("/trd/gastos-fijos/nomina");
 }
@@ -83,8 +84,13 @@ export async function actualizarPersona(formData: FormData) {
     [id, d.nombre, d.area, d.banco, d.email, d.identificacion, d.fechaNacimiento,
      d.fechaInicio, d.duracionMeses, d.fechaFin, d.valorNomina],
   );
+  // Propaga el cambio (área, salario, nombre) al mes en curso: Egresos + REG.
+  await resyncFijosMesActual();
   revalidatePath("/trd/gastos-fijos/nomina");
   revalidatePath(`/trd/gastos-fijos/nomina/${id}`);
+  revalidatePath("/trd/clientes/egresos");
+  revalidatePath("/trd/clientes");
+  revalidatePath("/trd/reg");
   redirect("/trd/gastos-fijos/nomina");
 }
 
@@ -94,7 +100,12 @@ export async function cambiarEstadoPersona(formData: FormData) {
   const id = Number(formData.get("id"));
   const activar = String(formData.get("activar")) === "1";
   await consulta(`update public.colaboradores set activo=$2 where id=$1`, [id, activar]);
+  // Activar/desactivar cambia quién entra en la nómina del mes en curso.
+  await resyncFijosMesActual();
   revalidatePath("/trd/gastos-fijos/nomina");
+  revalidatePath("/trd/clientes/egresos");
+  revalidatePath("/trd/clientes");
+  revalidatePath("/trd/reg");
 }
 
 const MIMES_OK = ["application/pdf", "image/png", "image/jpeg", "image/jpg", "image/webp"];
