@@ -339,16 +339,18 @@ export async function cambiarEstadoFactura(formData: FormData) {
   const estado = String(formData.get("estado"));
   const ok = ["pagado", "facturado", "por_facturar", "por_confirmar", "programado", "anulado"];
   if (!ok.includes(estado)) return;
-  // Al marcar Pagado, registra la fecha de pago (si no había); al Facturar, la de
-  // factura. Editable después en la ficha del cliente si fue un clic por error.
+  // Fecha de pago: si viene del popup de confirmación (fechaPago) se usa esa (el
+  // cliente pudo pagar otro día, ej. fin de semana); si no, la de hoy cuando aún
+  // no había. Al Facturar/Pagar, la fecha de factura se pone si faltaba.
+  const fechaPago = /^\d{4}-\d{2}-\d{2}$/.test(String(formData.get("fechaPago") ?? "")) ? String(formData.get("fechaPago")) : null;
   await consulta(
     `update public.factura_mensual
         set estado = $2,
-            fecha_pago    = case when $2 = 'pagado'    and fecha_pago    is null then current_date else fecha_pago end,
+            fecha_pago    = case when $2 = 'pagado' then coalesce($3::date, case when fecha_pago is null then current_date else fecha_pago end) else fecha_pago end,
             fecha_factura = case when $2 in ('facturado','pagado') and fecha_factura is null then current_date else fecha_factura end,
             actualizado_en = now()
       where id = $1`,
-    [id, estado],
+    [id, estado, fechaPago],
   );
   revalidatePath("/trd/clientes");
   revalidatePath("/trd/clientes/facturacion");
