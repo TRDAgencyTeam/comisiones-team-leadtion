@@ -22,15 +22,13 @@ export interface PnL {
   ingresos: {
     licencias: number;
     /**
-     * Membresía por tipo de licencia base. Cada cuenta Leadtion activa cuenta en
-     * EXACTAMENTE una categoría → estandar.n + conSoporte.n + agencia.n = cuentas
-     * activas. `total` = valor base de cartera (agencia = 0, va en el marketing).
-     * `enServicio` marca los que este mes están en ventana de servicio (su cobro
-     * del mes está en Servicios, no en la base).
+     * Licencias cobradas ESTE mes, por ítem. Solo entran las cuentas a las que se
+     * les cobra ese ítem este mes: las que están en servicio NO aparecen aquí (su
+     * cobro está en Servicios). Agencia = cargo $0 (incluida en el marketing).
      */
     licenciasDetalle: {
-      estandar: { n: number; total: number; ingreso: number; clientes: { nombre: string; monto: number; enServicio: boolean }[] };
-      conSoporte: { n: number; total: number; ingreso: number; clientes: { nombre: string; monto: number; enServicio: boolean }[] };
+      estandar: { n: number; total: number; clientes: { nombre: string; monto: number }[] };
+      conSoporte: { n: number; total: number; clientes: { nombre: string; monto: number }[] };
       agencia: { n: number; total: number; clientes: { nombre: string }[] };
     };
     servicios: {
@@ -49,43 +47,42 @@ export interface PnL {
   cuentasActivas: number;
 }
 
-export type TipoLineaLeadtion = "estandar" | "soporte";
+export type CategoriaLeadtion = "estandar" | "soporte" | "servicio" | "agencia";
 export interface LineaLeadtion {
   clienteId: number;
   nombre: string;
   esAgencia: boolean;
-  /** Licencia base del cliente (siempre, aunque esté en servicio o sea agencia). */
-  baseTipo: TipoLineaLeadtion;
-  baseValor: number;
-  /** Este mes está dentro de la ventana de un servicio (cobra el servicio, no la base). */
-  enServicio: boolean;
-  /** Ingreso REAL del mes: servicio si está en ventana; base si no; 0 si agencia. */
+  /** En qué ítem cuenta ESTE cargo del mes. Un cliente puede generar varios cargos
+   * (p. ej. reactivación mes 3 en "servicio" + Agente IA mes 3 en "soporte"). */
+  categoria: CategoriaLeadtion;
+  /** Monto de este cargo (cuenta una sola vez en su ítem). */
   valor: number;
-  /** De dónde salió el valor base (para auditar la clasificación). */
+  /** Tipo de servicio, solo cuando categoria = "servicio". */
+  tipoServicio?: TipoServicio;
+  /** De dónde salió el valor (para auditar). */
   fuenteValor?: string;
 }
 
 /**
- * Proyección del ingreso Leadtion del mes, por cada cliente ACTIVO.
+ * Proyección del ingreso Leadtion del mes, POR CARGO (no por cliente): lo que se
+ * cobra ese mes, clasificado en su ítem. No depende de que el cobro esté
+ * registrado: una cuenta activa cuenta porque se cobrará según su corte.
  *
- * No depende de que el cobro esté registrado en `pagos_mensuales`: una licencia
- * activa cuenta porque se cobrará tarde o temprano (según su fecha de corte),
- * salvo que se desactive en Membresías. La clasificación se basa en campos que
- * YA existen en el maestro de clientes (los mismos que muestra la lista de
- * Clientes), no en valores inventados:
- *  - dentro de una ventana de servicio (cliente_servicios) → "servicio"
- *    (o "garantia" si el calendario marca ese mes en $0);
- *  - fuera de ventana, la clasificación es por VALOR (regla del negocio):
- *      · con soporte explícito (cliente_soportes / soporte_valor) → "soporte";
- *      · si no, su `valor_licencia_general`: ≤ 69 (34/67/69) → "estandar";
- *        > 69 (87/119/157…) → "soporte"; sin valor → base 69 estándar.
- *  - `es_agencia` → no genera línea (la licencia va incluida en el marketing).
+ * Reglas (confirmadas con Mauro):
+ *  - Dentro de la ventana de un servicio manda el calendario, y cada mes cuenta
+ *    en SU categoría: Agente IA mes 1 y Reactivación (todos los meses) = "servicio";
+ *    Agente IA mes 3 = "soporte" (ya es su mensualidad); mes de garantía = $0 (no cuenta).
+ *    Un cliente con dos servicios genera dos cargos (p. ej. $197 servicio + $157 soporte).
+ *  - FUERA de toda ventana, la mensualidad base por VALOR: soporte explícito
+ *    (cliente_soportes / soporte_valor) o valor_licencia_general > 69 (119/157) = "soporte";
+ *    valor ≤ 69 (34/67/69) = "estandar"; sin valor = base $69 estándar.
+ *  - `es_agencia` → un cargo "agencia" de $0 (la licencia va incluida en el marketing).
  */
 export async function proyeccionLeadtionMes(mes: string): Promise<LineaLeadtion[]> {
   const [clientes, servicios, soportesInd] = await Promise.all([
     consulta(`select id, nombre, coalesce(es_agencia,false) es_agencia,
-                coalesce(tipo_cliente,'estandar') tipo, coalesce(soporte_valor,0) sop,
-                coalesce(valor_licencia_general,0) licgen, to_char(fecha_activacion,'YYYY-MM') act
+                coalesce(soporte_valor,0) sop, coalesce(valor_licencia_general,0) licgen,
+                to_char(fecha_activacion,'YYYY-MM') act
                 from public.clientes where estado_actual='activo' and es_leadtion`),
     consulta(`select cliente_id, tipo_servicio, to_char(mes_inicio,'YYYY-MM') mes_inicio, soporte_valor, precio_mes1
                 from public.cliente_servicios`),
@@ -95,21 +92,26 @@ export async function proyeccionLeadtionMes(mes: string): Promise<LineaLeadtion[
   const sopIndDe = new Map<number, number>();
   for (const s of soportesInd) sopIndDe.set(Number(s.cliente_id), Number(s.valor));
 
-  // Valor del calendario de servicio que cae en `mes`, por cliente
-  // (0 = garantía; undefined = ese cliente no tiene servicio ese mes).
-  const svcDe = new Map<number, number>();
+  // Cargos de ventana de servicio que caen en `mes`, por cliente.
+  interface Cargo { categoria: "servicio" | "soporte"; valor: number; tipoServicio: TipoServicio }
+  const cargosDe = new Map<number, Cargo[]>();
+  const enVentana = new Set<number>(); // tiene alguna entrada de calendario este mes (incl. garantía)
   for (const sv of servicios) {
+    const tipo = String(sv.tipo_servicio) as TipoServicio;
     const cal = calendarioServicio(
-      String(sv.tipo_servicio) as TipoServicio,
+      tipo,
       sv.soporte_valor == null ? null : Number(sv.soporte_valor),
       sv.precio_mes1 == null ? null : Number(sv.precio_mes1),
     );
     const inicio = (sv.mes_inicio instanceof Date ? sv.mes_inicio.toISOString() : String(sv.mes_inicio)).slice(0, 7);
-    for (const c of cal) {
-      if (mesConDesfaseMes(inicio, c.offset) === mes) {
-        const id = Number(sv.cliente_id);
-        svcDe.set(id, (svcDe.get(id) ?? 0) + c.valor);
-      }
+    for (const e of cal) {
+      if (mesConDesfaseMes(inicio, e.offset) !== mes) continue;
+      const id = Number(sv.cliente_id);
+      enVentana.add(id);
+      if (e.categoria === "garantia" || e.valor <= 0) continue; // garantía: no genera cargo
+      const arr = cargosDe.get(id) ?? [];
+      arr.push({ categoria: e.categoria === "soporte" ? "soporte" : "servicio", valor: round2(e.valor), tipoServicio: tipo });
+      cargosDe.set(id, arr);
     }
   }
 
@@ -120,30 +122,34 @@ export async function proyeccionLeadtionMes(mes: string): Promise<LineaLeadtion[
     const act = c.act ? String(c.act) : null;
     if (act != null && mes < act) continue; // aún no activo ese mes
 
-    const esAgencia = Boolean(c.es_agencia);
+    // Agencia: la licencia va incluida en el marketing → cargo $0, sin servicios propios.
+    if (Boolean(c.es_agencia)) {
+      lineas.push({ clienteId: id, nombre, esAgencia: true, categoria: "agencia", valor: 0, fuenteValor: "incluida en marketing" });
+      continue;
+    }
+
+    // Dentro de ventana de servicio → sus cargos (servicio/soporte); garantía = $0.
+    const cargos = cargosDe.get(id);
+    if (cargos && cargos.length > 0) {
+      for (const cg of cargos) {
+        lineas.push({ clienteId: id, nombre, esAgencia: false, categoria: cg.categoria, valor: cg.valor, tipoServicio: cg.categoria === "servicio" ? cg.tipoServicio : undefined, fuenteValor: "calendario servicio" });
+      }
+      continue;
+    }
+    if (enVentana.has(id)) continue; // solo garantía este mes ($0)
+
+    // Fuera de ventana → mensualidad base por valor.
     const licgen = Number(c.licgen);
     const sopVal = Number(c.sop);
     const sopInd = sopIndDe.get(id) ?? 0;
     const sopExplicito = sopInd > 0 ? sopInd : (sopVal > 0 ? sopVal : 0);
-
-    // Licencia base (siempre se calcula, aunque esté en servicio o sea agencia).
-    let baseTipo: TipoLineaLeadtion, baseValor: number, fuente: string;
     if (sopExplicito > 0) {
-      baseTipo = "soporte"; baseValor = round2(sopExplicito);
-      fuente = sopInd > 0 ? "cliente_soportes" : "soporte_valor";
+      lineas.push({ clienteId: id, nombre, esAgencia: false, categoria: "soporte", valor: round2(sopExplicito), fuenteValor: sopInd > 0 ? "cliente_soportes" : "soporte_valor" });
     } else if (licgen > 0) {
-      // 34/67/69 = estándar; mayor = soporte.
-      baseTipo = licgen <= 69 ? "estandar" : "soporte"; baseValor = round2(licgen);
-      fuente = "valor_licencia_general";
+      lineas.push({ clienteId: id, nombre, esAgencia: false, categoria: licgen <= 69 ? "estandar" : "soporte", valor: round2(licgen), fuenteValor: "valor_licencia_general" });
     } else {
-      baseTipo = "estandar"; baseValor = 69; fuente = "base 69";
+      lineas.push({ clienteId: id, nombre, esAgencia: false, categoria: "estandar", valor: 69, fuenteValor: "base 69" });
     }
-
-    const svc = svcDe.get(id);
-    const enServicio = svc !== undefined;
-    // Ingreso real del mes: servicio si está en ventana; base si no; 0 si agencia.
-    const valor = enServicio ? round2(svc) : (esAgencia ? 0 : baseValor);
-    lineas.push({ clienteId: id, nombre, esAgencia, baseTipo, baseValor, enServicio, valor, fuenteValor: fuente });
   }
   return lineas;
 }
@@ -152,14 +158,10 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
   const mes = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const finMes = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
 
-  const [fx, lineasLead, servicioRows, apiRows, cfgRows, reselRows, activasRows, bonoRows, afil, cs] = await Promise.all([
+  const [fx, lineasLead, apiRows, cfgRows, reselRows, activasRows, bonoRows, afil, cs] = await Promise.all([
     tasaUsdCop(),
-    // Licencias activas del mes (proyectadas, no dependen del cobro registrado).
+    // Ingreso Leadtion del mes por cargo (licencias, soporte y servicios).
     proyeccionLeadtionMes(mes),
-    // Servicios registrados (para atribuir el ingreso por tipo desde su calendario,
-    // sin doble conteo cuando un cliente tiene varios servicios).
-    consulta(`select cs.tipo_servicio, cs.mes_inicio, cs.soporte_valor, cs.precio_mes1, cl.nombre
-                from public.cliente_servicios cs join public.clientes cl on cl.id=cs.cliente_id`),
     // API: toda cuenta Leadtion activa lleva la API incluida (costo $10) salvo las
     // "vendidas" (el cliente la paga aparte). Por eso incluida = activas − vendidas.
     consulta(`select coalesce(sum(api_valor) filter (where api_estado='vendida' and estado_actual='activo' and es_leadtion),0)::float vendida_ingreso,
@@ -199,64 +201,34 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
   const apisIncluidas = round2(apiIncluidaCount * 10);
   const comisionesAfiliados = round2((afil.dash.pendienteMes ?? 0) + (afil.dash.pagadoMes ?? 0));
 
-  // Ingreso por servicios Leadtion del mes, por tipo, desde el CALENDARIO de cada
-  // servicio (así un cliente con varios servicios no se cuenta doble).
+  const porNombre = (a: LineaLeadtion, b: LineaLeadtion) => a.nombre.localeCompare(b.nombre, "es");
+
+  // Servicios del mes = cargos "servicio" (Agente IA mes 1, Reactivación, Level Up mes 1),
+  // por tipo. El Agente IA mes 3 NO va aquí: cuenta como soporte.
+  const servicioLines = lineasLead.filter((l) => l.categoria === "servicio").sort((a, b) => b.valor - a.valor);
   const serv = { agente_ai: 0, reactivacion: 0, level_up: 0 };
   const serviciosDetalle: { nombre: string; tipo: string; monto: number }[] = [];
-  for (const r of servicioRows) {
-    const t = String(r.tipo_servicio) as keyof typeof serv;
-    if (!(t in serv)) continue;
-    const mesInicio = (r.mes_inicio instanceof Date ? r.mes_inicio.toISOString() : String(r.mes_inicio)).slice(0, 7);
-    const cal = calendarioServicio(
-      t,
-      r.soporte_valor == null ? null : Number(r.soporte_valor),
-      r.precio_mes1 == null ? null : Number(r.precio_mes1),
-    );
-    let aporte = 0;
-    for (const m of cal) if (mesConDesfaseMes(mesInicio, m.offset) === mes) aporte += m.valor;
-    if (aporte > 0) {
-      serv[t] += aporte;
-      serviciosDetalle.push({ nombre: String(r.nombre), tipo: t, monto: round2(aporte) });
-    }
+  for (const l of servicioLines) {
+    const t = l.tipoServicio as keyof typeof serv | undefined;
+    if (t && t in serv) serv[t] = round2(serv[t] + l.valor);
+    serviciosDetalle.push({ nombre: l.nombre, tipo: l.tipoServicio ?? "servicio", monto: l.valor });
   }
-  serviciosDetalle.sort((a, b) => b.monto - a.monto);
-  serv.agente_ai = round2(serv.agente_ai);
-  serv.reactivacion = round2(serv.reactivacion);
-  serv.level_up = round2(serv.level_up);
   const serviciosTotal = round2(serv.agente_ai + serv.reactivacion + serv.level_up);
-  // Licencias activas del mes (proyectadas), separadas en puras ($69) y con soporte.
-  const porNombre = (a: LineaLeadtion, b: LineaLeadtion) => a.nombre.localeCompare(b.nombre, "es");
-  // Roster de membresía: cada cuenta activa cae en UNA categoría por su licencia
-  // base → estandar.n + conSoporte.n + agencia.n = cuentas activas.
-  const estandarLead = lineasLead.filter((l) => !l.esAgencia && l.baseTipo === "estandar").sort(porNombre);
-  const conSopLead = lineasLead.filter((l) => !l.esAgencia && l.baseTipo === "soporte").sort(porNombre);
-  const agenciaLead = lineasLead.filter((l) => l.esAgencia).sort(porNombre);
-  const rosterCli = (l: LineaLeadtion) => ({ nombre: l.nombre, monto: l.baseValor, enServicio: l.enServicio });
-  const ingresoBase = (arr: LineaLeadtion[]) => round2(arr.filter((l) => !l.enServicio).reduce((s, l) => s + l.baseValor, 0));
+
+  // Licencias del mes: cada cargo cuenta en SU ítem (estándar / con soporte).
+  // Un cliente en servicio no aparece aquí (su cobro está en Servicios); uno con
+  // soporte de Agente IA mes 3 sí aparece en "con soporte".
+  const estandarLead = lineasLead.filter((l) => l.categoria === "estandar").sort(porNombre);
+  const soporteLead = lineasLead.filter((l) => l.categoria === "soporte").sort(porNombre);
+  const agenciaLead = lineasLead.filter((l) => l.categoria === "agencia").sort(porNombre);
+  const cliDe = (l: LineaLeadtion) => ({ nombre: l.nombre, monto: l.valor });
+  const sumaValor = (arr: LineaLeadtion[]) => round2(arr.reduce((s, l) => s + l.valor, 0));
   const licenciasDetalle = {
-    estandar: {
-      n: estandarLead.length,
-      total: round2(estandarLead.reduce((s, l) => s + l.baseValor, 0)),
-      ingreso: ingresoBase(estandarLead),
-      clientes: estandarLead.map(rosterCli),
-    },
-    conSoporte: {
-      n: conSopLead.length,
-      total: round2(conSopLead.reduce((s, l) => s + l.baseValor, 0)),
-      ingreso: ingresoBase(conSopLead),
-      clientes: conSopLead.map(rosterCli),
-    },
-    agencia: {
-      n: agenciaLead.length,
-      total: 0,
-      clientes: agenciaLead.map((l) => ({ nombre: l.nombre })),
-    },
+    estandar: { n: estandarLead.length, total: sumaValor(estandarLead), clientes: estandarLead.map(cliDe) },
+    conSoporte: { n: soporteLead.length, total: sumaValor(soporteLead), clientes: soporteLead.map(cliDe) },
+    agencia: { n: agenciaLead.length, total: 0, clientes: agenciaLead.map((l) => ({ nombre: l.nombre })) },
   };
-  // Ingreso de licencias del mes (para el total): base de las cuentas que NO están
-  // en ventana de servicio (las que sí, su cobro va en Servicios) y no son agencia.
-  const licencias = round2(
-    lineasLead.filter((l) => !l.esAgencia && !l.enServicio).reduce((s, l) => s + l.baseValor, 0),
-  );
+  const licencias = round2(licenciasDetalle.estandar.total + licenciasDetalle.conSoporte.total);
   // Ganancia real de las APIs vendidas: precio cobrado − $10 de costo por cada una.
   const apiVendida = round2(apiVendidaIngreso - apiVendidaCuentas * 10);
   const reselling = round2(Number(reselRows[0]?.monto ?? 0));

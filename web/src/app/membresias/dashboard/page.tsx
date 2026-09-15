@@ -104,13 +104,12 @@ export default async function PnLDashboard() {
               <table><tbody>
                 {(() => {
                   const ld = pnl.ingresos.licenciasDetalle;
-                  const nTotal = ld.estandar.n + ld.conSoporte.n + ld.agencia.n;
-                  const item = (c: { nombre: string; monto: number; enServicio: boolean }) => ({ nombre: c.nombre, monto: c.monto, detalle: c.enServicio ? "en servicio este mes" : undefined });
+                  const item = (c: { nombre: string; monto: number }) => ({ nombre: c.nombre, monto: c.monto });
                   return (
                     <>
-                      <tr><td><b>Licencias activas</b> <span className="td-sub">({nTotal} cuentas)</span></td><td className="num"><b>{usd(pnl.ingresos.licencias)}</b></td></tr>
-                      <tr><td className="td-sub">— Licencia estándar <span className="td-sub">({ld.estandar.n})</span> <VerClientesPop label="ver licencias" titulo="Licencia estándar (34/67/69)" items={ld.estandar.clientes.map(item)} /></td><td className="num td-sub">{usd(ld.estandar.ingreso)}</td></tr>
-                      <tr><td className="td-sub">— Con soporte <span className="td-sub">({ld.conSoporte.n})</span> <VerClientesPop label="ver clientes" titulo="Licencias con soporte" items={ld.conSoporte.clientes.map(item)} /></td><td className="num td-sub">{usd(ld.conSoporte.ingreso)}</td></tr>
+                      <tr><td><b>Licencias cobradas (mes)</b></td><td className="num"><b>{usd(pnl.ingresos.licencias)}</b></td></tr>
+                      <tr><td className="td-sub">— Licencia estándar <span className="td-sub">({ld.estandar.n})</span> <VerClientesPop label="ver licencias" titulo="Licencia estándar (34/67/69)" items={ld.estandar.clientes.map(item)} /></td><td className="num td-sub">{usd(ld.estandar.total)}</td></tr>
+                      <tr><td className="td-sub">— Con soporte <span className="td-sub">({ld.conSoporte.n})</span> <VerClientesPop label="ver clientes" titulo="Con soporte (119 / 157 / …)" items={ld.conSoporte.clientes.map(item)} /></td><td className="num td-sub">{usd(ld.conSoporte.total)}</td></tr>
                       <tr><td className="td-sub">— Agencia <span className="td-sub">({ld.agencia.n})</span> · incluida en marketing <VerClientesPop label="ver" titulo="Agencia (licencia incluida en marketing)" items={ld.agencia.clientes.map((c) => ({ nombre: c.nombre }))} /></td><td className="num td-sub">{usd(0)}</td></tr>
                     </>
                   );
@@ -122,7 +121,7 @@ export default async function PnLDashboard() {
                 <tr><td>API vendida · ganancia $2 c/u <span className="td-sub">({pnl.ingresos.apiVendidaCuentas} cuentas)</span></td><td className="num">{usd(pnl.ingresos.apiVendida)}</td></tr>
                 <tr><td>Reselling reportado</td><td className="num">{usd(pnl.ingresos.reselling)}</td></tr>
               </tbody></table>
-              <p className="foot" style={{ marginTop: 8 }}>Las <b>licencias activas</b> cuentan todas las cuentas (estándar + soporte + agencia = cuentas activas). El monto es el ingreso de licencia del mes; los que este mes están <b>en servicio</b> cobran el servicio (ver <b>Servicios</b>), no su base. El <b>reselling</b> se reporta en <b>Facturación → otros ingresos</b> (categoría “reselling”); aquí se refleja solo.</p>
+              <p className="foot" style={{ marginTop: 8 }}>Cada cobro cuenta una sola vez en su ítem: los que este mes están <b>en servicio</b> (Agente IA mes 1, Reactivación) salen en <b>Servicios</b>, no en Licencias; el <b>soporte</b> (Agente IA mes 3, 119/157…) sale en Con soporte. Un cliente con dos cobros (p. ej. reactivación + soporte) aparece en ambos ítems con montos distintos. El <b>reselling</b> se reporta en <b>Facturación → otros ingresos</b>; aquí se refleja solo.</p>
             </section>
 
             <section className="card">

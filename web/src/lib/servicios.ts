@@ -16,6 +16,13 @@ export interface MesServicio {
   valor: number;
   estado: EstadoMes;
   concepto: string;
+  /**
+   * Cómo cuenta ese mes en el P&L:
+   *  - "servicio": ingreso por servicio (Agente IA mes 1, Reactivación cualquier mes, Level Up mes 1).
+   *  - "soporte": ya es la mensualidad de soporte (Agente IA mes 3).
+   *  - "garantia": mes sin cobro ($0).
+   */
+  categoria: "servicio" | "soporte" | "garantia";
 }
 
 export const SERVICIO_LABEL: Record<TipoServicio, string> = {
@@ -44,22 +51,25 @@ export function calendarioServicio(
   const m1 = precioMes1 != null ? precioMes1 : PRECIO_MES1_ESTANDAR[tipo];
   switch (tipo) {
     case "agente_ai":
+      // Mes 1 = servicio (full). Mes 2 = garantía ($0). Mes 3 EN ADELANTE ya es la
+      // mensualidad de SOPORTE (nativo $157, o el soporte negociado: 119, etc.).
       return [
-        { offset: 0, valor: m1, estado: "activo", concepto: "Agente IA — mes 1" },
-        { offset: 1, valor: 0, estado: "garantia", concepto: "Garantía (sin licencia; API la asume Leadtion)" },
-        { offset: 2, valor: soporteValor ?? 119, estado: "activo", concepto: "Soporte (mes 3)" },
+        { offset: 0, valor: m1, estado: "activo", concepto: "Agente IA — mes 1", categoria: "servicio" },
+        { offset: 1, valor: 0, estado: "garantia", concepto: "Garantía (sin licencia; API la asume Leadtion)", categoria: "garantia" },
+        { offset: 2, valor: soporteValor ?? 157, estado: "activo", concepto: "Soporte (desde mes 3)", categoria: "soporte" },
       ];
     case "reactivacion":
+      // Los 3 meses son SERVICIO (reactivación).
       return [
-        { offset: 0, valor: m1, estado: "activo", concepto: "Reactivación — mes 1" },
-        { offset: 1, valor: 197, estado: "activo", concepto: "Reactivación — mes 2" },
-        { offset: 2, valor: 197, estado: "activo", concepto: "Reactivación — mes 3" },
+        { offset: 0, valor: m1, estado: "activo", concepto: "Reactivación — mes 1", categoria: "servicio" },
+        { offset: 1, valor: 197, estado: "activo", concepto: "Reactivación — mes 2", categoria: "servicio" },
+        { offset: 2, valor: 197, estado: "activo", concepto: "Reactivación — mes 3", categoria: "servicio" },
       ];
     case "level_up":
       // Mes 1 $497 (o el precio negociado). Del mes 2 en adelante el cliente elige
       // soporte (cualquiera) o se queda sin soporte; se registra manualmente.
       return [
-        { offset: 0, valor: m1, estado: "activo", concepto: "Level Up — mes 1" },
+        { offset: 0, valor: m1, estado: "activo", concepto: "Level Up — mes 1", categoria: "servicio" },
       ];
     default:
       return [];
