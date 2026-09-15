@@ -21,10 +21,17 @@ export interface PnL {
   tasa: { cop: number; enVivo: boolean };
   ingresos: {
     licencias: number;
-    /** Licencias activas del mes separadas: estándar ($69) vs con soporte. */
+    /**
+     * Membresía por tipo de licencia base. Cada cuenta Leadtion activa cuenta en
+     * EXACTAMENTE una categoría → estandar.n + conSoporte.n + agencia.n = cuentas
+     * activas. `total` = valor base de cartera (agencia = 0, va en el marketing).
+     * `enServicio` marca los que este mes están en ventana de servicio (su cobro
+     * del mes está en Servicios, no en la base).
+     */
     licenciasDetalle: {
-      puras: { n: number; total: number; clientes: { nombre: string }[] };
-      conSoporte: { n: number; total: number; clientes: { nombre: string; monto: number }[] };
+      estandar: { n: number; total: number; ingreso: number; clientes: { nombre: string; monto: number; enServicio: boolean }[] };
+      conSoporte: { n: number; total: number; ingreso: number; clientes: { nombre: string; monto: number; enServicio: boolean }[] };
+      agencia: { n: number; total: number; clientes: { nombre: string }[] };
     };
     servicios: {
       agente_ai: number; reactivacion: number; level_up: number; total: number;
@@ -42,13 +49,19 @@ export interface PnL {
   cuentasActivas: number;
 }
 
-export type TipoLineaLeadtion = "estandar" | "soporte" | "servicio" | "garantia";
+export type TipoLineaLeadtion = "estandar" | "soporte";
 export interface LineaLeadtion {
   clienteId: number;
   nombre: string;
-  tipo: TipoLineaLeadtion;
+  esAgencia: boolean;
+  /** Licencia base del cliente (siempre, aunque esté en servicio o sea agencia). */
+  baseTipo: TipoLineaLeadtion;
+  baseValor: number;
+  /** Este mes está dentro de la ventana de un servicio (cobra el servicio, no la base). */
+  enServicio: boolean;
+  /** Ingreso REAL del mes: servicio si está en ventana; base si no; 0 si agencia. */
   valor: number;
-  /** De dónde salió el valor (para auditar la clasificación). */
+  /** De dónde salió el valor base (para auditar la clasificación). */
   fuenteValor?: string;
 }
 
@@ -107,27 +120,30 @@ export async function proyeccionLeadtionMes(mes: string): Promise<LineaLeadtion[
     const act = c.act ? String(c.act) : null;
     if (act != null && mes < act) continue; // aún no activo ese mes
 
-    const svc = svcDe.get(id);
-    if (svc !== undefined) {
-      lineas.push({ clienteId: id, nombre, tipo: svc > 0 ? "servicio" : "garantia", valor: round2(svc), fuenteValor: "calendario servicio" });
-      continue;
-    }
-    if (c.es_agencia) continue; // agencia: la licencia va incluida en el marketing
-
+    const esAgencia = Boolean(c.es_agencia);
     const licgen = Number(c.licgen);
     const sopVal = Number(c.sop);
     const sopInd = sopIndDe.get(id) ?? 0;
     const sopExplicito = sopInd > 0 ? sopInd : (sopVal > 0 ? sopVal : 0);
+
+    // Licencia base (siempre se calcula, aunque esté en servicio o sea agencia).
+    let baseTipo: TipoLineaLeadtion, baseValor: number, fuente: string;
     if (sopExplicito > 0) {
-      // Tiene un soporte real asignado → con soporte.
-      lineas.push({ clienteId: id, nombre, tipo: "soporte", valor: round2(sopExplicito), fuenteValor: sopInd > 0 ? "cliente_soportes" : "soporte_valor" });
+      baseTipo = "soporte"; baseValor = round2(sopExplicito);
+      fuente = sopInd > 0 ? "cliente_soportes" : "soporte_valor";
     } else if (licgen > 0) {
-      // Clasifica por el valor de la licencia: 34/67/69 = estándar; mayor = soporte.
-      lineas.push({ clienteId: id, nombre, tipo: licgen <= 69 ? "estandar" : "soporte", valor: round2(licgen), fuenteValor: "valor_licencia_general" });
+      // 34/67/69 = estándar; mayor = soporte.
+      baseTipo = licgen <= 69 ? "estandar" : "soporte"; baseValor = round2(licgen);
+      fuente = "valor_licencia_general";
     } else {
-      // Sin valor → base estándar 69 (nunca queda vacío).
-      lineas.push({ clienteId: id, nombre, tipo: "estandar", valor: 69, fuenteValor: "base 69" });
+      baseTipo = "estandar"; baseValor = 69; fuente = "base 69";
     }
+
+    const svc = svcDe.get(id);
+    const enServicio = svc !== undefined;
+    // Ingreso real del mes: servicio si está en ventana; base si no; 0 si agencia.
+    const valor = enServicio ? round2(svc) : (esAgencia ? 0 : baseValor);
+    lineas.push({ clienteId: id, nombre, esAgencia, baseTipo, baseValor, enServicio, valor, fuenteValor: fuente });
   }
   return lineas;
 }
@@ -153,7 +169,7 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
     consulta(`select clave, valor from public.config_negocio`),
     // Reselling: ahora se reporta en Facturación → otros ingresos (categoría 'reselling').
     consulta(`select coalesce(sum(valor_usd),0)::float monto from public.ingreso_mensual where categoria='reselling' and to_char(mes,'YYYY-MM')=$1`, [mes]),
-    consulta(`select count(*) filter (where estado_actual='activo')::int n from public.clientes`),
+    consulta(`select count(*) filter (where estado_actual='activo' and es_leadtion)::int n from public.clientes`),
     consulta(`select coalesce(sum(bono_reactivacion),0)::float t from public.clientes where bono_reactivacion is not null and to_char(fecha_activacion,'YYYY-MM')=$1`, [mes]),
     dashboardAfiliados(now),
     cargarResultados(finMes),
@@ -210,21 +226,37 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
   const serviciosTotal = round2(serv.agente_ai + serv.reactivacion + serv.level_up);
   // Licencias activas del mes (proyectadas), separadas en puras ($69) y con soporte.
   const porNombre = (a: LineaLeadtion, b: LineaLeadtion) => a.nombre.localeCompare(b.nombre, "es");
-  const purasLead = lineasLead.filter((l) => l.tipo === "estandar").sort(porNombre);
-  const conSopLead = lineasLead.filter((l) => l.tipo === "soporte").sort(porNombre);
+  // Roster de membresía: cada cuenta activa cae en UNA categoría por su licencia
+  // base → estandar.n + conSoporte.n + agencia.n = cuentas activas.
+  const estandarLead = lineasLead.filter((l) => !l.esAgencia && l.baseTipo === "estandar").sort(porNombre);
+  const conSopLead = lineasLead.filter((l) => !l.esAgencia && l.baseTipo === "soporte").sort(porNombre);
+  const agenciaLead = lineasLead.filter((l) => l.esAgencia).sort(porNombre);
+  const rosterCli = (l: LineaLeadtion) => ({ nombre: l.nombre, monto: l.baseValor, enServicio: l.enServicio });
+  const ingresoBase = (arr: LineaLeadtion[]) => round2(arr.filter((l) => !l.enServicio).reduce((s, l) => s + l.baseValor, 0));
   const licenciasDetalle = {
-    puras: {
-      n: purasLead.length,
-      total: round2(purasLead.reduce((s, l) => s + l.valor, 0)),
-      clientes: purasLead.map((l) => ({ nombre: l.nombre })),
+    estandar: {
+      n: estandarLead.length,
+      total: round2(estandarLead.reduce((s, l) => s + l.baseValor, 0)),
+      ingreso: ingresoBase(estandarLead),
+      clientes: estandarLead.map(rosterCli),
     },
     conSoporte: {
       n: conSopLead.length,
-      total: round2(conSopLead.reduce((s, l) => s + l.valor, 0)),
-      clientes: conSopLead.map((l) => ({ nombre: l.nombre, monto: l.valor })),
+      total: round2(conSopLead.reduce((s, l) => s + l.baseValor, 0)),
+      ingreso: ingresoBase(conSopLead),
+      clientes: conSopLead.map(rosterCli),
+    },
+    agencia: {
+      n: agenciaLead.length,
+      total: 0,
+      clientes: agenciaLead.map((l) => ({ nombre: l.nombre })),
     },
   };
-  const licencias = round2(licenciasDetalle.puras.total + licenciasDetalle.conSoporte.total);
+  // Ingreso de licencias del mes (para el total): base de las cuentas que NO están
+  // en ventana de servicio (las que sí, su cobro va en Servicios) y no son agencia.
+  const licencias = round2(
+    lineasLead.filter((l) => !l.esAgencia && !l.enServicio).reduce((s, l) => s + l.baseValor, 0),
+  );
   // Ganancia real de las APIs vendidas: precio cobrado − $10 de costo por cada una.
   const apiVendida = round2(apiVendidaIngreso - apiVendidaCuentas * 10);
   const reselling = round2(Number(reselRows[0]?.monto ?? 0));
