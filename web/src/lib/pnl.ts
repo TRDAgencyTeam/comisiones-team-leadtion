@@ -78,7 +78,14 @@ export interface LineaLeadtion {
  *    valor ≤ 69 (34/67/69) = "estandar"; sin valor = base $69 estándar.
  *  - `es_agencia` → un cargo "agencia" de $0 (la licencia va incluida en el marketing).
  */
-export async function proyeccionLeadtionMes(mes: string): Promise<LineaLeadtion[]> {
+interface DatosLeadtion {
+  clientes: Record<string, unknown>[];
+  servicios: Record<string, unknown>[];
+  sopIndDe: Map<number, number>;
+}
+
+/** Trae UNA sola vez el maestro Leadtion (para clasificar uno o varios meses). */
+async function fetchDatosLeadtion(): Promise<DatosLeadtion> {
   const [clientes, servicios, soportesInd] = await Promise.all([
     consulta(`select id, nombre, coalesce(es_agencia,false) es_agencia,
                 coalesce(soporte_valor,0) sop, coalesce(valor_licencia_general,0) licgen,
@@ -88,15 +95,17 @@ export async function proyeccionLeadtionMes(mes: string): Promise<LineaLeadtion[
                 from public.cliente_servicios`),
     consulta(`select cliente_id, valor from public.cliente_soportes where hasta is null`),
   ]);
-
   const sopIndDe = new Map<number, number>();
   for (const s of soportesInd) sopIndDe.set(Number(s.cliente_id), Number(s.valor));
+  return { clientes, servicios, sopIndDe };
+}
 
-  // Cargos de ventana de servicio que caen en `mes`, por cliente.
+/** Clasifica los cargos Leadtion de un mes a partir de datos ya cargados (sin DB). */
+function clasificarCargosMes(d: DatosLeadtion, mes: string): LineaLeadtion[] {
   interface Cargo { categoria: "servicio" | "soporte"; valor: number; tipoServicio: TipoServicio }
   const cargosDe = new Map<number, Cargo[]>();
   const enVentana = new Set<number>(); // tiene alguna entrada de calendario este mes (incl. garantía)
-  for (const sv of servicios) {
+  for (const sv of d.servicios) {
     const tipo = String(sv.tipo_servicio) as TipoServicio;
     const cal = calendarioServicio(
       tipo,
@@ -116,7 +125,7 @@ export async function proyeccionLeadtionMes(mes: string): Promise<LineaLeadtion[
   }
 
   const lineas: LineaLeadtion[] = [];
-  for (const c of clientes) {
+  for (const c of d.clientes) {
     const id = Number(c.id);
     const nombre = String(c.nombre);
     const act = c.act ? String(c.act) : null;
@@ -141,7 +150,7 @@ export async function proyeccionLeadtionMes(mes: string): Promise<LineaLeadtion[
     // Fuera de ventana → mensualidad base por valor.
     const licgen = Number(c.licgen);
     const sopVal = Number(c.sop);
-    const sopInd = sopIndDe.get(id) ?? 0;
+    const sopInd = d.sopIndDe.get(id) ?? 0;
     const sopExplicito = sopInd > 0 ? sopInd : (sopVal > 0 ? sopVal : 0);
     if (sopExplicito > 0) {
       lineas.push({ clienteId: id, nombre, esAgencia: false, categoria: "soporte", valor: round2(sopExplicito), fuenteValor: sopInd > 0 ? "cliente_soportes" : "soporte_valor" });
@@ -152,6 +161,36 @@ export async function proyeccionLeadtionMes(mes: string): Promise<LineaLeadtion[
     }
   }
   return lineas;
+}
+
+export async function proyeccionLeadtionMes(mes: string): Promise<LineaLeadtion[]> {
+  return clasificarCargosMes(await fetchDatosLeadtion(), mes);
+}
+
+export interface IngresoLeadtionMes { mes: string; licencia: number; servicio: number; total: number }
+
+/**
+ * Ingreso Leadtion de los últimos `nMeses` con el MISMO modelo de cargos que el
+ * dashboard: licencia = estándar + soporte; servicio = servicios (Agente IA mes 1,
+ * Reactivación, Level Up mes 1). El mes que un cliente está en servicio NO aporta
+ * licencia (el valor full del servicio ya la incluye). Una sola carga de datos.
+ */
+export async function ingresosLeadtionPorMes(nMeses = 12): Promise<IngresoLeadtionMes[]> {
+  const d = await fetchDatosLeadtion();
+  const hoy = new Date();
+  const out: IngresoLeadtionMes[] = [];
+  for (let i = nMeses - 1; i >= 0; i--) {
+    const dt = new Date(Date.UTC(hoy.getFullYear(), hoy.getMonth() - i, 1));
+    const mes = `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}`;
+    const lineas = clasificarCargosMes(d, mes);
+    let licencia = 0, servicio = 0;
+    for (const l of lineas) {
+      if (l.categoria === "servicio") servicio += l.valor;
+      else if (l.categoria === "estandar" || l.categoria === "soporte") licencia += l.valor;
+    }
+    out.push({ mes, licencia: round2(licencia), servicio: round2(servicio), total: round2(licencia + servicio) });
+  }
+  return out;
 }
 
 export async function calcularPnL(now = new Date()): Promise<PnL> {

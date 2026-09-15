@@ -1,5 +1,4 @@
-import { calcularPnL } from "@/lib/pnl";
-import { ingresosPorMes, type IngresoMes } from "@/lib/clientes";
+import { calcularPnL, ingresosLeadtionPorMes, type IngresoLeadtionMes } from "@/lib/pnl";
 import { SERVICIO_LABEL } from "@/lib/servicios";
 import { BarChart } from "@/components/BarChart";
 import { VerClientesPop } from "@/components/VerClientesPop";
@@ -14,9 +13,9 @@ const soloMes = (m: string) => { const [, mm] = m.split("-").map(Number); return
 
 export default async function PnLDashboard() {
   let pnl = null, error: string | null = null;
-  let ingresos: IngresoMes[] = [];
+  let ingresos: IngresoLeadtionMes[] = [];
   try {
-    [pnl, ingresos] = await Promise.all([calcularPnL(), ingresosPorMes(12)]);
+    [pnl, ingresos] = await Promise.all([calcularPnL(), ingresosLeadtionPorMes(12)]);
   } catch (e) { error = e instanceof Error ? e.message : String(e); }
 
   return (

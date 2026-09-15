@@ -269,16 +269,30 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
   // curso/futuro; los meses pasados quedan cuadrados al Excel oficial.
   let leadtion = 0;
   if (mes.slice(0, 7) >= mesActualISO()) {
+    // Excluye a los facturados por cliente_id Y por nombre normalizado (las facturas
+    // viejas pueden no tener cliente_id → si no, se contaría doble).
     const [lineas, facturados] = await Promise.all([
       proyeccionLeadtionMes(mes.slice(0, 7)),
       consulta(
-        `select distinct cliente_id from public.factura_mensual
-          where to_char(mes,'YYYY-MM') = $1 and estado <> 'anulado' and cliente_id is not null`,
+        `select cliente_id,
+                translate(lower(trim(cliente_nombre)),'áéíóúüñ','aeiouun') nom
+           from public.factura_mensual
+          where to_char(mes,'YYYY-MM') = $1 and estado <> 'anulado'`,
         [mes.slice(0, 7)],
       ),
     ]);
-    const conFactura = new Set(facturados.map((f) => Number((f as Record<string, unknown>).cliente_id)));
-    leadtion = r2(lineas.filter((l) => !conFactura.has(l.clienteId)).reduce((s, l) => s + l.valor, 0));
+    const conFacturaId = new Set<number>();
+    const conFacturaNom = new Set<string>();
+    for (const f of facturados as Record<string, unknown>[]) {
+      if (f.cliente_id != null) conFacturaId.add(Number(f.cliente_id));
+      if (f.nom) conFacturaNom.add(String(f.nom));
+    }
+    const norm = (s: string) => s.trim().toLowerCase().replace(/[áàä]/g, "a").replace(/[éèë]/g, "e").replace(/[íìï]/g, "i").replace(/[óòö]/g, "o").replace(/[úùü]/g, "u").replace(/ñ/g, "n");
+    leadtion = r2(
+      lineas
+        .filter((l) => !conFacturaId.has(l.clienteId) && !conFacturaNom.has(norm(l.nombre)))
+        .reduce((s, l) => s + l.valor, 0),
+    );
   }
   const totalIngresos = r2(clientesUsa + clientesCol + otrosTotal + leadtion);
 

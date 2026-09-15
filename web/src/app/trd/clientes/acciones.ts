@@ -54,9 +54,11 @@ async function registrarCostoTercerizacion(mes: string, servicioClave: string | 
 
 const SERVICIOS_LEADTION = ["agente_ai", "reactivacion", "level_up"];
 
-/** Si el servicio facturado es de Leadtion y el cliente es del maestro, registra el
- *  servicio en Membresías (cliente_servicios) para que corra su flujo de cobros
- *  (mes 1/2/3) y aparezca en el módulo. Idempotente por (cliente, tipo, mes). */
+/** Si el servicio facturado es de Leadtion (Agente IA / Reactivación / Level Up) y
+ *  el cliente es del maestro, registra el servicio en Membresías (cliente_servicios)
+ *  para que corra su flujo de cobros y aparezca en el módulo, y MARCA al cliente como
+ *  miembro Leadtion reflejando el plan en su hoja de vida (es_leadtion, plan_tipo,
+ *  tipo_cliente). Idempotente por (cliente, tipo, mes). */
 async function registrarServicioLeadtion(clienteId: number | null, servicioClave: string | null, mes: string, monto: number) {
   if (!clienteId || !servicioClave || !SERVICIOS_LEADTION.includes(servicioClave)) return;
   const mesIni = `${mes.slice(0, 7)}-01`;
@@ -64,13 +66,45 @@ async function registrarServicioLeadtion(clienteId: number | null, servicioClave
     `select 1 from public.cliente_servicios where cliente_id=$1 and tipo_servicio=$2 and mes_inicio=$3 limit 1`,
     [clienteId, servicioClave, mesIni],
   );
-  if (dup.length) return;
+  // Comprar un servicio Leadtion vuelve miembro al cliente y refleja el plan en su
+  // ficha (sin quitarle el flag de agencia si ya lo era: la agencia manda su $0).
   await consulta(
-    `insert into public.cliente_servicios (cliente_id, tipo_servicio, mes_inicio, fecha_compra, precio_mes1)
-     values ($1,$2,$3,$3,$4)`,
-    [clienteId, servicioClave, mesIni, monto > 0 ? monto : null],
+    `update public.clientes
+        set es_leadtion = true, plan_tipo = $2,
+            tipo_cliente = case when coalesce(es_agencia,false) then tipo_cliente else 'servicio' end,
+            estado_actualizado_en = now()
+      where id = $1`,
+    [clienteId, servicioClave],
   );
+  if (!dup.length) {
+    await consulta(
+      `insert into public.cliente_servicios (cliente_id, tipo_servicio, mes_inicio, fecha_compra, precio_mes1)
+       values ($1,$2,$3,$3,$4)`,
+      [clienteId, servicioClave, mesIni, monto > 0 ? monto : null],
+    );
+  }
   await recomputarPagosDeCliente(clienteId);
+  revalidatePath(`/membresias/${clienteId}`);
+  revalidatePath("/membresias/clientes");
+  revalidatePath("/membresias/dashboard");
+  revalidatePath("/trd/clientes");
+}
+
+/** Un plan de marketing con Leadtion incluida (catálogo `incluye_leadtion`) también
+ *  vuelve miembro Leadtion al cliente, pero con la licencia INCLUIDA ($0, la paga el
+ *  marketing). Social media / SEO / hosting / etc. NO aplican. */
+async function marcarMiembroPorMarketing(clienteId: number | null, servicioClave: string | null) {
+  if (!clienteId || !servicioClave || SERVICIOS_LEADTION.includes(servicioClave)) return;
+  const cat = await consulta(`select coalesce(incluye_leadtion,false) il from public.servicio_catalogo where clave=$1`, [servicioClave]);
+  if (!cat.length || !Boolean((cat[0] as Record<string, unknown>).il)) return;
+  await consulta(
+    `update public.clientes
+        set es_leadtion = true, es_agencia = true, incluye_crm_en_marketing = true,
+            valor_licencia_general = 0, soporte_valor = 0,
+            agencia_desde = coalesce(agencia_desde, current_date), estado_actualizado_en = now()
+      where id = $1`,
+    [clienteId],
+  );
   revalidatePath(`/membresias/${clienteId}`);
   revalidatePath("/membresias/clientes");
   revalidatePath("/membresias/dashboard");
@@ -95,6 +129,8 @@ export async function crearFactura(formData: FormData) {
   await registrarCostoTercerizacion(mes, servicioClave, Number(formData.get("personas") ?? 0));
   // Si es un servicio Leadtion de un cliente del maestro, sincroniza Membresías.
   await registrarServicioLeadtion(d.clienteId, servicioClave, mes, d.facturado);
+  // Si es un plan de marketing con Leadtion incluida, lo vuelve miembro (licencia $0).
+  await marcarMiembroPorMarketing(d.clienteId, servicioClave);
   revalidatePath("/trd/clientes");
   revalidatePath("/trd/clientes/facturacion");
   redirect(back);
@@ -185,6 +221,9 @@ export async function crearClienteCascada(formData: FormData) {
     }
     // Marca Leadtion si el servicio lo lleva (nunca lo quita a un miembro existente).
     if (incluyeLeadtion) await consulta(`update public.clientes set es_leadtion = true where id = $1`, [clienteId]);
+    // Si el servicio elegido es un servicio Leadtion (Agente IA / Reactivación / Level Up),
+    // regístralo en Membresías para que corra su flujo de cobros y refleje el plan.
+    if (planLeadtion) await registrarServicioLeadtion(clienteId, planLeadtion, mes, precios[0] || 0);
     for (const colId of asignados) {
       await consulta(`insert into public.cliente_colaboradores (cliente_id, colaborador_id) values ($1,$2) on conflict do nothing`, [clienteId, colId]);
     }
@@ -200,7 +239,8 @@ export async function crearClienteCascada(formData: FormData) {
       reserva, fechaInicioReal: null,
       valorLicencia: esAgencia ? 0 : 69,
       asignados, afiliadoRef, origen: "Madre / Clientes",
-      esLeadtion: incluyeLeadtion,
+      // Miembro Leadtion si el plan de marketing lo incluye O si compró un servicio Leadtion.
+      esLeadtion: incluyeLeadtion || !!planLeadtion,
     };
     clienteId = await crearClienteCompleto(datos);
   }
@@ -359,7 +399,9 @@ export async function guardarServiciosFactura(formData: FormData) {
   const fmes = fr[0]?.mes ? String(fr[0]!.mes) : "";
   if (cid && fmes) {
     for (let i = 0; i < conceptos.length; i++) {
-      if (SERVICIOS_LEADTION.includes(claves[i] || "")) await registrarServicioLeadtion(cid, claves[i]!, fmes, montos[i] ?? 0);
+      const clave = claves[i] || "";
+      if (SERVICIOS_LEADTION.includes(clave)) await registrarServicioLeadtion(cid, clave, fmes, montos[i] ?? 0);
+      else await marcarMiembroPorMarketing(cid, clave);
     }
   }
   revalidatePath("/trd/clientes");
