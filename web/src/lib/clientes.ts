@@ -161,11 +161,11 @@ export async function estadisticasClientes(): Promise<EstadisticasClientes> {
          count(*) filter (where estado_actual='cancelado')::int cancelados,
          count(*) filter (where estado_actual='pausado')::int pausados,
          count(*) filter (where incluye_crm_en_marketing)::int marketing
-       from public.clientes`,
+       from public.clientes where es_leadtion`,
     ),
     consulta(
       `select id, nombre, fecha_activacion from public.clientes
-        where estado_actual='activo' and fecha_activacion is not null
+        where es_leadtion and estado_actual='activo' and fecha_activacion is not null
         order by fecha_activacion asc limit 6`,
     ),
   ]);
@@ -190,11 +190,12 @@ export async function listarClientes(
 ): Promise<ClienteResumen[]> {
   const q = (opts.q ?? "").trim();
   const dir = opts.orden === "antiguo" ? "asc" : "desc";
+  // CS solo gestiona clientes Leadtion (los que tienen un producto que soportar).
   const params: unknown[] = [];
-  let where = "";
+  let where = "where es_leadtion";
   if (q) {
     params.push(`%${q}%`);
-    where = `where nombre ilike $1`;
+    where += ` and nombre ilike $1`;
   }
   const [rows, comision] = await Promise.all([
     consulta(
@@ -260,7 +261,7 @@ export async function clientesPorMes(): Promise<ClientesPorMes[]> {
             count(*)::int total,
             count(*) filter (where estado_actual='activo')::int activos
        from public.clientes
-      where fecha_activacion is not null
+      where es_leadtion and fecha_activacion is not null
       group by 1 order by 1 desc`,
   );
   return rows.map((r) => ({
@@ -268,6 +269,22 @@ export async function clientesPorMes(): Promise<ClientesPorMes[]> {
     total: Number(r.total),
     activos: Number(r.activos),
   }));
+}
+
+/** Equipo CS disponible (fundadores + nuevos activos) y quiénes están asignados a
+ *  este cliente (para el editor de "personas a cargo"). */
+export async function equipoYAsignados(
+  clienteId: number,
+): Promise<{ equipo: { id: number; nombre: string }[]; asignados: number[] }> {
+  const [eq, asig] = await Promise.all([
+    consulta(`select id, nombre from public.colaboradores
+               where activo and categoria in ('fundador','nuevo') order by nombre`),
+    consulta(`select colaborador_id from public.cliente_colaboradores where cliente_id=$1`, [clienteId]),
+  ]);
+  return {
+    equipo: eq.map((r) => ({ id: Number(r.id), nombre: String(r.nombre) })),
+    asignados: asig.map((r) => Number(r.colaborador_id)),
+  };
 }
 
 /** Ficha completa de un cliente: datos, historial mensual y comisión al equipo. */

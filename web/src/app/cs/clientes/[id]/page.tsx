@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { obtenerCliente, fechaPago, mesLargo, fechaLarga } from "@/lib/clientes";
-import { cambiarEstadoCliente } from "../acciones";
+import { obtenerCliente, equipoYAsignados, fechaPago, mesLargo, fechaLarga } from "@/lib/clientes";
+import { cambiarEstadoCliente, guardarAsignados } from "../acciones";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +33,7 @@ export default async function FichaClientePage({
 
   const c = await obtenerCliente(Number(id), corte);
   if (!c) notFound();
+  const { equipo, asignados } = await equipoYAsignados(Number(id));
 
   const hoy = new Date().toISOString().slice(0, 10);
   const badge = ESTADO_MES[c.estado] ?? { txt: c.estado, cls: "em-gris" };
@@ -65,6 +66,30 @@ export default async function FichaClientePage({
           <div><span className="dato-label">Servicios</span>{c.serviciosAdicionales ?? "—"}</div>
         </div>
         {c.notas && <p className="notas">{c.notas}</p>}
+      </section>
+
+      {/* --- Equipo de Customer Success a cargo (comisionan) --- */}
+      <section className="card">
+        <div className="card-head"><span className="who">Equipo a cargo (CS)</span></div>
+        {equipo.length === 0 ? (
+          <p className="empty">No hay colaboradores de CS activos para asignar.</p>
+        ) : (
+          <form action={guardarAsignados} className="asignados-form">
+            <input type="hidden" name="id" value={c.id} />
+            <div className="asignados-grid">
+              {equipo.map((e) => (
+                <label key={e.id} className="asignado-chk">
+                  <input type="checkbox" name="asignados" value={e.id} defaultChecked={asignados.includes(e.id)} />
+                  <span>{e.nombre}</span>
+                </label>
+              ))}
+            </div>
+            <button type="submit" className="btn-primary" style={{ marginTop: 12 }}>Guardar equipo</button>
+            <p className="foot" style={{ marginTop: 8 }}>
+              Marca quién atiende a este cliente. Se sincroniza al instante con Comisiones CS y Membresías.
+            </p>
+          </form>
+        )}
       </section>
 
       <section className="card">

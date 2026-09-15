@@ -402,6 +402,12 @@ a.mini-stat.activo { background: rgba(0, 229, 204, 0.12); outline-color: rgba(0,
   font-size: 0.82rem; text-decoration: none; }
 .pop-vertodos:hover { text-decoration: underline; }
 @media (max-width: 620px) { .pop { left: auto; right: 0; min-width: 240px; } }
+/* Editor de equipo CS a cargo (checkboxes) */
+.asignados-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.asignado-chk { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px;
+  border: 1px solid var(--border); border-radius: 10px; cursor: pointer; font-size: 0.9rem; }
+.asignado-chk input { accent-color: var(--accent); }
+
 /* Pop-up por click (ver clientes en el dashboard) */
 .verpop-wrap { position: relative; display: inline; }
 .verpop-btn { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; }

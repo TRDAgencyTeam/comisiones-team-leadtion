@@ -136,6 +136,31 @@ export async function actualizarCliente(formData: FormData) {
 }
 
 /**
+ * Reemplaza el equipo de Customer Success a cargo del cliente (personas que
+ * comisionan). Sincroniza al instante con Comisiones CS y con Membresías.
+ * Sirve para corregir cuando al crear el cliente no se asignó a nadie.
+ */
+export async function guardarAsignados(formData: FormData) {
+  await soloAdmin();
+  const id = Number(formData.get("id"));
+  const asignados = formData.getAll("asignados").map((v) => Number(v)).filter(Boolean);
+  await consulta(`delete from public.cliente_colaboradores where cliente_id=$1`, [id]);
+  for (const colId of asignados) {
+    await consulta(
+      `insert into public.cliente_colaboradores (cliente_id, colaborador_id)
+       values ($1,$2) on conflict do nothing`,
+      [id, colId],
+    );
+  }
+  revalidatePath(`/cs/clientes/${id}`);
+  revalidatePath("/cs/clientes");
+  revalidatePath("/cs");
+  revalidatePath(`/membresias/${id}`);
+  revalidatePath("/membresias/clientes");
+  redirect(`/cs/clientes/${id}`);
+}
+
+/**
  * Cambia el estado del cliente: cancelar, pausar/congelar o reactivar.
  * Registra el motivo y lo guarda en el historial para auditoría futura.
  */
