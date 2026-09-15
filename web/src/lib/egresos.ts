@@ -213,7 +213,8 @@ export interface ResumenMes {
     clientesUsa: number;
     clientesCol: number;
     otros: IngresoRow[];
-    /** Ingreso de Leadtion (membresías + servicios) que NO está en Facturación. */
+    /** Ingreso Leadtion de membresías + soporte (licencias estándar y con soporte);
+     *  NO incluye servicios (esos se facturan por la LLC). = dato del dashboard. */
     leadtion: number;
     total: number;
     porFuente: { etiqueta: string; valor: number }[];
@@ -262,35 +263,17 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
   clientesUsa = r2(clientesUsa); clientesCol = r2(clientesCol);
   const otrosTotal = r2(otros.reduce((s, x) => s + x.valorUsd, 0));
 
-  // Ingreso de Leadtion que NO está en Facturación: proyección de licencias +
-  // servicios de cada cliente Leadtion ACTIVO que NO tiene factura ese mes (una
-  // licencia activa cuenta aunque su cobro aún no esté registrado). Así no se
-  // duplica con Facturación (los facturados se cuentan por ahí). Solo mes en
-  // curso/futuro; los meses pasados quedan cuadrados al Excel oficial.
+  // Ingreso Leadtion de MEMBRESÍAS + SOPORTE (licencias): estándar + con soporte de
+  // todas las cuentas activas. Es EXACTAMENTE el dato del dashboard de Membresías.
+  // NO incluye servicios (Agente IA / Reactivación): esos se facturan por la LLC y ya
+  // están en la Facturación del mes (contarlos aquí duplicaría). Las licencias/soporte
+  // nunca van en Facturación, así que no hay doble conteo. Solo mes en curso/futuro.
   let leadtion = 0;
   if (mes.slice(0, 7) >= mesActualISO()) {
-    // Excluye a los facturados por cliente_id Y por nombre normalizado (las facturas
-    // viejas pueden no tener cliente_id → si no, se contaría doble).
-    const [lineas, facturados] = await Promise.all([
-      proyeccionLeadtionMes(mes.slice(0, 7)),
-      consulta(
-        `select cliente_id,
-                translate(lower(trim(cliente_nombre)),'áéíóúüñ','aeiouun') nom
-           from public.factura_mensual
-          where to_char(mes,'YYYY-MM') = $1 and estado <> 'anulado'`,
-        [mes.slice(0, 7)],
-      ),
-    ]);
-    const conFacturaId = new Set<number>();
-    const conFacturaNom = new Set<string>();
-    for (const f of facturados as Record<string, unknown>[]) {
-      if (f.cliente_id != null) conFacturaId.add(Number(f.cliente_id));
-      if (f.nom) conFacturaNom.add(String(f.nom));
-    }
-    const norm = (s: string) => s.trim().toLowerCase().replace(/[áàä]/g, "a").replace(/[éèë]/g, "e").replace(/[íìï]/g, "i").replace(/[óòö]/g, "o").replace(/[úùü]/g, "u").replace(/ñ/g, "n");
+    const lineas = await proyeccionLeadtionMes(mes.slice(0, 7));
     leadtion = r2(
       lineas
-        .filter((l) => !conFacturaId.has(l.clienteId) && !conFacturaNom.has(norm(l.nombre)))
+        .filter((l) => l.categoria === "estandar" || l.categoria === "soporte")
         .reduce((s, l) => s + l.valor, 0),
     );
   }
@@ -321,7 +304,7 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
       porFuente: [
         { etiqueta: "Clientes USA", valor: clientesUsa },
         { etiqueta: "Clientes Colombia", valor: clientesCol },
-        { etiqueta: "Leadtion (membresías)", valor: leadtion },
+        { etiqueta: "Leadtion (membresías + soporte)", valor: leadtion },
         ...otros.map((o) => ({ etiqueta: o.concepto, valor: o.valorUsd })),
       ].filter((x) => x.valor > 0),
     },
