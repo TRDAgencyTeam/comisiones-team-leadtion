@@ -62,10 +62,10 @@ export interface LineaLeadtion {
  * Clientes), no en valores inventados:
  *  - dentro de una ventana de servicio (cliente_servicios) → "servicio"
  *    (o "garantia" si el calendario marca ese mes en $0);
- *  - `tipo_cliente='servicio'` fuera de ventana → "soporte": su valor recurrente
- *    (cliente_soportes indefinido → soporte_valor → valor_licencia_general → 69);
- *  - `tipo_cliente='estandar'` (o null) → "estandar": su `valor_licencia_general`
- *    real (67, 69, 34, 77…), NO un $69 fijo;
+ *  - fuera de ventana, la clasificación es por VALOR (regla del negocio):
+ *      · con soporte explícito (cliente_soportes / soporte_valor) → "soporte";
+ *      · si no, su `valor_licencia_general`: ≤ 69 (34/67/69) → "estandar";
+ *        > 69 (87/119/157…) → "soporte"; sin valor → base 69 estándar.
  *  - `es_agencia` → no genera línea (la licencia va incluida en el marketing).
  */
 export async function proyeccionLeadtionMes(mes: string): Promise<LineaLeadtion[]> {
@@ -117,15 +117,16 @@ export async function proyeccionLeadtionMes(mes: string): Promise<LineaLeadtion[
     const licgen = Number(c.licgen);
     const sopVal = Number(c.sop);
     const sopInd = sopIndDe.get(id) ?? 0;
-    if (String(c.tipo) === "servicio") {
-      // Cliente de servicio fuera de ventana → soporte/mantenimiento recurrente.
-      const valor = sopInd > 0 ? sopInd : (sopVal > 0 ? sopVal : (licgen > 0 ? licgen : 69));
-      const fuente = sopInd > 0 ? "cliente_soportes" : (sopVal > 0 ? "soporte_valor" : (licgen > 0 ? "valor_licencia_general" : "base 69"));
-      lineas.push({ clienteId: id, nombre, tipo: "soporte", valor: round2(valor), fuenteValor: fuente });
+    const sopExplicito = sopInd > 0 ? sopInd : (sopVal > 0 ? sopVal : 0);
+    if (sopExplicito > 0) {
+      // Tiene un soporte real asignado → con soporte.
+      lineas.push({ clienteId: id, nombre, tipo: "soporte", valor: round2(sopExplicito), fuenteValor: sopInd > 0 ? "cliente_soportes" : "soporte_valor" });
+    } else if (licgen > 0) {
+      // Clasifica por el valor de la licencia: 34/67/69 = estándar; mayor = soporte.
+      lineas.push({ clienteId: id, nombre, tipo: licgen <= 69 ? "estandar" : "soporte", valor: round2(licgen), fuenteValor: "valor_licencia_general" });
     } else {
-      // Licencia estándar → su valor real de licencia.
-      const valor = licgen > 0 ? licgen : 69;
-      lineas.push({ clienteId: id, nombre, tipo: "estandar", valor: round2(valor), fuenteValor: licgen > 0 ? "valor_licencia_general" : "base 69" });
+      // Sin valor → base estándar 69 (nunca queda vacío).
+      lineas.push({ clienteId: id, nombre, tipo: "estandar", valor: 69, fuenteValor: "base 69" });
     }
   }
   return lineas;
