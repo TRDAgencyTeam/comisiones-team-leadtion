@@ -42,12 +42,14 @@ export interface PnL {
   cuentasActivas: number;
 }
 
-export type TipoLineaLeadtion = "pura" | "soporte" | "servicio" | "garantia";
+export type TipoLineaLeadtion = "estandar" | "soporte" | "servicio" | "garantia";
 export interface LineaLeadtion {
   clienteId: number;
   nombre: string;
   tipo: TipoLineaLeadtion;
   valor: number;
+  /** De dónde salió el valor (para auditar la clasificación). */
+  fuenteValor?: string;
 }
 
 /**
@@ -55,16 +57,22 @@ export interface LineaLeadtion {
  *
  * No depende de que el cobro esté registrado en `pagos_mensuales`: una licencia
  * activa cuenta porque se cobrará tarde o temprano (según su fecha de corte),
- * salvo que se desactive en Membresías. Es la ÚNICA fuente de la clasificación:
- *  - dentro de una ventana de servicio → "servicio" (o "garantia" si es el mes $0);
- *  - fuera de ventana, con soporte activo → "soporte" (su valor recurrente);
- *  - fuera de ventana, sin soporte → "pura" ($69);
- *  - agencia con Leadtion incluida ($0) → no genera línea (se cobra por marketing).
+ * salvo que se desactive en Membresías. La clasificación se basa en campos que
+ * YA existen en el maestro de clientes (los mismos que muestra la lista de
+ * Clientes), no en valores inventados:
+ *  - dentro de una ventana de servicio (cliente_servicios) → "servicio"
+ *    (o "garantia" si el calendario marca ese mes en $0);
+ *  - `tipo_cliente='servicio'` fuera de ventana → "soporte": su valor recurrente
+ *    (cliente_soportes indefinido → soporte_valor → valor_licencia_general → 69);
+ *  - `tipo_cliente='estandar'` (o null) → "estandar": su `valor_licencia_general`
+ *    real (67, 69, 34, 77…), NO un $69 fijo;
+ *  - `es_agencia` → no genera línea (la licencia va incluida en el marketing).
  */
 export async function proyeccionLeadtionMes(mes: string): Promise<LineaLeadtion[]> {
   const [clientes, servicios, soportesInd] = await Promise.all([
-    consulta(`select id, nombre, coalesce(es_agencia,false) es_agencia, coalesce(soporte_valor,0) sop,
-                to_char(fecha_activacion,'YYYY-MM') act
+    consulta(`select id, nombre, coalesce(es_agencia,false) es_agencia,
+                coalesce(tipo_cliente,'estandar') tipo, coalesce(soporte_valor,0) sop,
+                coalesce(valor_licencia_general,0) licgen, to_char(fecha_activacion,'YYYY-MM') act
                 from public.clientes where estado_actual='activo' and es_leadtion`),
     consulta(`select cliente_id, tipo_servicio, to_char(mes_inicio,'YYYY-MM') mes_inicio, soporte_valor, precio_mes1
                 from public.cliente_servicios`),
@@ -101,12 +109,24 @@ export async function proyeccionLeadtionMes(mes: string): Promise<LineaLeadtion[
 
     const svc = svcDe.get(id);
     if (svc !== undefined) {
-      lineas.push({ clienteId: id, nombre, tipo: svc > 0 ? "servicio" : "garantia", valor: round2(svc) });
+      lineas.push({ clienteId: id, nombre, tipo: svc > 0 ? "servicio" : "garantia", valor: round2(svc), fuenteValor: "calendario servicio" });
       continue;
     }
-    const sop = Number(c.sop) > 0 ? Number(c.sop) : (sopIndDe.get(id) ?? 0);
-    if (sop > 0) lineas.push({ clienteId: id, nombre, tipo: "soporte", valor: round2(sop) });
-    else if (!c.es_agencia) lineas.push({ clienteId: id, nombre, tipo: "pura", valor: 69 });
+    if (c.es_agencia) continue; // agencia: la licencia va incluida en el marketing
+
+    const licgen = Number(c.licgen);
+    const sopVal = Number(c.sop);
+    const sopInd = sopIndDe.get(id) ?? 0;
+    if (String(c.tipo) === "servicio") {
+      // Cliente de servicio fuera de ventana → soporte/mantenimiento recurrente.
+      const valor = sopInd > 0 ? sopInd : (sopVal > 0 ? sopVal : (licgen > 0 ? licgen : 69));
+      const fuente = sopInd > 0 ? "cliente_soportes" : (sopVal > 0 ? "soporte_valor" : (licgen > 0 ? "valor_licencia_general" : "base 69"));
+      lineas.push({ clienteId: id, nombre, tipo: "soporte", valor: round2(valor), fuenteValor: fuente });
+    } else {
+      // Licencia estándar → su valor real de licencia.
+      const valor = licgen > 0 ? licgen : 69;
+      lineas.push({ clienteId: id, nombre, tipo: "estandar", valor: round2(valor), fuenteValor: licgen > 0 ? "valor_licencia_general" : "base 69" });
+    }
   }
   return lineas;
 }
@@ -189,7 +209,7 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
   const serviciosTotal = round2(serv.agente_ai + serv.reactivacion + serv.level_up);
   // Licencias activas del mes (proyectadas), separadas en puras ($69) y con soporte.
   const porNombre = (a: LineaLeadtion, b: LineaLeadtion) => a.nombre.localeCompare(b.nombre, "es");
-  const purasLead = lineasLead.filter((l) => l.tipo === "pura").sort(porNombre);
+  const purasLead = lineasLead.filter((l) => l.tipo === "estandar").sort(porNombre);
   const conSopLead = lineasLead.filter((l) => l.tipo === "soporte").sort(porNombre);
   const licenciasDetalle = {
     puras: {
