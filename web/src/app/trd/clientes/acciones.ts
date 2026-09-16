@@ -181,12 +181,15 @@ export async function crearClienteCascada(formData: FormData) {
 
   // Deriva reglas del catálogo (no confiamos en flags del cliente).
   const cat = await consulta(
-    `select nombre, categoria, recurrente, aplica_reserva, incluye_leadtion from public.servicio_catalogo where clave = $1`,
+    `select nombre, categoria, recurrente, aplica_reserva, incluye_leadtion,
+            coalesce(comisiona_comercial,true) comisiona_comercial
+       from public.servicio_catalogo where clave = $1`,
     [servicioClave],
   );
   const c = cat[0] as Record<string, unknown> | undefined;
   const categoria = String(c?.categoria ?? "agencia");
   const incluyeLeadtion = Boolean(c?.incluye_leadtion);
+  const comisionaComercial = c?.comisiona_comercial !== false; // excluidos: hosting, dominio, grabación, camp 90/10
   // "Agencia" (Leadtion incluida) SOLO si el servicio realmente lleva Leadtion
   // (ej. Plan Marketing Ads+IA+CRM). Social media/SEO/Canva → NO es cuenta Leadtion.
   const esAgencia = categoria === "agencia" && incluyeLeadtion;
@@ -271,7 +274,7 @@ export async function crearClienteCascada(formData: FormData) {
   // Comisión del equipo comercial: 10% de la venta neta, SOLO si es cliente NUEVO
   // y el admin marcó al comercial. Una vez (sobre esta primera factura).
   const facturaId = facRows[0]?.id != null ? Number(facRows[0]!.id) : null;
-  if (esClienteNuevo && facturaId && comercialIds.length) {
+  if (esClienteNuevo && comisionaComercial && facturaId && comercialIds.length) {
     for (const colId of comercialIds) {
       await registrarComisionComercial({
         clienteId, facturaId, colaboradorId: colId, mes: mes.slice(0, 7), facturado, medio,
