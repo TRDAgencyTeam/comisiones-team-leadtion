@@ -29,7 +29,8 @@ const GRUPOS: GrupoDef[] = [
   { key: "tools", t: "Herramientas & Hosting", ic: "🧰", edit: false, gestion: { href: "/trd/gastos-fijos/herramientas", label: "Gestionar en Herramientas" }, f: (e) => e.categoria === "fijo" && inList(e.subcategoria, ["herramienta", "hosting"]) },
   { key: "fijohist", t: "Fijos (histórico)", ic: "📌", edit: false, f: (e) => e.categoria === "fijo" && !e.subcategoria },
   { key: "lead", t: "Operación Leadtion del mes", ic: "⚡", edit: false, f: (e) => e.afectaUtilidad && inList(e.categoria, ["comision", "api", "bono", "referido", "comision_banco"]) },
-  { key: "var", t: "Gastos variables del mes", ic: "🧾", edit: true, add: "variable", f: (e) => e.afectaUtilidad && !inList(e.categoria, ["fijo", "comision", "api", "bono", "referido", "comision_banco"]) },
+  { key: "comercial", t: "Comisiones equipo comercial", ic: "💼", edit: false, gestion: { href: "/comercial", label: "Ver en Comercial" }, f: (e) => e.afectaUtilidad && e.categoria === "comision_comercial" },
+  { key: "var", t: "Gastos variables del mes", ic: "🧾", edit: true, add: "variable", f: (e) => e.afectaUtilidad && !inList(e.categoria, ["fijo", "comision", "api", "bono", "referido", "comision_banco", "comision_comercial"]) },
 ];
 
 function Grupo({ t, ic, filas, mes, edit, add, gestion }: {

@@ -36,18 +36,22 @@ export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<num
   //    por eso va antes del corte de backfill. Es agencia-wide (NO Operación Leadtion).
   await consulta(`delete from public.egreso_mensual where mes = $1 and categoria = 'comision_comercial'`, [primer]);
   {
+    // Una fila por comercial: concepto = su nombre, marca = "N cuentas".
     const cc = await consulta(
-      `select coalesce(sum(monto_usd),0)::float t, count(*)::int n
-         from public.comision_comercial where to_char(mes,'YYYY-MM') = $1`,
+      `select co.nombre, count(*)::int n, coalesce(sum(cc.monto_usd),0)::float t
+         from public.comision_comercial cc
+         join public.colaboradores co on co.id = cc.colaborador_id
+        where to_char(cc.mes,'YYYY-MM') = $1
+        group by co.nombre order by t desc`,
       [mes.slice(0, 7)],
     );
-    const t = Number((cc[0] as Record<string, unknown>)?.t ?? 0);
-    const cuenta = Number((cc[0] as Record<string, unknown>)?.n ?? 0);
-    if (t > 0) {
+    for (const row of cc as Record<string, unknown>[]) {
+      const t = Number(row.t ?? 0);
+      if (t <= 0) continue;
       await consulta(
         `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, afecta_utilidad, categoria)
-         values ($1, $2, 'TRD', $3, true, 'comision_comercial')`,
-        [primer, `Comisiones equipo comercial (${cuenta})`, Math.round(t * 100) / 100],
+         values ($1, $2, $3, $4, true, 'comision_comercial')`,
+        [primer, String(row.nombre), `${Number(row.n)} cuenta${Number(row.n) === 1 ? "" : "s"}`, Math.round(t * 100) / 100],
       );
     }
   }
