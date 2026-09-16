@@ -30,7 +30,29 @@ export interface EgresoRow {
  */
 export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<number> => {
   const primer = primerDiaMes(mes);
-  if (primer < primerDiaMes(mesActualISO())) return 0; // no backfill histórico
+
+  // 0) COMISIONES EQUIPO COMERCIAL: egreso derivado de `comision_comercial` del mes.
+  //    Aplica a CUALQUIER mes (una venta pasada deja su comisión en su propio mes),
+  //    por eso va antes del corte de backfill. Es agencia-wide (NO Operación Leadtion).
+  await consulta(`delete from public.egreso_mensual where mes = $1 and categoria = 'comision_comercial'`, [primer]);
+  {
+    const cc = await consulta(
+      `select coalesce(sum(monto_usd),0)::float t, count(*)::int n
+         from public.comision_comercial where to_char(mes,'YYYY-MM') = $1`,
+      [mes.slice(0, 7)],
+    );
+    const t = Number((cc[0] as Record<string, unknown>)?.t ?? 0);
+    const cuenta = Number((cc[0] as Record<string, unknown>)?.n ?? 0);
+    if (t > 0) {
+      await consulta(
+        `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, afecta_utilidad, categoria)
+         values ($1, $2, 'TRD', $3, true, 'comision_comercial')`,
+        [primer, `Comisiones equipo comercial (${cuenta})`, Math.round(t * 100) / 100],
+      );
+    }
+  }
+
+  if (primer < primerDiaMes(mesActualISO())) return 0; // no backfill histórico (fijos)
   const { cop: tasa } = await tasaUsdCop();
 
   // 1) FIJOS: snapshot 1 vez.

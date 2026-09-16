@@ -7,6 +7,7 @@ import { soloAdmin } from "@/lib/sesion";
 import { primerDiaMes } from "@/lib/facturacion";
 import { tasaUsdCop } from "@/lib/fx";
 import { crearClienteCompleto, recomputarPagosDeCliente, type NuevoClienteInput } from "@/app/membresias/acciones";
+import { registrarComisionComercial } from "@/lib/comercial";
 
 const n = (v: FormDataEntryValue | null): number => {
   const x = Number(String(v ?? "").replace(/[^\d.-]/g, ""));
@@ -171,6 +172,7 @@ export async function crearClienteCascada(formData: FormData) {
   const servicioClave = String(formData.get("servicioClave") ?? "").trim();
   const fechaActivacion = String(formData.get("fechaActivacion") ?? "").trim() || `${mes.slice(0, 7)}-01`;
   const asignados = formData.getAll("asignados").map((v) => Number(v)).filter(Boolean);
+  const comercialIds = formData.getAll("comercialIds").map((v) => Number(v)).filter(Boolean);
   const afiliadoRef = String(formData.get("afiliadoRef") ?? "").trim() || null;
   const medio = txt(formData.get("medio")) ?? (entidad === "COL" ? "bancolombia" : "stripe");
   const estado = String(formData.get("estado") ?? "por_facturar");
@@ -203,6 +205,9 @@ export async function crearClienteCascada(formData: FormData) {
     );
     if (m.length) existenteId = Number(m[0]!.id);
   }
+
+  // La comisión comercial SOLO aplica a clientes NUEVOS (no reutilizados/existentes).
+  const esClienteNuevo = !existenteId;
 
   let clienteId: number;
   let nombreFactura = nombre;
@@ -253,15 +258,27 @@ export async function crearClienteCascada(formData: FormData) {
     : (precios.filter((p) => p > 0).map((p, i) => `$${p} (mes ${i + 1})`).join(" · ") || null);
   const ivaPct = entidad === "COL" ? 19 : 0;
   const tasaVal = entidad === "COL" ? (await tasaUsdCop()).cop : null;
-  await consulta(
+  const facRows = await consulta(
     `insert into public.factura_mensual
        (mes, entidad, cliente_id, cliente_nombre, reserva, recurrente, servicios, precio_desglose,
         facturado, medio, iva_pct, estado, mes_contrato, servicio_clave, tasa)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,1,$13,$14)`,
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,1,$13,$14) returning id`,
     [mes, entidad, clienteId, nombreFactura, reserva, recurrente, nombreServicio, desglose,
      facturado, medio, ivaPct, estado, servicioClave, tasaVal],
   );
   await registrarCostoTercerizacion(mes, servicioClave, personas);
+
+  // Comisión del equipo comercial: 10% de la venta neta, SOLO si es cliente NUEVO
+  // y el admin marcó al comercial. Una vez (sobre esta primera factura).
+  const facturaId = facRows[0]?.id != null ? Number(facRows[0]!.id) : null;
+  if (esClienteNuevo && facturaId && comercialIds.length) {
+    for (const colId of comercialIds) {
+      await registrarComisionComercial({
+        clienteId, facturaId, colaboradorId: colId, mes: mes.slice(0, 7), facturado, medio,
+      });
+    }
+    revalidatePath("/comercial");
+  }
 
   revalidatePath("/trd/clientes");
   revalidatePath("/trd/clientes/facturacion");

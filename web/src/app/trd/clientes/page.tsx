@@ -23,6 +23,7 @@ function agruparGastos(filas: { categoria: string | null; subcategoria: string |
     tools: { label: "Herramientas & Hosting", total: 0, count: 0, unidad: "herramientas" },
     fijo: { label: "Gastos fijos", total: 0, count: 0, unidad: "conceptos" },
     lead: { label: "Operación Leadtion", total: 0, count: 0, unidad: "conceptos" },
+    comercial: { label: "Comisiones equipo comercial", total: 0, count: 0, unidad: "conceptos" },
     var: { label: "Gastos variables del mes", total: 0, count: 0, unidad: "conceptos" },
   };
   for (const e of filas) {
@@ -31,6 +32,7 @@ function agruparGastos(filas: { categoria: string | null; subcategoria: string |
     else if (e.categoria === "fijo" && enLista(e.subcategoria, ["servicio_publico", "otro"])) k = "oper";
     else if (e.categoria === "fijo" && enLista(e.subcategoria, ["herramienta", "hosting"])) k = "tools";
     else if (e.categoria === "fijo") k = "fijo";
+    else if (e.categoria === "comision_comercial") k = "comercial";
     else if (enLista(e.categoria, ["comision", "api", "bono", "referido", "comision_banco"])) k = "lead";
     else k = "var";
     g[k]!.total += e.valorUsd; g[k]!.count += 1;

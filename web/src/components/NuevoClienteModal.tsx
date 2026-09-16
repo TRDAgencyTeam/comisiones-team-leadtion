@@ -9,13 +9,14 @@ const money = (n: number, moneda: "USD" | "COP") =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: moneda, maximumFractionDigits: moneda === "COP" ? 0 : 2 }).format(n);
 
 export function NuevoClienteModal({
-  mes, tasa, catalogo, afiliados, colaboradores, clientes = [],
+  mes, tasa, catalogo, afiliados, colaboradores, comerciales = [], clientes = [],
 }: {
   mes: string;
   tasa: number;
   catalogo: ServicioCatalogo[];
   afiliados: { ref: string; nombre: string; tipo: string }[];
   colaboradores: { id: number; nombre: string }[];
+  comerciales?: { id: number; nombre: string }[];
   clientes?: { id: number; nombre: string }[];
 }) {
   const [open, setOpen] = useState(false);
@@ -173,6 +174,20 @@ export function NuevoClienteModal({
                   </div>
                 ) : (
                   <span className="cf-hint">Este servicio no comisiona CS (no incluye cuenta Leadtion).</span>
+                )}
+
+                {!existenteId && comerciales.length > 0 && (
+                  <div className="cf-f">
+                    <label>Comisión comercial (10% de la venta neta · solo cliente nuevo)</label>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {comerciales.map((c) => (
+                        <label key={c.id} style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 500, color: "var(--text)" }}>
+                          <input type="checkbox" name="comercialIds" value={c.id} style={{ width: "auto" }} /> {c.nombre}
+                        </label>
+                      ))}
+                    </div>
+                    <span className="cf-hint">Marca si esta venta la trajo el equipo comercial. Solo aplica a clientes nuevos (no upgrades).</span>
+                  </div>
                 )}
 
                 {srv?.aplicaReferido && (

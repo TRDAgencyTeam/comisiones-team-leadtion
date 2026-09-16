@@ -4,6 +4,7 @@ import { vistaFacturacion, catalogoServicios, clientesParaFactura, netoUsdDeFact
 import { calcLLC } from "@/lib/facturacion-calc";
 import { otrosIngresosDelMes } from "@/lib/egresos";
 import { opcionesFormulario } from "@/lib/membresias";
+import { comercialesActivos } from "@/lib/comercial";
 import { EstadoFactura } from "@/components/EstadoFactura";
 import { ClientesHeader } from "@/components/ClientesHeader";
 import { NuevoClienteModal } from "@/components/NuevoClienteModal";
@@ -64,7 +65,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
   await soloAdmin();
   const sp = await searchParams;
   const mes = sp.mes && /^\d{4}-\d{2}$/.test(sp.mes) ? sp.mes : mesISO();
-  const [v, catalogo, opciones, otros, clientes] = await Promise.all([vistaFacturacion(mes), catalogoServicios(), opcionesFormulario(), otrosIngresosDelMes(mes), clientesParaFactura()]);
+  const [v, catalogo, opciones, otros, clientes, comerciales] = await Promise.all([vistaFacturacion(mes), catalogoServicios(), opcionesFormulario(), otrosIngresosDelMes(mes), clientesParaFactura(), comercialesActivos()]);
 
   const recLLC = v.recurrentes.filter((f) => f.entidad === "LLC");
   const recCOL = v.recurrentes.filter((f) => f.entidad === "COL");
@@ -78,7 +79,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
       <div className="cf-sec-head">
         <h2>Clientes recurrentes · USA (LLC) <span className="count">{recLLC.length}</span></h2>
         <div style={{ display: "inline-flex", gap: 10 }}>
-          <NuevoClienteModal mes={mes} tasa={v.tasa} catalogo={catalogo} afiliados={opciones.afiliados} colaboradores={opciones.colaboradores} clientes={clientes} />
+          <NuevoClienteModal mes={mes} tasa={v.tasa} catalogo={catalogo} afiliados={opciones.afiliados} colaboradores={opciones.colaboradores} comerciales={comerciales} clientes={clientes} />
           <Link href={`/trd/clientes/nuevo?mes=${mes}`} className="cf-btn cf-btn-ghost">+ Nueva factura</Link>
         </div>
       </div>

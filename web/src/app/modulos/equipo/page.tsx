@@ -36,12 +36,12 @@ export default async function ModulosEquipoPage() {
             <span className="modulo-cta">Entrar →</span>
           </Link>
 
-          <div className="modulo-card deshab" aria-disabled="true">
-            <span className="modulo-icono">◇</span>
+          <Link href="/comercial" className="modulo-card activa">
+            <span className="modulo-icono">◆</span>
             <span className="modulo-nombre">Comercial</span>
-            <span className="modulo-desc">Comisiones del área comercial. Disponible próximamente.</span>
-            <span className="modulo-cta">Próximamente</span>
-          </div>
+            <span className="modulo-desc">Comisión 10% por cliente nuevo (sobre venta neta).</span>
+            <span className="modulo-cta">Entrar →</span>
+          </Link>
         </div>
       </div>
     </main>
