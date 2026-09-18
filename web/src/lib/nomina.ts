@@ -67,6 +67,36 @@ export async function obtenerPersona(id: number): Promise<PersonaNomina | null> 
   return rows.length ? mapRow(rows[0]!) : null;
 }
 
+export interface NominaMesResumen { mes: string; personas: number; cop: number; usd: number }
+
+/** Histórico del gasto de nómina por mes (desde el snapshot en egreso_mensual).
+ *  El COP es estable; el USD queda congelado a la tasa de cada mes. */
+export async function historicoNomina(nMeses = 6): Promise<NominaMesResumen[]> {
+  const rows = await consulta(
+    `select to_char(mes,'YYYY-MM') mes, count(*)::int n,
+            coalesce(sum(valor_cop),0)::float cop, coalesce(sum(valor_usd),0)::float usd
+       from public.egreso_mensual
+      where categoria='fijo' and subcategoria='nomina'
+      group by 1 order by 1 desc limit $1`,
+    [nMeses],
+  );
+  return rows.map((r) => ({ mes: String(r.mes), personas: Number(r.n), cop: Number(r.cop), usd: Number(r.usd) }));
+}
+
+export interface NominaMesPersona { nombre: string; area: string | null; cop: number; usd: number }
+
+/** Personas de la nómina de un mes ('YYYY-MM') según el snapshot de ese mes. */
+export async function nominaDelMes(mes: string): Promise<NominaMesPersona[]> {
+  const rows = await consulta(
+    `select concepto, marca, coalesce(valor_cop,0)::float cop, coalesce(valor_usd,0)::float usd
+       from public.egreso_mensual
+      where categoria='fijo' and subcategoria='nomina' and to_char(mes,'YYYY-MM')=$1
+      order by valor_cop desc`,
+    [mes],
+  );
+  return rows.map((r) => ({ nombre: String(r.concepto), area: (r.marca as string) ?? null, cop: Number(r.cop), usd: Number(r.usd) }));
+}
+
 /** Días para que venza el contrato (negativo = ya venció); null si no hay fecha. */
 export function diasParaVencer(fechaFin: string | null): number | null {
   if (!fechaFin) return null;

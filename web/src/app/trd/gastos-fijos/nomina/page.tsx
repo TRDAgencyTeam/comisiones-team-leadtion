@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { soloAdmin } from "@/lib/sesion";
 import { tasaUsdCop } from "@/lib/fx";
-import { listarNomina, diasParaVencer } from "@/lib/nomina";
+import { listarNomina, diasParaVencer, historicoNomina, nominaDelMes } from "@/lib/nomina";
+import { asegurarEgresosFijosDelMes } from "@/lib/egresos";
 import { AREAS } from "@/lib/catalogos";
 import { cambiarEstadoPersona } from "./acciones";
 
@@ -13,6 +14,8 @@ const usd = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", c
 const fmt = (iso: string | null) => iso ? new Date(`${iso}T00:00:00`).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 const AREA_LABEL: Record<string, string> = Object.fromEntries(AREAS.map((a) => [a.value, a.label]));
 const DEPT_COLORS = ["#6d5ac0", "#00a0a0", "#1e5080", "#0f9d6b", "#b45309", "#c0504f", "#2e2a6e"];
+const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+const mesLargo = (m: string) => { const [y, mm] = m.split("-").map(Number); return `${MESES[(mm ?? 1) - 1]} ${y}`; };
 
 function ContratoTag({ fin }: { fin: string | null }) {
   const d = diasParaVencer(fin);
@@ -22,11 +25,19 @@ function ContratoTag({ fin }: { fin: string | null }) {
   return <span className="ct-tag ct-ok">Vigente</span>;
 }
 
-export default async function NominaPage() {
+export default async function NominaPage({ searchParams }: { searchParams: Promise<{ verMes?: string }> }) {
   await soloAdmin();
-  const [personas, fx] = await Promise.all([listarNomina(), tasaUsdCop()]);
-  const activos = personas.filter((p) => p.activo);
-  const totalCop = activos.reduce((s, p) => s + p.valorNomina, 0);
+  const sp = await searchParams;
+  const verMes = sp.verMes && /^\d{4}-\d{2}$/.test(sp.verMes) ? sp.verMes : null;
+  const mesActual = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+  await asegurarEgresosFijosDelMes(mesActual); // deja el snapshot del mes en curso para el histórico
+  const [personas, fx, historico, detalleMes] = await Promise.all([
+    listarNomina(), tasaUsdCop(), historicoNomina(6), verMes ? nominaDelMes(verMes) : Promise.resolve(null),
+  ]);
+  // Nómina = personas activas CON valor de nómina (los freelances en $0 no cuentan).
+  const conNomina = personas.filter((p) => p.activo && p.valorNomina > 0);
+  const totalCop = conNomina.reduce((s, p) => s + p.valorNomina, 0);
+  const activos = conNomina;
   const tasa = fx.cop;
 
   // Costos por departamento (área) de los activos.
@@ -62,6 +73,51 @@ export default async function NominaPage() {
           </div>
         ))}
       </div>
+
+      <div className="cf-sec-head" style={{ marginTop: 20 }}>
+        <h2 style={{ fontSize: "1rem", margin: 0 }}>Histórico mensual</h2>
+        <form method="get" style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <input type="month" name="verMes" defaultValue={verMes ?? ""} />
+          <button type="submit" className="btn-secondary btn-guardar">Ver mes</button>
+        </form>
+      </div>
+      {historico.length === 0 ? (
+        <p className="reg-nota">Aún no hay meses guardados. El histórico se registra a partir de este mes.</p>
+      ) : (
+        <div className="nom-deptos">
+          {historico.map((h) => (
+            <Link key={h.mes} href={`/trd/gastos-fijos/nomina?verMes=${h.mes}`}
+              className="nom-dept" style={{ borderLeftColor: h.mes === verMes ? "#0f9d6b" : "#6d5ac0", textDecoration: "none" }}>
+              <div className="d-top">
+                <span className="d-name">{mesLargo(h.mes)}</span>
+                <span className="d-count">{h.personas} {h.personas === 1 ? "persona" : "personas"}</span>
+              </div>
+              <div className="d-cop" style={{ fontSize: "1.05rem", fontWeight: 700 }}>{cop(h.cop)}</div>
+              <div className="d-usd" style={{ fontSize: "0.85rem" }}><small>≈ {usd(h.usd)} (tasa del mes)</small></div>
+            </Link>
+          ))}
+        </div>
+      )}
+      {verMes && detalleMes && (
+        <div className="nom-tabla-wrap" style={{ marginTop: 12 }}>
+          <div className="cf-sec-head"><h3 style={{ margin: 0, fontSize: "0.95rem" }}>Personas en nómina · {mesLargo(verMes)} ({detalleMes.length})</h3><b className="cf-mono">{cop(detalleMes.reduce((s, p) => s + p.cop, 0))}</b></div>
+          {detalleMes.length === 0 ? (
+            <p className="reg-nota">No hay nómina registrada en {mesLargo(verMes)}.</p>
+          ) : (
+            <table className="reg-tabla">
+              <thead><tr><th>Persona</th><th>Área</th><th className="right">COP</th><th className="right">USD (tasa del mes)</th></tr></thead>
+              <tbody>
+                {detalleMes.map((p, i) => (
+                  <tr key={`${p.nombre}-${i}`}>
+                    <td>{p.nombre}</td><td className="muted">{AREA_LABEL[p.area ?? ""] ?? p.area ?? "—"}</td>
+                    <td className="right cf-mono">{cop(p.cop)}</td><td className="right muted">{usd(p.usd)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
       <div className="nom-tabla-wrap" style={{ marginTop: 16 }}>
         <table className="reg-tabla">
