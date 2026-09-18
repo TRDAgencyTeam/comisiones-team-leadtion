@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { PersonaNomina } from "@/lib/nomina";
 import { AREAS, BANCOS } from "@/lib/catalogos";
 
@@ -37,9 +37,24 @@ export function PersonaForm({
   const [duracion, setDuracion] = useState(persona?.duracionMeses?.toString() ?? "");
   const [cedula, setCedula] = useState(fmtMiles(persona?.identificacion ?? ""));
   const [valor, setValor] = useState(persona?.valorNomina ? fmtMiles(String(persona.valorNomina)) : "");
+  const [valorPrimerMes, setValorPrimerMes] = useState(persona?.valorPrimerMes ? fmtMiles(String(persona.valorPrimerMes)) : "");
+  const [primerMesTocado, setPrimerMesTocado] = useState(!!persona?.valorPrimerMes);
 
   const tieneDuracion = Number(duracion) > 0;
   const fechaFin = fechaInicio && tieneDuracion ? addMonthsISO(fechaInicio, Math.round(Number(duracion))) : "";
+
+  // Prorrateo del primer mes (base 30 días, como nómina CO): del día de inicio al 30.
+  const diaInicio = fechaInicio ? Number(fechaInicio.split("-")[2]) : 0;
+  const diasPrimerMes = diaInicio ? Math.max(0, Math.min(30, 30 - diaInicio + 1)) : 30;
+  const valorNum = Number(valor.replace(/[^\d]/g, ""));
+  const esParcial = diaInicio > 1 && diasPrimerMes < 30;
+  const sugerido = esParcial && valorNum ? Math.round((valorNum * diasPrimerMes) / 30) : 0;
+
+  // Autocompleta la sugerencia del primer mes mientras el usuario no lo edite a mano.
+  useEffect(() => {
+    if (primerMesTocado) return;
+    setValorPrimerMes(sugerido ? fmtMiles(String(sugerido)) : "");
+  }, [sugerido, primerMesTocado]);
 
   return (
     <form action={action} className="persona-form">
@@ -90,9 +105,18 @@ export function PersonaForm({
             value={tieneDuracion ? (fechaFin ? fmtFecha(fechaFin) : "—") : "Indefinido"} />
         </label>
 
-        <label>Valor de nómina (COP)
+        <label>Valor de nómina (COP) <small style={{ color: "var(--faint)" }}>— mensual fijo (mes 2 en adelante)</small>
           <input name="valorNomina" inputMode="numeric" value={valor}
             onChange={(e) => setValor(fmtMiles(e.target.value))} placeholder="0" />
+        </label>
+
+        <label>Valor del primer mes (parcial) <small style={{ color: "var(--faint)" }}>opcional</small>
+          <input name="valorPrimerMes" inputMode="numeric" value={valorPrimerMes}
+            onChange={(e) => { setPrimerMesTocado(true); setValorPrimerMes(fmtMiles(e.target.value)); }}
+            placeholder={esParcial ? "0" : "Mes completo"} />
+          {esParcial
+            ? <small className="pf-hint">Entra el día {diaInicio} → se liquidan {diasPrimerMes} días. Sugerido: {fmtMiles(String(sugerido))} COP (prorrateo /30). Editable. Desde el mes 2 se cobra el valor mensual completo.</small>
+            : <small className="pf-hint">Si entra a mitad de mes, aquí va el valor parcial de ese primer mes. Déjalo vacío = primer mes completo.</small>}
         </label>
       </div>
 

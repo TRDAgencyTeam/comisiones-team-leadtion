@@ -33,13 +33,15 @@ function parse(formData: FormData) {
   const duracionRaw = txt(formData.get("duracionMeses"));
   const duracionMeses = duracionRaw ? Math.round(Number(duracionRaw)) : null;
   const valorNomina = numCO(formData.get("valorNomina"));
+  const primerRaw = String(formData.get("valorPrimerMes") ?? "").replace(/[^\d]/g, "");
+  const valorPrimerMes = primerRaw === "" ? null : Number(primerRaw);
 
   // Fecha fin = inicio + duración (en meses). Se calcula sola.
   let fechaFin: string | null = null;
   if (fechaInicio && duracionMeses && duracionMeses > 0) {
     fechaFin = addMonths(fechaInicio, duracionMeses);
   }
-  return { nombre, area, banco, email, identificacion, fechaNacimiento, fechaInicio, duracionMeses, fechaFin, valorNomina };
+  return { nombre, area, banco, email, identificacion, fechaNacimiento, fechaInicio, duracionMeses, fechaFin, valorNomina, valorPrimerMes };
 }
 
 /** Crea una persona de nómina (categoría vacía → NO comisiona en CS). */
@@ -53,10 +55,10 @@ export async function crearPersona(formData: FormData) {
     `insert into public.colaboradores
        (nombre, rol, categoria, activo, area, banco, email, identificacion,
         fecha_nacimiento, fecha_ingreso, fecha_inicio_contrato, duracion_contrato_meses,
-        fecha_fin_contrato, valor_nomina)
-     values ($1,'cs',null,true,$2,$3,$4,$5,$6,$7,$7,$8,$9,$10) returning id`,
+        fecha_fin_contrato, valor_nomina, valor_primer_mes)
+     values ($1,'cs',null,true,$2,$3,$4,$5,$6,$7,$7,$8,$9,$10,$11) returning id`,
     [d.nombre, d.area, d.banco, d.email, d.identificacion, d.fechaNacimiento, d.fechaInicio,
-     d.duracionMeses, d.fechaFin, d.valorNomina],
+     d.duracionMeses, d.fechaFin, d.valorNomina, d.valorPrimerMes],
   );
   // Refleja la persona en el mes en curso (Egresos). REG la toma en vivo.
   await resyncFijosMesActual();
@@ -79,10 +81,10 @@ export async function actualizarPersona(formData: FormData) {
     `update public.colaboradores
         set nombre=$2, area=$3, banco=$4, email=$5, identificacion=$6, fecha_nacimiento=$7,
             fecha_inicio_contrato=$8, duracion_contrato_meses=$9, fecha_fin_contrato=$10,
-            valor_nomina=$11
+            valor_nomina=$11, valor_primer_mes=$12
       where id=$1`,
     [id, d.nombre, d.area, d.banco, d.email, d.identificacion, d.fechaNacimiento,
-     d.fechaInicio, d.duracionMeses, d.fechaFin, d.valorNomina],
+     d.fechaInicio, d.duracionMeses, d.fechaFin, d.valorNomina, d.valorPrimerMes],
   );
   // Propaga el cambio (área, salario, nombre) al mes en curso: Egresos + REG.
   await resyncFijosMesActual();

@@ -64,7 +64,10 @@ export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<num
   if (yaFijo.length === 0) {
     await consulta(
       `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
-       select $1, nombre, coalesce(area,'Equipo'), round((valor_nomina/$2)::numeric,2), valor_nomina, true, 'fijo', 'nomina'
+       select $1, nombre, coalesce(area,'Equipo'),
+              round((coalesce(case when to_char(fecha_inicio_contrato,'YYYY-MM')=to_char($1::date,'YYYY-MM') and valor_primer_mes is not null then valor_primer_mes else valor_nomina end,0)/$2)::numeric,2),
+              coalesce(case when to_char(fecha_inicio_contrato,'YYYY-MM')=to_char($1::date,'YYYY-MM') and valor_primer_mes is not null then valor_primer_mes else valor_nomina end,0),
+              true, 'fijo', 'nomina'
          from public.colaboradores where activo and coalesce(valor_nomina,0) > 0`,
       [primer, tasa],
     );
@@ -132,7 +135,10 @@ export async function sincronizarFijoMesActual(tipo: "nomina" | "gasto", id: num
   if (tipo === "nomina") {
     await consulta(
       `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
-       select $1, nombre, coalesce(area,'Equipo'), round((valor_nomina/$2)::numeric,2), valor_nomina, true, 'fijo', 'nomina'
+       select $1, nombre, coalesce(area,'Equipo'),
+              round((coalesce(case when to_char(fecha_inicio_contrato,'YYYY-MM')=to_char($1::date,'YYYY-MM') and valor_primer_mes is not null then valor_primer_mes else valor_nomina end,0)/$2)::numeric,2),
+              coalesce(case when to_char(fecha_inicio_contrato,'YYYY-MM')=to_char($1::date,'YYYY-MM') and valor_primer_mes is not null then valor_primer_mes else valor_nomina end,0),
+              true, 'fijo', 'nomina'
          from public.colaboradores where id = $3 and activo and coalesce(valor_nomina,0) > 0`,
       [primer, tasa, id],
     );
