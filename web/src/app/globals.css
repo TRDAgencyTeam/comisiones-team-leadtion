@@ -1272,5 +1272,21 @@ button.ck:hover { border-color: var(--muted); }
 .nom-dept .d-usd { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; margin-top: 10px; font-variant-numeric: tabular-nums; }
 .nom-dept .d-usd small { font-size: 0.7rem; font-weight: 600; color: var(--muted); margin-left: 3px; }
 .nom-dept .d-cop { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 2px; }
+/* Histórico de nómina: tarjetas clicables por mes */
+.nom-hist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.nom-hist-card { display: block; background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+  padding: 14px 16px; box-shadow: var(--shadow); text-decoration: none; color: inherit;
+  transition: border-color .15s ease, transform .12s ease, box-shadow .15s ease; }
+.nom-hist-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 10px 26px rgba(0,0,0,0.28); }
+.nom-hist-card .nhc-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.nom-hist-card .nhc-mes { font-weight: 700; font-size: 0.95rem; text-transform: capitalize; }
+.nom-hist-card .nhc-chip { font-size: 0.66rem; color: var(--muted); background: var(--bg); border: 1px solid var(--border);
+  border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+.nom-hist-card .nhc-cop { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; margin-top: 12px; font-variant-numeric: tabular-nums; }
+.nom-hist-card .nhc-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.nom-hist-card .nhc-usd { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.nom-hist-card .nhc-est { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
+  border: 1px dashed var(--border); border-radius: 999px; padding: 1px 7px; }
+.nom-hist-card .nhc-ver { margin-left: auto; font-size: 0.78rem; font-weight: 700; color: var(--accent); }
 /* Tabla de nómina: sin encajonar en un scroll vertical chico; solo scroll horizontal. */
 .nom-tabla-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); }

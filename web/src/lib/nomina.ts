@@ -67,34 +67,55 @@ export async function obtenerPersona(id: number): Promise<PersonaNomina | null> 
   return rows.length ? mapRow(rows[0]!) : null;
 }
 
-export interface NominaMesResumen { mes: string; personas: number; cop: number; usd: number }
+const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
-/** Histórico del gasto de nómina por mes (desde el snapshot en egreso_mensual).
- *  El COP es estable; el USD queda congelado a la tasa de cada mes. */
-export async function historicoNomina(nMeses = 6): Promise<NominaMesResumen[]> {
-  const rows = await consulta(
-    `select to_char(mes,'YYYY-MM') mes, count(*)::int n,
-            coalesce(sum(valor_cop),0)::float cop, coalesce(sum(valor_usd),0)::float usd
-       from public.egreso_mensual
-      where categoria='fijo' and subcategoria='nomina'
-      group by 1 order by 1 desc limit $1`,
-    [nMeses],
-  );
-  return rows.map((r) => ({ mes: String(r.mes), personas: Number(r.n), cop: Number(r.cop), usd: Number(r.usd) }));
-}
-
+export interface NominaMesResumen { mes: string; personas: number; cop: number; usd: number; estimado: boolean }
 export interface NominaMesPersona { nombre: string; area: string | null; cop: number; usd: number }
 
-/** Personas de la nómina de un mes ('YYYY-MM') según el snapshot de ese mes. */
-export async function nominaDelMes(mes: string): Promise<NominaMesPersona[]> {
-  const rows = await consulta(
+/**
+ * Cuadro de nómina de un mes 'YYYY-MM'. Si ese mes tiene snapshot real
+ * (egreso_mensual), lo usa (exacto, USD a la tasa de ese mes). Si no (meses
+ * previos al registro), lo RECONSTRUYE desde los contratos vigentes ese mes
+ * (fecha de inicio/fin) con el salario actual → `estimado=true`.
+ */
+export async function nominaMesDetalle(mes: string, tasa: number): Promise<{ personas: NominaMesPersona[]; estimado: boolean }> {
+  const snap = await consulta(
     `select concepto, marca, coalesce(valor_cop,0)::float cop, coalesce(valor_usd,0)::float usd
        from public.egreso_mensual
       where categoria='fijo' and subcategoria='nomina' and to_char(mes,'YYYY-MM')=$1
       order by valor_cop desc`,
     [mes],
   );
-  return rows.map((r) => ({ nombre: String(r.concepto), area: (r.marca as string) ?? null, cop: Number(r.cop), usd: Number(r.usd) }));
+  if (snap.length) {
+    return { estimado: false, personas: snap.map((r) => ({ nombre: String(r.concepto), area: (r.marca as string) ?? null, cop: Number(r.cop), usd: Number(r.usd) })) };
+  }
+  const rec = await consulta(
+    `select nombre, area, coalesce(valor_nomina,0)::float vn
+       from public.colaboradores
+      where coalesce(valor_nomina,0) > 0
+        and (fecha_inicio_contrato is null or to_char(fecha_inicio_contrato,'YYYY-MM') <= $1)
+        and (fecha_fin_contrato is null or to_char(fecha_fin_contrato,'YYYY-MM') >= $1)
+      order by valor_nomina desc`,
+    [mes],
+  );
+  return { estimado: true, personas: rec.map((r) => ({ nombre: String(r.nombre), area: (r.area as string) ?? null, cop: Number(r.vn), usd: tasa > 0 ? r2(Number(r.vn) / tasa) : 0 })) };
+}
+
+/** Histórico de los últimos `nMeses` meses PASADOS (excluye el mes en curso). */
+export async function historicoNominaPasado(nMeses: number, tasa: number): Promise<NominaMesResumen[]> {
+  const now = new Date();
+  const out: NominaMesResumen[] = [];
+  for (let i = 1; i <= nMeses; i++) {
+    const d = new Date(Date.UTC(now.getFullYear(), now.getMonth() - i, 1));
+    const mes = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    const { personas, estimado } = await nominaMesDetalle(mes, tasa);
+    out.push({
+      mes, personas: personas.length, estimado,
+      cop: r2(personas.reduce((s, p) => s + p.cop, 0)),
+      usd: r2(personas.reduce((s, p) => s + p.usd, 0)),
+    });
+  }
+  return out;
 }
 
 /** Días para que venza el contrato (negativo = ya venció); null si no hay fecha. */

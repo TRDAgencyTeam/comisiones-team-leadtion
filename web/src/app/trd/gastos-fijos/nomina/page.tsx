@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { soloAdmin } from "@/lib/sesion";
 import { tasaUsdCop } from "@/lib/fx";
-import { listarNomina, diasParaVencer, historicoNomina, nominaDelMes } from "@/lib/nomina";
+import { listarNomina, diasParaVencer, historicoNominaPasado } from "@/lib/nomina";
 import { asegurarEgresosFijosDelMes } from "@/lib/egresos";
 import { AREAS } from "@/lib/catalogos";
 import { cambiarEstadoPersona } from "./acciones";
@@ -25,20 +25,17 @@ function ContratoTag({ fin }: { fin: string | null }) {
   return <span className="ct-tag ct-ok">Vigente</span>;
 }
 
-export default async function NominaPage({ searchParams }: { searchParams: Promise<{ verMes?: string }> }) {
+export default async function NominaPage() {
   await soloAdmin();
-  const sp = await searchParams;
-  const verMes = sp.verMes && /^\d{4}-\d{2}$/.test(sp.verMes) ? sp.verMes : null;
   const mesActual = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
   await asegurarEgresosFijosDelMes(mesActual); // deja el snapshot del mes en curso para el histórico
-  const [personas, fx, historico, detalleMes] = await Promise.all([
-    listarNomina(), tasaUsdCop(), historicoNomina(6), verMes ? nominaDelMes(verMes) : Promise.resolve(null),
-  ]);
+  const [personas, fx] = await Promise.all([listarNomina(), tasaUsdCop()]);
+  const tasa = fx.cop;
+  const historico = await historicoNominaPasado(3, tasa); // ago, jul, jun (meses pasados)
   // Nómina = personas activas CON valor de nómina (los freelances en $0 no cuentan).
   const conNomina = personas.filter((p) => p.activo && p.valorNomina > 0);
   const totalCop = conNomina.reduce((s, p) => s + p.valorNomina, 0);
   const activos = conNomina;
-  const tasa = fx.cop;
 
   // Costos por departamento (área) de los activos.
   const deptos = new Map<string, { count: number; cop: number }>();
@@ -54,7 +51,7 @@ export default async function NominaPage({ searchParams }: { searchParams: Promi
     <main className="wrap">
       <div className="reg-head">
         <div>
-          <h1>Nómina</h1>
+          <h1>Nómina a {mesLargo(mesActual)}</h1>
           <p className="sub">{activos.length} activas · total {cop(totalCop)} ≈ {usd(mesUsd(totalCop))} / mes · tasa {cop(tasa)}.</p>
         </div>
         <Link href="/trd/gastos-fijos/nomina/nuevo" className="btn-primary">+ Agregar persona</Link>
@@ -73,51 +70,6 @@ export default async function NominaPage({ searchParams }: { searchParams: Promi
           </div>
         ))}
       </div>
-
-      <div className="cf-sec-head" style={{ marginTop: 20 }}>
-        <h2 style={{ fontSize: "1rem", margin: 0 }}>Histórico mensual</h2>
-        <form method="get" style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <input type="month" name="verMes" defaultValue={verMes ?? ""} />
-          <button type="submit" className="btn-secondary btn-guardar">Ver mes</button>
-        </form>
-      </div>
-      {historico.length === 0 ? (
-        <p className="reg-nota">Aún no hay meses guardados. El histórico se registra a partir de este mes.</p>
-      ) : (
-        <div className="nom-deptos">
-          {historico.map((h) => (
-            <Link key={h.mes} href={`/trd/gastos-fijos/nomina?verMes=${h.mes}`}
-              className="nom-dept" style={{ borderLeftColor: h.mes === verMes ? "#0f9d6b" : "#6d5ac0", textDecoration: "none" }}>
-              <div className="d-top">
-                <span className="d-name">{mesLargo(h.mes)}</span>
-                <span className="d-count">{h.personas} {h.personas === 1 ? "persona" : "personas"}</span>
-              </div>
-              <div className="d-cop" style={{ fontSize: "1.05rem", fontWeight: 700 }}>{cop(h.cop)}</div>
-              <div className="d-usd" style={{ fontSize: "0.85rem" }}><small>≈ {usd(h.usd)} (tasa del mes)</small></div>
-            </Link>
-          ))}
-        </div>
-      )}
-      {verMes && detalleMes && (
-        <div className="nom-tabla-wrap" style={{ marginTop: 12 }}>
-          <div className="cf-sec-head"><h3 style={{ margin: 0, fontSize: "0.95rem" }}>Personas en nómina · {mesLargo(verMes)} ({detalleMes.length})</h3><b className="cf-mono">{cop(detalleMes.reduce((s, p) => s + p.cop, 0))}</b></div>
-          {detalleMes.length === 0 ? (
-            <p className="reg-nota">No hay nómina registrada en {mesLargo(verMes)}.</p>
-          ) : (
-            <table className="reg-tabla">
-              <thead><tr><th>Persona</th><th>Área</th><th className="right">COP</th><th className="right">USD (tasa del mes)</th></tr></thead>
-              <tbody>
-                {detalleMes.map((p, i) => (
-                  <tr key={`${p.nombre}-${i}`}>
-                    <td>{p.nombre}</td><td className="muted">{AREA_LABEL[p.area ?? ""] ?? p.area ?? "—"}</td>
-                    <td className="right cf-mono">{cop(p.cop)}</td><td className="right muted">{usd(p.usd)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      )}
 
       <div className="nom-tabla-wrap" style={{ marginTop: 16 }}>
         <table className="reg-tabla">
@@ -164,6 +116,27 @@ export default async function NominaPage({ searchParams }: { searchParams: Promi
       <p className="reg-nota">
         Valores por hora asumen 8 h/día y 30 días/mes (como en el Excel). Las personas activas aparecen en Registro contable.
       </p>
+
+      <section style={{ marginTop: 28 }}>
+        <h2 style={{ fontSize: "1.05rem", margin: "0 0 4px" }}>Histórico mensual</h2>
+        <p className="sub" style={{ margin: "0 0 12px" }}>Nómina de meses anteriores. Toca un mes para ver su cuadro completo.</p>
+        <div className="nom-hist-grid">
+          {historico.map((h) => (
+            <Link key={h.mes} href={`/trd/gastos-fijos/nomina/historico/${h.mes}`} className="nom-hist-card">
+              <div className="nhc-top">
+                <span className="nhc-mes">{mesLargo(h.mes)}</span>
+                <span className="nhc-chip">{h.personas} {h.personas === 1 ? "persona" : "personas"}</span>
+              </div>
+              <div className="nhc-cop">{cop(h.cop)}</div>
+              <div className="nhc-foot">
+                <span className="nhc-usd">≈ {usd(h.usd)}</span>
+                {h.estimado && <span className="nhc-est" title="Reconstruido desde la nómina actual (sin snapshot de ese mes)">estimado</span>}
+                <span className="nhc-ver">Ver cuadro →</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
     </main>
   );
 }
