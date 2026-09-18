@@ -242,6 +242,11 @@ export interface ResumenMes {
     /** Ingreso Leadtion de membresías + soporte (licencias estándar y con soporte);
      *  NO incluye servicios (esos se facturan por la LLC). = dato del dashboard. */
     leadtion: number;
+    /** Ganancia de las APIs de WhatsApp vendidas ($2 por cuenta). Automático desde Membresías. */
+    apiVendida: number;
+    apiVendidaCuentas: number;
+    /** Reselling reportado (manual, categoría 'reselling' en otros ingresos). */
+    reselling: number;
     total: number;
     porFuente: { etiqueta: string; valor: number }[];
   };
@@ -287,7 +292,24 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
     else clientesCol += calcCOL(num(f.facturado), num(f.iva_pct), f.tasa != null ? Number(f.tasa) : tasa).netoUsd;
   }
   clientesUsa = r2(clientesUsa); clientesCol = r2(clientesCol);
-  const otrosTotal = r2(otros.reduce((s, x) => s + x.valorUsd, 0));
+  // Reselling (manual) va en su propia línea; el resto de "otros" queda aparte.
+  const reselling = r2(otros.filter((o) => o.categoria === "reselling").reduce((s, o) => s + o.valorUsd, 0));
+  const otrosSinResel = otros.filter((o) => o.categoria !== "reselling");
+  const otrosTotal = r2(otrosSinResel.reduce((s, x) => s + x.valorUsd, 0));
+
+  // API WhatsApp vendida: ganancia neta ($2/cuenta) de las cuentas 'vendida' activas.
+  // Automático desde el maestro Leadtion; solo mes en curso/futuro (es foto de hoy).
+  let apiVendida = 0, apiVendidaCuentas = 0;
+  if (mes.slice(0, 7) >= mesActualISO()) {
+    const av = await consulta(
+      `select coalesce(sum(api_valor) filter (where api_estado='vendida' and estado_actual='activo' and es_leadtion),0)::float ing,
+              count(*) filter (where api_estado='vendida' and estado_actual='activo' and es_leadtion)::int n
+         from public.clientes`,
+    );
+    const ing = Number((av[0] as Record<string, unknown>)?.ing ?? 0);
+    apiVendidaCuentas = Number((av[0] as Record<string, unknown>)?.n ?? 0);
+    apiVendida = r2(ing - apiVendidaCuentas * 10); // ganancia = cobrado − $10 de costo
+  }
 
   // Ingreso Leadtion de MEMBRESÍAS + SOPORTE (licencias): estándar + con soporte de
   // todas las cuentas activas. Es EXACTAMENTE el dato del dashboard de Membresías.
@@ -303,7 +325,7 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
         .reduce((s, l) => s + l.valor, 0),
     );
   }
-  const totalIngresos = r2(clientesUsa + clientesCol + otrosTotal + leadtion);
+  const totalIngresos = r2(clientesUsa + clientesCol + otrosTotal + reselling + leadtion + apiVendida);
 
   const afectan = egresos.filter((e) => e.afectaUtilidad);
   const caja = egresos.filter((e) => !e.afectaUtilidad);
@@ -326,12 +348,14 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
   return {
     tasa,
     ingresos: {
-      clientesUsa, clientesCol, otros, leadtion, total: totalIngresos,
+      clientesUsa, clientesCol, otros: otrosSinResel, leadtion, apiVendida, apiVendidaCuentas, reselling, total: totalIngresos,
       porFuente: [
         { etiqueta: "Clientes USA", valor: clientesUsa },
         { etiqueta: "Clientes Colombia", valor: clientesCol },
         { etiqueta: "Leadtion (membresías + soporte)", valor: leadtion },
-        ...otros.map((o) => ({ etiqueta: o.concepto, valor: o.valorUsd })),
+        { etiqueta: "API WhatsApp vendida", valor: apiVendida },
+        { etiqueta: "Reselling (Leadtion)", valor: reselling },
+        ...otrosSinResel.map((o) => ({ etiqueta: o.concepto, valor: o.valorUsd })),
       ].filter((x) => x.valor > 0),
     },
     egresos: { afectanUtilidad: afectan, saleDeCaja: [diezmoRow, ...caja], totalAfectan, totalCaja },
