@@ -278,6 +278,54 @@ export function recalcular(valor: number, tarifaIcaMil: number, salud: number, p
   return calcularRetenciones({ valor, tarifaIcaMil, aporteSalud: salud, aportePension: pension, uvt });
 }
 
+/** Cierre de un mes: TODOS los renglones con registro en reg_pago (incluye personas
+ *  ya inactivas y freelances). A diferencia de renglonesDelMes, NO filtra por activo
+ *  ni recalcula comisiones en vivo: muestra el snapshot guardado de ese mes. */
+export async function cierreDelMes(mes: string): Promise<RenglonReg[]> {
+  const primer = primerDiaMes(mes);
+  const rows = await consulta(
+    `select p.id pago_id, p.colaborador_id, coalesce(c.nombre, p.nombre_libre) nombre,
+            c.email, c.banco, coalesce(p.identificacion, c.identificacion) identificacion,
+            p.tarifa_ica_mil, p.pago_fijo, p.adicional, p.adicional_desc, p.comision,
+            p.valor_cuenta_cobro, p.aporte_salud, p.aporte_pension, p.rete_ica, p.rete_renta,
+            p.valor_girar, p.costo_transferencia, p.ck_correo, p.ck_drive, p.ck_registro, p.ck_pagado,
+            (p.colaborador_id is null) es_free
+       from public.reg_pago p
+       left join public.colaboradores c on c.id = p.colaborador_id
+      where p.mes = $1
+      order by es_free, nombre`,
+    [primer],
+  );
+  return rows.map((r: Record<string, unknown>) => ({
+    pagoId: Number(r.pago_id),
+    colaboradorId: r.colaborador_id != null ? Number(r.colaborador_id) : null,
+    nombre: String(r.nombre ?? "—"),
+    esFreelance: Boolean(r.es_free),
+    email: (r.email as string) ?? null,
+    banco: (r.banco as string) ?? null,
+    identificacion: (r.identificacion as string) ?? null,
+    actividadCiiu: null,
+    tarifaIcaMil: num(r.tarifa_ica_mil) || TARIFA_ICA_DEFAULT,
+    valorNomina: 0,
+    valorMesAnterior: 0,
+    pagoFijo: num(r.pago_fijo),
+    adicional: num(r.adicional),
+    adicionalDesc: (r.adicional_desc as string) ?? null,
+    comision: num(r.comision),
+    valorCuentaCobro: num(r.valor_cuenta_cobro),
+    aporteSalud: num(r.aporte_salud),
+    aportePension: num(r.aporte_pension),
+    reteIca: num(r.rete_ica),
+    reteRenta: num(r.rete_renta),
+    valorGirar: num(r.valor_girar),
+    costoTransferencia: num(r.costo_transferencia),
+    ckCorreo: Boolean(r.ck_correo),
+    ckDrive: Boolean(r.ck_drive),
+    ckRegistro: Boolean(r.ck_registro),
+    ckPagado: Boolean(r.ck_pagado),
+  }));
+}
+
 export interface RegMesResumen {
   mes: string; personas: number; pagados: number;
   cuentaCobro: number; reteIca: number; reteRenta: number; valorGirar: number;

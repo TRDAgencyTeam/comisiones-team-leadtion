@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { soloAdmin } from "@/lib/sesion";
-import { renglonesDelMes, totalizar } from "@/lib/reg";
+import { cierreDelMes, totalizar } from "@/lib/reg";
 
 export const metadata = { title: "Registro contable · cierre" };
 export const dynamic = "force-dynamic";
@@ -14,9 +14,8 @@ export default async function RegHistoricoMesPage({ params }: { params: Promise<
   const { mes } = await params;
   if (!/^\d{4}-\d{2}$/.test(mes)) notFound();
 
-  const todos = await renglonesDelMes(mes);
-  // Solo los que realmente tienen registro de ese mes (el cierre pagado/registrado).
-  const renglones = todos.filter((r) => r.pagoId != null);
+  // Cierre = todos los renglones con registro ese mes (incluye inactivos y freelances).
+  const renglones = await cierreDelMes(mes);
   const t = totalizar(renglones);
   const costosBanco = t.gmf + t.costoTransferencia + t.ivaTransferencia;
 
@@ -57,8 +56,8 @@ export default async function RegHistoricoMesPage({ params }: { params: Promise<
                   <td className="right">{cop(r.pagoFijo)}</td>
                   <td className="right">{r.comision > 0 ? cop(r.comision) : "—"}</td>
                   <td className="right cf-mono" style={{ fontWeight: 700 }}>{cop(r.valorCuentaCobro)}</td>
-                  <td className="right neg">{r.reteIca > 0 ? cop(r.reteIca) : "—"}</td>
-                  <td className="right neg">{r.reteRenta > 0 ? cop(r.reteRenta) : "—"}</td>
+                  <td className="right neg">{r.reteIca !== 0 ? cop(r.reteIca) : "—"}</td>
+                  <td className="right neg">{r.reteRenta !== 0 ? cop(r.reteRenta) : "—"}</td>
                   <td className="right cf-mono">{cop(r.valorGirar)}</td>
                   <td className="center">{r.ckPagado ? <span className="estado-pagado">✓</span> : <span className="estado-pendiente">—</span>}</td>
                 </tr>
