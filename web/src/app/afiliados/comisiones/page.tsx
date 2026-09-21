@@ -9,16 +9,19 @@ const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", curren
 const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 const mesLargo = (mesISO: string) => { const [y, m] = mesISO.split("-").map(Number); return `${MESES[(m ?? 1) - 1]} ${y}`; };
 
-function proximosMeses(now = new Date(), n = 3): string[] {
+/** Devuelve n meses desde un desfase respecto al mes actual (offset 0 = actual). */
+function tresMeses(now: Date, offsetInicial: number): string[] {
   const out: string[] = [];
-  for (let i = 0; i < n; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+  for (let i = 0; i < 3; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + offsetInicial + i, 1);
     out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
   }
   return out;
 }
 
-export default async function ComisionesAfiliadosPage() {
+export default async function ComisionesAfiliadosPage({ searchParams }: { searchParams: Promise<{ periodo?: string }> }) {
+  const sp = await searchParams;
+  const periodo = sp.periodo === "anterior" ? "anterior" : "actual";
   let filas: FilaComision[] | null = null;
   let error: string | null = null;
   try {
@@ -27,18 +30,26 @@ export default async function ComisionesAfiliadosPage() {
     error = e instanceof Error ? e.message : String(e);
   }
 
-  const meses = proximosMeses(new Date(), 3);
+  const now = new Date();
+  const mesAhora = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  // En curso = actual + siguientes 2; Anterior = los 3 meses previos (más nuevo primero).
+  const meses = periodo === "anterior" ? tresMeses(now, -3).reverse() : tresMeses(now, 0);
 
   return (
     <main className="wrap">
       <header className="page">
         <h1>Comisiones de afiliados</h1>
-        <p>Las comisiones se pagan por mes. Vista del trimestre en curso (3 meses).</p>
+        <p>Las comisiones se pagan por mes. Elige el trimestre que quieres revisar.</p>
       </header>
+
+      <div className="per-toggle">
+        <Link href="/afiliados/comisiones" className={periodo === "actual" ? "on" : ""}>Trimestre en curso</Link>
+        <Link href="/afiliados/comisiones?periodo=anterior" className={periodo === "anterior" ? "on" : ""}>Trimestre anterior</Link>
+      </div>
 
       {error && <div className="card"><strong>No se pudo cargar.</strong><p className="empty">{error}</p></div>}
 
-      {filas && meses.map((mes, idx) => {
+      {filas && meses.map((mes) => {
         const delMes = filas!.filter((f) => f.mes === mes)
           .sort((a, b) => Number(a.pagado) - Number(b.pagado) || a.afiliadoNombre.localeCompare(b.afiliadoNombre));
         const pend = delMes.filter((f) => !f.pagado).reduce((s, f) => s + f.monto, 0);
@@ -47,7 +58,7 @@ export default async function ComisionesAfiliadosPage() {
           <section className="card" key={mes}>
             <div className="card-head">
               <span className="who">
-                {mesLargo(mes)} {idx === 0 && <span className="badge-mes">mes actual</span>}
+                {mesLargo(mes)} {mes === mesAhora && <span className="badge-mes">mes actual</span>}
               </span>
               <div className="totales">
                 <span className="t-pendiente">Pendiente <b>{usd(Math.round(pend * 100) / 100)}</b></span>

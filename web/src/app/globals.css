@@ -1272,6 +1272,14 @@ button.ck:hover { border-color: var(--muted); }
 .nom-dept .d-usd { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; margin-top: 10px; font-variant-numeric: tabular-nums; }
 .nom-dept .d-usd small { font-size: 0.7rem; font-weight: 600; color: var(--muted); margin-left: 3px; }
 .nom-dept .d-cop { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 2px; }
+/* Selector de trimestre (comisiones afiliados) */
+.per-toggle { display: inline-flex; gap: 4px; padding: 4px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 999px; margin: 0 0 16px; }
+.per-toggle a { padding: 7px 16px; border-radius: 999px; font-size: 0.85rem; font-weight: 600; color: var(--muted);
+  text-decoration: none; transition: background .15s ease, color .15s ease; }
+.per-toggle a:hover { color: var(--text); }
+.per-toggle a.on { background: var(--accent); color: #fff; }
+
 /* Histórico de nómina: tarjetas clicables por mes */
 .nom-hist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
 .nom-hist-card { display: block; background: var(--panel); border: 1px solid var(--border); border-radius: 14px;

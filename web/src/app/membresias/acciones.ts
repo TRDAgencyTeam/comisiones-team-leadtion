@@ -437,6 +437,7 @@ export async function crearClienteCompleto(d: NuevoClienteInput): Promise<number
     }
   }
   const serviciosValidos = ["agente_ai", "reactivacion", "level_up"];
+  const PRECIO_MES1: Record<string, number> = { agente_ai: 847, reactivacion: 597, level_up: 497 };
   if (d.planTipo && serviciosValidos.includes(d.planTipo)) {
     const mes = d.fechaActivacion.slice(0, 7);
     await consulta(
@@ -446,6 +447,20 @@ export async function crearClienteCompleto(d: NuevoClienteInput): Promise<number
       [id, d.planTipo, `${mes}-01`, d.fechaActivacion, d.soporteValor, d.precioMes1, d.bono],
     );
     await recomputarPagosDeCliente(id);
+    // Si viene por un afiliado, registra el servicio en servicios_afiliados para que
+    // el motor de comisiones calcule bien el mes 1 de AGENCIA (% × total de servicios,
+    // no % × licencia). Sin esto la comisión sale como 30% × $69.
+    if (d.afiliadoRef) {
+      const precioSrv = d.precioMes1 && d.precioMes1 > 0 ? d.precioMes1 : (PRECIO_MES1[d.planTipo] ?? 0);
+      const srvRef = `srv-mem-${id}-${d.planTipo}`;
+      const dup = await consulta(`select 1 from public.servicios_afiliados where ref=$1 limit 1`, [srvRef]);
+      if (!dup.length) {
+        await consulta(
+          `insert into public.servicios_afiliados (ref, cliente_ref, tipo, precio) values ($1,$2,$3,$4)`,
+          [srvRef, `cl-mem-${id}`, d.planTipo, precioSrv],
+        );
+      }
+    }
   }
   revalidatePath("/membresias/clientes");
   revalidatePath("/membresias/dashboard");
