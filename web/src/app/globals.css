@@ -1272,6 +1272,8 @@ button.ck:hover { border-color: var(--muted); }
 .nom-dept .d-usd { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; margin-top: 10px; font-variant-numeric: tabular-nums; }
 .nom-dept .d-usd small { font-size: 0.7rem; font-weight: 600; color: var(--muted); margin-left: 3px; }
 .nom-dept .d-cop { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 2px; }
+.cf-li-sub { font-size: 0.84rem; padding: 1px 0 !important; border: 0 !important; }
+
 /* Selector de trimestre (comisiones afiliados) */
 .per-toggle { display: inline-flex; gap: 4px; padding: 4px; background: var(--bg); border: 1px solid var(--border);
   border-radius: 999px; margin: 0 0 16px; }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export interface GrupoGasto { label: string; total: number; count: number; unidad: string }
+export interface GrupoGasto { label: string; total: number; count: number; unidad: string; detalle?: { label: string; valor: number }[] }
 
 /** Card de gastos por categoría del Resumen, con switch COP↔USD. */
 export function ResumenGastos({
@@ -25,9 +25,17 @@ export function ResumenGastos({
         </span>
       </div>
       {grupos.map((g) => (
-        <div key={g.label} className="cf-li">
-          <span>{g.label}{conCount(g.label) ? <small style={{ color: "var(--faint)" }}> · {g.count} {g.unidad}</small> : null}</span>
-          <b>{fmt(g.total)}</b>
+        <div key={g.label}>
+          <div className="cf-li">
+            <span>{g.label}{conCount(g.label) ? <small style={{ color: "var(--faint)" }}> · {g.count} {g.unidad}</small> : null}</span>
+            <b>{fmt(g.total)}</b>
+          </div>
+          {g.detalle && g.detalle.length > 0 && g.detalle.map((d, i) => (
+            <div key={`${g.label}-${i}`} className="cf-li cf-li-sub">
+              <span style={{ paddingLeft: 14, color: "var(--muted)" }}>— {d.label}</span>
+              <span style={{ color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}>{fmt(d.valor)}</span>
+            </div>
+          ))}
         </div>
       ))}
       {grupos.length === 0 && <div className="cf-li"><span>Sin gastos registrados</span><b>—</b></div>}

@@ -15,17 +15,22 @@ const usd2 = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", 
 const mesISO = () => { const h = new Date(); return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}`; };
 
 const enLista = (v: string | null, arr: string[]) => arr.includes(v ?? "");
-/** Agrupa los gastos que afectan la utilidad por categoría (resumen, no fila a fila). */
-function agruparGastos(filas: { categoria: string | null; subcategoria: string | null; valorUsd: number }[]) {
-  const g: Record<string, { label: string; total: number; count: number; unidad: string }> = {
-    nomina: { label: "Nómina", total: 0, count: 0, unidad: "personas" },
-    oper: { label: "Operativos fijos", total: 0, count: 0, unidad: "conceptos" },
-    tools: { label: "Herramientas & Hosting", total: 0, count: 0, unidad: "herramientas" },
-    fijo: { label: "Gastos fijos", total: 0, count: 0, unidad: "conceptos" },
-    lead: { label: "Operación Leadtion", total: 0, count: 0, unidad: "conceptos" },
-    comercial: { label: "Comisiones equipo comercial", total: 0, count: 0, unidad: "conceptos" },
-    var: { label: "Gastos variables del mes", total: 0, count: 0, unidad: "conceptos" },
+/** Agrupa los gastos que afectan la utilidad por categoría (resumen, no fila a fila).
+ *  Los grupos automáticos (Operación Leadtion, Comisiones comercial) traen su
+ *  detalle línea a línea para verlo desglosado y verificar que no se duplique. */
+function agruparGastos(filas: { categoria: string | null; subcategoria: string | null; valorUsd: number; concepto: string }[]) {
+  type G = { label: string; total: number; count: number; unidad: string; detalle: { label: string; valor: number }[] };
+  const nuevo = (label: string, unidad: string): G => ({ label, total: 0, count: 0, unidad, detalle: [] });
+  const g: Record<string, G> = {
+    nomina: nuevo("Nómina", "personas"),
+    oper: nuevo("Operativos fijos", "conceptos"),
+    tools: nuevo("Herramientas & Hosting", "herramientas"),
+    fijo: nuevo("Gastos fijos", "conceptos"),
+    lead: nuevo("Operación Leadtion", "conceptos"),
+    comercial: nuevo("Comisiones equipo comercial", "conceptos"),
+    var: nuevo("Gastos variables del mes", "conceptos"),
   };
+  const conDetalle = new Set(["lead", "comercial"]);
   for (const e of filas) {
     let k: string;
     if (e.categoria === "fijo" && e.subcategoria === "nomina") k = "nomina";
@@ -36,6 +41,7 @@ function agruparGastos(filas: { categoria: string | null; subcategoria: string |
     else if (enLista(e.categoria, ["comision", "api", "bono", "referido", "comision_banco"])) k = "lead";
     else k = "var";
     g[k]!.total += e.valorUsd; g[k]!.count += 1;
+    if (conDetalle.has(k)) g[k]!.detalle.push({ label: e.concepto, valor: e.valorUsd });
   }
   return Object.values(g).filter((x) => x.count > 0);
 }
