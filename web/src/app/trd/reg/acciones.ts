@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { soloAdmin } from "@/lib/sesion";
-import { primerDiaMes, uvtDeMes, recalcular, corteCerrado, comisionPendienteCop, tasaCorte } from "@/lib/reg";
+import { primerDiaMes, uvtDeMes, recalcular, corteDeMes, comisionPendienteCop, tasaCorte } from "@/lib/reg";
 import { TARIFA_ICA_DEFAULT } from "@/lib/retenciones";
 import { enviarEmail, plantillaCorreoPago, REPLY_TO } from "@/lib/email";
 import { pagarCiclo, deshacerCiclo } from "@/lib/comisiones-pago";
@@ -84,7 +84,7 @@ export async function toggleCheck(formData: FormData) {
     if (r && r.colaborador_id != null) {
       const colaboradorId = Number(r.colaborador_id);
       const mesISO = r.mes instanceof Date ? r.mes.toISOString().slice(0, 7) : String(r.mes).slice(0, 7);
-      const corte = corteCerrado(mesISO);
+      const corte = corteDeMes(mesISO);
       if (valor) {
         // Antes de bloquear el pago, refresca la comisión al corte cerrado (por si
         // el valor guardado era un acumulado viejo) y recalcula el total del renglón.

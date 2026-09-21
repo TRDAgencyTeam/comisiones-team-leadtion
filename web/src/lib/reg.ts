@@ -112,7 +112,7 @@ export async function tasaCorte(mes: string): Promise<TasaCorte> {
 
 /** Comisión CS pendiente por colaborador (COP) para el corte del mes. */
 async function comisionesCopDelMes(mes: string): Promise<{ mapa: Map<number, number>; tasa: number }> {
-  const corte = corteCerrado(mes);
+  const corte = corteDeMes(mes);
   const [resultados, t] = await Promise.all([cargarResultados(corte), tasaCorte(mes)]);
   const mapa = new Map<number, number>();
   for (const r of resultados) {
@@ -123,7 +123,7 @@ async function comisionesCopDelMes(mes: string): Promise<{ mapa: Map<number, num
 
 /** Comisión CS pendiente (COP) de un colaborador para el corte del mes. */
 export async function comisionPendienteCop(colaboradorId: number, mes: string): Promise<number> {
-  const corte = corteCerrado(mes);
+  const corte = corteDeMes(mes);
   const [res, t] = await Promise.all([resultadoDeColaborador(colaboradorId, corte), tasaCorte(mes)]);
   return res ? Math.round(res.totalPendiente * t.cop) : 0;
 }
@@ -276,4 +276,25 @@ export function totalizar(renglones: RenglonReg[]): TotalesReg {
 /** Recalcula retenciones desde los datos crudos (fuente única = retenciones.ts). */
 export function recalcular(valor: number, tarifaIcaMil: number, salud: number, pension: number, uvt: number) {
   return calcularRetenciones({ valor, tarifaIcaMil, aporteSalud: salud, aportePension: pension, uvt });
+}
+
+export interface RegMesResumen {
+  mes: string; personas: number; pagados: number;
+  cuentaCobro: number; reteIca: number; reteRenta: number; valorGirar: number;
+}
+
+/** Historial de REG por mes (desde reg_pago). Meses con al menos un registro,
+ *  más recientes primero. Excluye el mes en curso si aún no tiene registros. */
+export async function historicoReg(nMeses = 6): Promise<RegMesResumen[]> {
+  const rows = await consulta(
+    `select to_char(mes,'YYYY-MM') mes, count(*)::int n, count(*) filter (where ck_pagado)::int pag,
+            coalesce(sum(valor_cuenta_cobro),0)::float cc, coalesce(sum(rete_ica),0)::float ri,
+            coalesce(sum(rete_renta),0)::float rr, coalesce(sum(valor_girar),0)::float vg
+       from public.reg_pago group by 1 order by 1 desc limit $1`,
+    [nMeses],
+  );
+  return rows.map((r: Record<string, unknown>) => ({
+    mes: String(r.mes), personas: Number(r.n), pagados: Number(r.pag),
+    cuentaCobro: num(r.cc), reteIca: num(r.ri), reteRenta: num(r.rr), valorGirar: num(r.vg),
+  }));
 }

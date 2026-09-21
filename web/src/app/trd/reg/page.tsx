@@ -1,5 +1,6 @@
 import { soloAdmin } from "@/lib/sesion";
-import { renglonesDelMes, totalizar, uvtDeMes, primerDiaMes, tasaCorte } from "@/lib/reg";
+import Link from "next/link";
+import { renglonesDelMes, totalizar, uvtDeMes, primerDiaMes, tasaCorte, historicoReg } from "@/lib/reg";
 import { historialFx, snapshotTasaHoy, backfillFx } from "@/lib/fx-historial";
 import { RegFila } from "@/components/RegFila";
 import { RegTasaWidget } from "@/components/RegTasaWidget";
@@ -31,9 +32,10 @@ export default async function RegPage({
   const mes = sp.mes && /^\d{4}-\d{2}$/.test(sp.mes) ? sp.mes : mesActualISO();
   // Historial de la tasa (informativo): registra la de hoy y rellena días faltantes.
   await Promise.all([snapshotTasaHoy(), backfillFx(4)]);
-  const [renglones, uvt, tasa, historial] = await Promise.all([
-    renglonesDelMes(mes), uvtDeMes(mes), tasaCorte(mes), historialFx(3),
+  const [renglones, uvt, tasa, historial, historico] = await Promise.all([
+    renglonesDelMes(mes), uvtDeMes(mes), tasaCorte(mes), historialFx(3), historicoReg(6),
   ]);
+  const historicoOtros = historico.filter((h) => h.mes !== mes);
   const totales = totalizar(renglones);
   const primer = primerDiaMes(mes);
 
@@ -113,6 +115,29 @@ export default async function RegPage({
       </div>
 
       <FreelanceForm mes={mes} />
+
+      {historicoOtros.length > 0 && (
+        <section style={{ marginTop: 26 }}>
+          <h2 style={{ fontSize: "1.05rem", margin: "0 0 4px" }}>Historial por mes</h2>
+          <p className="sub" style={{ margin: "0 0 12px" }}>Cierres de meses anteriores. Toca un mes para ver a quién se le pagó y los costos.</p>
+          <div className="nom-hist-grid">
+            {historicoOtros.map((h) => (
+              <Link key={h.mes} href={`/trd/reg/historico/${h.mes}`} className="nom-hist-card">
+                <div className="nhc-top">
+                  <span className="nhc-mes">{nombreMes(h.mes)}</span>
+                  <span className="nhc-chip">{h.pagados}/{h.personas} pagados</span>
+                </div>
+                <div className="nhc-cop">{cop(h.cuentaCobro)}</div>
+                <div className="nhc-foot">
+                  <span className="nhc-usd">reteICA {cop(h.reteIca)} · reteRenta {cop(h.reteRenta)}</span>
+                  <span className="nhc-ver">Ver cierre →</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       <p className="reg-nota">
         El <strong>costo de transferencia</strong> lo asume Ebenezer y no se descuenta al colaborador. Marca los
         4 estados a medida que completas el proceso; más adelante el sistema enviará el correo al colaborador
