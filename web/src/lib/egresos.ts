@@ -262,6 +262,8 @@ export interface ResumenMes {
     totalAfectan: number;
     totalCaja: number;
   };
+  /** Recurrencia de la facturación de clientes (base fija vs. del momento), en USD neto. */
+  recurrencia: { fijaNeto: number; fijaClientes: number; momentoNeto: number; momentoClientes: number };
   utilidadBruta: number;
   diezmo: number;
   utilidadNeta: number;
@@ -283,7 +285,7 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
   await asegurarEgresosFijosDelMes(mes); // fijos del mes en curso/futuro (idempotente)
   const primer = primerDiaMes(mes);
   const [facturas, fx, otros, egresos, cajaSnap] = await Promise.all([
-    consulta(`select entidad, facturado, medio, iva_pct, estado, tasa from public.factura_mensual where mes = $1`, [primer]),
+    consulta(`select entidad, facturado, medio, iva_pct, estado, tasa, recurrente from public.factura_mensual where mes = $1`, [primer]),
     tasaUsdCop(),
     otrosIngresosDelMes(mes),
     egresosDelMes(mes),
@@ -292,12 +294,18 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
   const tasa = fx.cop;
 
   let clientesUsa = 0, clientesCol = 0;
+  // Recurrencia: separa la facturación de clientes recurrentes (base fija) vs del momento.
+  let fijaNeto = 0, fijaN = 0, momentoNeto = 0, momentoN = 0;
   for (const f of facturas as Record<string, unknown>[]) {
     if (String(f.estado) === "anulado") continue;
-    if (f.entidad === "LLC") clientesUsa += calcLLC(num(f.facturado), (f.medio as string) ?? null).neto;
-    else clientesCol += calcCOL(num(f.facturado), num(f.iva_pct), f.tasa != null ? Number(f.tasa) : tasa).netoUsd;
+    const neto = f.entidad === "LLC"
+      ? calcLLC(num(f.facturado), (f.medio as string) ?? null).neto
+      : calcCOL(num(f.facturado), num(f.iva_pct), f.tasa != null ? Number(f.tasa) : tasa).netoUsd;
+    if (f.entidad === "LLC") clientesUsa += neto; else clientesCol += neto;
+    if (Boolean(f.recurrente)) { fijaNeto += neto; fijaN += 1; } else { momentoNeto += neto; momentoN += 1; }
   }
   clientesUsa = r2(clientesUsa); clientesCol = r2(clientesCol);
+  fijaNeto = r2(fijaNeto); momentoNeto = r2(momentoNeto);
   // Reselling (manual) va en su propia línea; el resto de "otros" queda aparte.
   const reselling = r2(otros.filter((o) => o.categoria === "reselling").reduce((s, o) => s + o.valorUsd, 0));
   const otrosSinResel = otros.filter((o) => o.categoria !== "reselling");
@@ -365,6 +373,7 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
       ].filter((x) => x.valor > 0),
     },
     egresos: { afectanUtilidad: afectan, saleDeCaja: [diezmoRow, ...caja], totalAfectan, totalCaja },
+    recurrencia: { fijaNeto, fijaClientes: fijaN, momentoNeto, momentoClientes: momentoN },
     utilidadBruta, diezmo, utilidadNeta, margen, cajaOficial,
   };
 }

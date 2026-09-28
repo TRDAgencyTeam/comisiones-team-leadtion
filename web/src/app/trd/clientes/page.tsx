@@ -6,6 +6,7 @@ import { ClientesHeader } from "@/components/ClientesHeader";
 import { TendenciaChart } from "@/components/TendenciaChart";
 import { DonutChart } from "@/components/DonutChart";
 import { ResumenGastos } from "@/components/ResumenGastos";
+import { RecurrenciaCard } from "@/components/RecurrenciaCard";
 
 export const metadata = { title: "Resumen del mes" };
 export const dynamic = "force-dynamic";
@@ -100,6 +101,12 @@ export default async function ResumenPage({ searchParams }: { searchParams: Prom
         </div>
         <div className="cf-card"><h3>Ingresos por fuente</h3><DonutChart fuentes={r.ingresos.porFuente} total={r.ingresos.total} /></div>
       </div>
+
+      <RecurrenciaCard
+        fijaNeto={r.recurrencia.fijaNeto} fijaClientes={r.recurrencia.fijaClientes}
+        momentoNeto={r.recurrencia.momentoNeto} momentoClientes={r.recurrencia.momentoClientes}
+        leadtionRec={r.ingresos.leadtion + r.ingresos.reselling} apiVendida={r.ingresos.apiVendida}
+      />
 
       <div className="cf-ie">
         <div className="cf-card">
