@@ -118,6 +118,12 @@ export function PersonaForm({
             ? <small className="pf-hint">Entra el día {diaInicio} → se liquidan {diasPrimerMes} días. Sugerido: {fmtMiles(String(sugerido))} COP (prorrateo /30). Editable. Desde el mes 2 se cobra el valor mensual completo.</small>
             : <small className="pf-hint">Si entra a mitad de mes, aquí va el valor parcial de ese primer mes. Déjalo vacío = primer mes completo.</small>}
         </label>
+
+        <label>% dedicación a Leadtion <small style={{ color: "var(--faint)" }}>0 = todo Agencia</small>
+          <input name="dedicacionLeadtion" type="number" min="0" max="100" step="5"
+            defaultValue={persona?.dedicacionLeadtion ?? 0} placeholder="0" />
+          <small className="pf-hint">Cuánto de su nómina va a Leadtion (el resto a Agencia). Se usa en la cobertura por negocio del Resumen. Ej. 100 = solo Leadtion, 60 = 60% Leadtion / 40% Agencia.</small>
+        </label>
       </div>
 
       <div className="pf-acciones">

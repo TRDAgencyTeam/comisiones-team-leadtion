@@ -24,6 +24,7 @@ function mapRow(r: Record<string, unknown>): GastoFijo {
     amortizar: Boolean(r.amortizar),
     afectaUtilidad: Boolean(r.afecta_utilidad),
     activo: Boolean(r.activo),
+    negocio: (r.negocio as "agencia" | "leadtion") ?? "agencia",
     notas: (r.notas as string) ?? null,
   };
 }

@@ -35,13 +35,15 @@ function parse(formData: FormData) {
   const valorNomina = numCO(formData.get("valorNomina"));
   const primerRaw = String(formData.get("valorPrimerMes") ?? "").replace(/[^\d]/g, "");
   const valorPrimerMes = primerRaw === "" ? null : Number(primerRaw);
+  const dedRaw = String(formData.get("dedicacionLeadtion") ?? "").replace(/[^\d]/g, "");
+  const dedicacionLeadtion = dedRaw === "" ? 0 : Math.min(100, Math.max(0, Number(dedRaw)));
 
   // Fecha fin = inicio + duración (en meses). Se calcula sola.
   let fechaFin: string | null = null;
   if (fechaInicio && duracionMeses && duracionMeses > 0) {
     fechaFin = addMonths(fechaInicio, duracionMeses);
   }
-  return { nombre, area, banco, email, identificacion, fechaNacimiento, fechaInicio, duracionMeses, fechaFin, valorNomina, valorPrimerMes };
+  return { nombre, area, banco, email, identificacion, fechaNacimiento, fechaInicio, duracionMeses, fechaFin, valorNomina, valorPrimerMes, dedicacionLeadtion };
 }
 
 /** Crea una persona de nómina (categoría vacía → NO comisiona en CS). */
@@ -55,10 +57,10 @@ export async function crearPersona(formData: FormData) {
     `insert into public.colaboradores
        (nombre, rol, categoria, activo, area, banco, email, identificacion,
         fecha_nacimiento, fecha_ingreso, fecha_inicio_contrato, duracion_contrato_meses,
-        fecha_fin_contrato, valor_nomina, valor_primer_mes)
-     values ($1,'cs',null,true,$2,$3,$4,$5,$6,$7,$7,$8,$9,$10,$11) returning id`,
+        fecha_fin_contrato, valor_nomina, valor_primer_mes, dedicacion_leadtion)
+     values ($1,'cs',null,true,$2,$3,$4,$5,$6,$7,$7,$8,$9,$10,$11,$12) returning id`,
     [d.nombre, d.area, d.banco, d.email, d.identificacion, d.fechaNacimiento, d.fechaInicio,
-     d.duracionMeses, d.fechaFin, d.valorNomina, d.valorPrimerMes],
+     d.duracionMeses, d.fechaFin, d.valorNomina, d.valorPrimerMes, d.dedicacionLeadtion],
   );
   // Refleja la persona en el mes en curso (Egresos). REG la toma en vivo.
   await resyncFijosMesActual();
@@ -81,10 +83,10 @@ export async function actualizarPersona(formData: FormData) {
     `update public.colaboradores
         set nombre=$2, area=$3, banco=$4, email=$5, identificacion=$6, fecha_nacimiento=$7,
             fecha_inicio_contrato=$8, duracion_contrato_meses=$9, fecha_fin_contrato=$10,
-            valor_nomina=$11, valor_primer_mes=$12
+            valor_nomina=$11, valor_primer_mes=$12, dedicacion_leadtion=$13
       where id=$1`,
     [id, d.nombre, d.area, d.banco, d.email, d.identificacion, d.fechaNacimiento,
-     d.fechaInicio, d.duracionMeses, d.fechaFin, d.valorNomina, d.valorPrimerMes],
+     d.fechaInicio, d.duracionMeses, d.fechaFin, d.valorNomina, d.valorPrimerMes, d.dedicacionLeadtion],
   );
   // Propaga el cambio (área, salario, nombre) al mes en curso: Egresos + REG.
   await resyncFijosMesActual();

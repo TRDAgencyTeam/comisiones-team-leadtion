@@ -7,6 +7,8 @@ import { TendenciaChart } from "@/components/TendenciaChart";
 import { DonutChart } from "@/components/DonutChart";
 import { ResumenGastos } from "@/components/ResumenGastos";
 import { RecurrenciaCard } from "@/components/RecurrenciaCard";
+import { CoberturaCard } from "@/components/CoberturaCard";
+import { coberturaPorNegocio } from "@/lib/cobertura";
 
 export const metadata = { title: "Resumen del mes" };
 export const dynamic = "force-dynamic";
@@ -67,6 +69,10 @@ export default async function ResumenPage({ searchParams }: { searchParams: Prom
       [primerDiaMes(mes)],
     ),
   ]);
+  // Cobertura solo del mes en curso (usa costos/comisiones actuales, no históricos).
+  const cobertura = mes === mesISO()
+    ? await coberturaPorNegocio(r.recurrencia.fijaNeto, r.ingresos.leadtion + r.ingresos.reselling)
+    : null;
   const rec = Number(cnt[0]?.rec ?? 0), mom = Number(cnt[0]?.mom ?? 0);
   const prev = tendencia.length >= 2 ? tendencia[tendencia.length - 2]! : null;
   const dIng = prev ? delta(r.ingresos.total, prev.ingresos) : null;
@@ -107,6 +113,8 @@ export default async function ResumenPage({ searchParams }: { searchParams: Prom
         momentoNeto={r.recurrencia.momentoNeto} momentoClientes={r.recurrencia.momentoClientes}
         leadtionRec={r.ingresos.leadtion + r.ingresos.reselling} apiVendida={r.ingresos.apiVendida}
       />
+
+      {cobertura && <CoberturaCard cobertura={cobertura} />}
 
       <div className="cf-ie">
         <div className="cf-card">

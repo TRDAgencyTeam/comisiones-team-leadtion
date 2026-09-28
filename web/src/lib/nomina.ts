@@ -21,6 +21,8 @@ export interface PersonaNomina {
   valorNomina: number;
   /** Valor del primer mes (parcial). NULL = primer mes completo. */
   valorPrimerMes: number | null;
+  /** % de la nómina que corresponde a Leadtion (0-100). El resto es Agencia. */
+  dedicacionLeadtion: number;
   activo: boolean;
 }
 
@@ -45,12 +47,14 @@ function mapRow(r: Record<string, unknown>): PersonaNomina {
     fechaFinContrato: toISO(r.fecha_fin_contrato),
     valorNomina: r.valor_nomina != null ? Number(r.valor_nomina) : 0,
     valorPrimerMes: r.valor_primer_mes != null ? Number(r.valor_primer_mes) : null,
+    dedicacionLeadtion: r.dedicacion_leadtion != null ? Number(r.dedicacion_leadtion) : 0,
     activo: Boolean(r.activo),
   };
 }
 
 const CAMPOS = `id, nombre, area, banco, email, identificacion, fecha_nacimiento,
-  fecha_inicio_contrato, duracion_contrato_meses, fecha_fin_contrato, valor_nomina, valor_primer_mes, activo`;
+  fecha_inicio_contrato, duracion_contrato_meses, fecha_fin_contrato, valor_nomina, valor_primer_mes,
+  dedicacion_leadtion, activo`;
 
 /** Lista toda la nómina (activos primero, luego por área y nombre). */
 export async function listarNomina(): Promise<PersonaNomina[]> {

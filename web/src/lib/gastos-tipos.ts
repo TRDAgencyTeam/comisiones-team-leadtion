@@ -30,5 +30,7 @@ export interface GastoFijo {
   amortizar: boolean;
   afectaUtilidad: boolean;
   activo: boolean;
+  /** Negocio al que pertenece: 'agencia' | 'leadtion' (para la cobertura por negocio). */
+  negocio: "agencia" | "leadtion";
   notas: string | null;
 }

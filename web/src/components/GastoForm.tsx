@@ -77,6 +77,15 @@ export function GastoForm({
           </label>
         )}
 
+        {(esHerramienta || esHosting) ? (
+          <label>Negocio <small style={{ color: "var(--faint)" }}>para la cobertura</small>
+            <select name="negocio" defaultValue={gasto?.negocio ?? "agencia"}>
+              <option value="agencia">Agencia</option>
+              <option value="leadtion">Leadtion</option>
+            </select>
+          </label>
+        ) : <input type="hidden" name="negocio" value={gasto?.negocio ?? "agencia"} />}
+
         {!esPaso && (
           <label className="pf-check">
             <input type="checkbox" name="afectaUtilidad" value="1" defaultChecked={gasto?.afectaUtilidad ?? true} />
