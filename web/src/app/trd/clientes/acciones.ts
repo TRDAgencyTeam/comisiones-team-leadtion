@@ -7,7 +7,7 @@ import { soloAdmin } from "@/lib/sesion";
 import { primerDiaMes } from "@/lib/facturacion";
 import { tasaUsdCop } from "@/lib/fx";
 import { crearClienteCompleto, recomputarPagosDeCliente, type NuevoClienteInput } from "@/app/membresias/acciones";
-import { registrarComisionComercial } from "@/lib/comercial";
+import { registrarComisionComercial, COMERCIAL_DESDE } from "@/lib/comercial";
 
 const n = (v: FormDataEntryValue | null): number => {
   const x = Number(String(v ?? "").replace(/[^\d.-]/g, ""));
@@ -274,7 +274,7 @@ export async function crearClienteCascada(formData: FormData) {
   // Comisión del equipo comercial: 10% de la venta neta, SOLO si es cliente NUEVO
   // y el admin marcó al comercial. Una vez (sobre esta primera factura).
   const facturaId = facRows[0]?.id != null ? Number(facRows[0]!.id) : null;
-  if (esClienteNuevo && comisionaComercial && facturaId && comercialIds.length) {
+  if (esClienteNuevo && comisionaComercial && facturaId && comercialIds.length && mes.slice(0, 7) >= COMERCIAL_DESDE) {
     for (const colId of comercialIds) {
       await registrarComisionComercial({
         clienteId, facturaId, colaboradorId: colId, mes: mes.slice(0, 7), facturado, medio,

@@ -11,6 +11,10 @@ const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 export const PCT_COMERCIAL = 10;
 
+/** La comisión comercial aplica desde este mes en adelante (Mauro: septiembre no
+ *  comisiona; octubre en adelante sí). Formato 'YYYY-MM'. */
+export const COMERCIAL_DESDE = "2026-10";
+
 /** Costo de pasarela por medio de pago. Editable aquí (Mauro confirma los demás
  *  medios más adelante). Stripe: 2.9% + $0.30; Zelle/Bancolombia/Nequi: $0. */
 export const COSTO_PASARELA: Record<string, { pct: number; fijo: number }> = {
