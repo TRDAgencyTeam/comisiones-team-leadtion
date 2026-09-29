@@ -1298,6 +1298,18 @@ button.ck:hover { border-color: var(--muted); }
 .rec-callout { margin-top: 12px; font-size: 0.86rem; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 11px 13px; }
 .rec-callout b { color: var(--text); }
 
+/* Tendencia de recurrencia (columnas apiladas) */
+.trec-chart { display: flex; align-items: flex-end; gap: 10px; height: 190px; padding: 4px 2px 0; }
+.trec-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; }
+.trec-bars { position: relative; width: 100%; max-width: 46px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; }
+.trec-seg { width: 100%; }
+.trec-seg.fija { background: #4d47c2; border-radius: 0 0 5px 5px; }
+.trec-seg.mom { background: #079c8b; border-radius: 5px 5px 0 0; }
+.trec-bars:has(.trec-seg.mom[style*="height: 0"]) .trec-seg.fija,
+.trec-col .trec-bars .trec-seg.fija:only-of-type { border-radius: 5px; }
+.trec-tot { position: absolute; top: -18px; left: 0; right: 0; text-align: center; font-size: 0.68rem; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.trec-x { font-size: 0.74rem; color: var(--faint); text-transform: capitalize; }
+
 /* Cobertura por unidad de negocio */
 .cov-card { margin-top: 14px; }
 .cov-meters { display: flex; flex-direction: column; gap: 18px; margin-top: 4px; }

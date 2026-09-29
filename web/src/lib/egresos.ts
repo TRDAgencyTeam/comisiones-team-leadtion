@@ -378,6 +378,45 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
   };
 }
 
+export interface RecurrenciaMes { mes: string; fija: number; momento: number }
+
+/**
+ * Tendencia de recurrencia de los últimos `n` meses (incluye el mes en curso):
+ * facturación NETA de clientes recurrentes (base fija) vs. del momento, por mes.
+ * Sale de `factura_mensual.recurrente` — datos históricos reales, sin snapshots.
+ */
+export async function tendenciaRecurrencia(mesFin: string, n = 6): Promise<RecurrenciaMes[]> {
+  const [ay, am] = primerDiaMes(mesFin).split("-").map(Number);
+  const inicio = new Date(Date.UTC(ay!, (am! - 1) - (n - 1), 1));
+  const inicioISO = `${inicio.getUTCFullYear()}-${String(inicio.getUTCMonth() + 1).padStart(2, "0")}-01`;
+  const finISO = primerDiaMes(mesFin);
+  const [rows, fx] = await Promise.all([
+    consulta(
+      `select to_char(mes,'YYYY-MM') mes, entidad, facturado, medio, iva_pct, tasa, coalesce(recurrente,false) rec
+         from public.factura_mensual
+        where mes >= $1 and mes <= $2 and coalesce(estado,'') <> 'anulado'`,
+      [inicioISO, finISO],
+    ),
+    tasaUsdCop(),
+  ]);
+  const mapa = new Map<string, RecurrenciaMes>();
+  for (let i = 0; i < n; i++) {
+    const d = new Date(Date.UTC(ay!, (am! - 1) - (n - 1) + i, 1));
+    const k = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    mapa.set(k, { mes: k, fija: 0, momento: 0 });
+  }
+  for (const r of rows as Record<string, unknown>[]) {
+    const k = String(r.mes);
+    const row = mapa.get(k);
+    if (!row) continue;
+    const neto = r.entidad === "LLC"
+      ? calcLLC(num(r.facturado), (r.medio as string) ?? null).neto
+      : calcCOL(num(r.facturado), num(r.iva_pct), r.tasa != null ? Number(r.tasa) : fx.cop).netoUsd;
+    if (Boolean(r.rec)) row.fija += neto; else row.momento += neto;
+  }
+  return [...mapa.values()].map((m) => ({ mes: m.mes, fija: r2(m.fija), momento: r2(m.momento) }));
+}
+
 export interface FilaCaja { mes: string; ingresos: number; egresos: number; utilidad: number; inversiones: number }
 export interface FlujoCaja { filas: FilaCaja[]; utilAcum: number; invAcum: number; cajaDisponible: number }
 

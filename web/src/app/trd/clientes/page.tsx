@@ -1,12 +1,13 @@
 import { soloAdmin } from "@/lib/sesion";
 import { consulta } from "@/lib/db";
 import { primerDiaMes } from "@/lib/facturacion";
-import { resumenDelMes, tendenciaMensual } from "@/lib/egresos";
+import { resumenDelMes, tendenciaMensual, tendenciaRecurrencia } from "@/lib/egresos";
 import { ClientesHeader } from "@/components/ClientesHeader";
 import { TendenciaChart } from "@/components/TendenciaChart";
 import { DonutChart } from "@/components/DonutChart";
 import { ResumenGastos } from "@/components/ResumenGastos";
 import { RecurrenciaCard } from "@/components/RecurrenciaCard";
+import { TendenciaRecurrenciaCard } from "@/components/TendenciaRecurrenciaCard";
 import { CoberturaCard } from "@/components/CoberturaCard";
 import { coberturaPorNegocio } from "@/lib/cobertura";
 
@@ -60,9 +61,10 @@ export default async function ResumenPage({ searchParams }: { searchParams: Prom
   const sp = await searchParams;
   const mes = sp.mes && /^\d{4}-\d{2}$/.test(sp.mes) ? sp.mes : mesISO();
 
-  const [r, tendencia, cnt] = await Promise.all([
+  const [r, tendencia, tendRec, cnt] = await Promise.all([
     resumenDelMes(mes),
     tendenciaMensual(mes, 8),
+    tendenciaRecurrencia(mes, 6),
     consulta(
       `select count(*) filter (where recurrente) rec, count(*) filter (where not recurrente) mom
          from public.factura_mensual where mes = $1 and estado <> 'anulado'`,
@@ -113,6 +115,8 @@ export default async function ResumenPage({ searchParams }: { searchParams: Prom
         momentoNeto={r.recurrencia.momentoNeto} momentoClientes={r.recurrencia.momentoClientes}
         leadtionRec={r.ingresos.leadtion + r.ingresos.reselling} apiVendida={r.ingresos.apiVendida}
       />
+
+      <TendenciaRecurrenciaCard datos={tendRec} />
 
       {cobertura && <CoberturaCard cobertura={cobertura} />}
 
