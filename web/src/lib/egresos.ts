@@ -37,7 +37,7 @@ export interface EgresoRow {
 async function insertarCreditoDelMes(primer: string, tasa: number, q: typeof consulta = consulta) {
   await q(
     `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
-     select $1, 'Cuota crédito · ' || nombre, 'TRD', round((cuota/$2)::numeric,2), cuota, true, 'fijo', 'credito'
+     select $1, 'Cuota crédito · ' || nombre, 'TRD', round((cuota/$2::numeric)::numeric,2), cuota, true, 'fijo', 'credito'
        from public.credito where activo and coalesce(cuota,0) > 0`,
     [primer, tasa],
   );
@@ -86,7 +86,7 @@ export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<num
     await q(
       `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
        select $1, nombre, coalesce(area,'Equipo'),
-              round((coalesce(case when to_char(fecha_inicio_contrato,'YYYY-MM')=to_char($1::date,'YYYY-MM') and valor_primer_mes is not null then valor_primer_mes else valor_nomina end,0)/$2)::numeric,2),
+              round((coalesce(case when to_char(fecha_inicio_contrato,'YYYY-MM')=to_char($1::date,'YYYY-MM') and valor_primer_mes is not null then valor_primer_mes else valor_nomina end,0)/$2::numeric)::numeric,2),
               coalesce(case when to_char(fecha_inicio_contrato,'YYYY-MM')=to_char($1::date,'YYYY-MM') and valor_primer_mes is not null then valor_primer_mes else valor_nomina end,0),
               true, 'fijo', 'nomina'
          from public.colaboradores where activo and coalesce(valor_nomina,0) > 0`,
@@ -98,7 +98,7 @@ export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<num
        select $1, nombre, 'TRD',
           round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
                   * (coalesce(porcentaje_reparto,100)/100.0)
-                  / case when moneda='COP' then $2 else 1 end )::numeric, 2),
+                  / case when moneda='COP' then $2::numeric else 1 end )::numeric, 2),
           case when moneda='COP'
                then round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
                             * (coalesce(porcentaje_reparto,100)/100.0) )::numeric, 2)
@@ -158,7 +158,7 @@ export async function sincronizarFijoMesActual(tipo: "nomina" | "gasto", id: num
     await consulta(
       `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
        select $1, nombre, coalesce(area,'Equipo'),
-              round((coalesce(case when to_char(fecha_inicio_contrato,'YYYY-MM')=to_char($1::date,'YYYY-MM') and valor_primer_mes is not null then valor_primer_mes else valor_nomina end,0)/$2)::numeric,2),
+              round((coalesce(case when to_char(fecha_inicio_contrato,'YYYY-MM')=to_char($1::date,'YYYY-MM') and valor_primer_mes is not null then valor_primer_mes else valor_nomina end,0)/$2::numeric)::numeric,2),
               coalesce(case when to_char(fecha_inicio_contrato,'YYYY-MM')=to_char($1::date,'YYYY-MM') and valor_primer_mes is not null then valor_primer_mes else valor_nomina end,0),
               true, 'fijo', 'nomina'
          from public.colaboradores where id = $3 and activo and coalesce(valor_nomina,0) > 0`,
@@ -169,7 +169,7 @@ export async function sincronizarFijoMesActual(tipo: "nomina" | "gasto", id: num
       `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
        select $1, nombre, 'TRD',
           round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
-                  * (coalesce(porcentaje_reparto,100)/100.0) / case when moneda='COP' then $2 else 1 end )::numeric, 2),
+                  * (coalesce(porcentaje_reparto,100)/100.0) / case when moneda='COP' then $2::numeric else 1 end )::numeric, 2),
           case when moneda='COP'
                then round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
                             * (coalesce(porcentaje_reparto,100)/100.0) )::numeric, 2)
@@ -199,7 +199,7 @@ export async function resyncFijosMesActual(): Promise<void> {
   await consulta(`delete from public.egreso_mensual where mes = $1 and categoria = 'fijo'`, [primer]);
   await consulta(
     `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
-     select $1, nombre, coalesce(area,'Equipo'), round((valor_nomina/$2)::numeric,2), valor_nomina, true, 'fijo', 'nomina'
+     select $1, nombre, coalesce(area,'Equipo'), round((valor_nomina/$2::numeric)::numeric,2), valor_nomina, true, 'fijo', 'nomina'
        from public.colaboradores where activo and coalesce(valor_nomina,0) > 0`,
     [primer, tasa],
   );
@@ -208,7 +208,7 @@ export async function resyncFijosMesActual(): Promise<void> {
      select $1, nombre, 'TRD',
         round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
                 * (coalesce(porcentaje_reparto,100)/100.0)
-                / case when moneda='COP' then $2 else 1 end )::numeric, 2),
+                / case when moneda='COP' then $2::numeric else 1 end )::numeric, 2),
         case when moneda='COP'
              then round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
                           * (coalesce(porcentaje_reparto,100)/100.0) )::numeric, 2)

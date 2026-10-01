@@ -131,7 +131,10 @@ export async function partidasPropuestas(mes: string, tasa: number, ajustes: Rec
       if (usaReg) continue; // la nómina sale de REG (completa)
       push({ ...base, grupo: "Nómina (Egresos · REG aún no generado)", detalle: (e.marca as string) ?? null, porDefecto: true });
     } else if (cat === "fijo" && (sub === "servicio_publico" || sub === "otro")) {
-      push({ ...base, grupo: "Operativos fijos", detalle: medio, porDefecto: true });
+      // Los operativos en USD (ej. costo de transferencia Bank of America) se pagan en
+      // USA: no se bajan a Colombia (desmarcados por defecto).
+      const enUsd = e.cop == null || num(e.cop) <= 0;
+      push({ ...base, grupo: "Operativos fijos", detalle: enUsd ? `pagado en USD${medio ? ` · ${medio}` : ""}` : medio, porDefecto: !enUsd });
     } else if (cat === "fijo" && sub === "credito") {
       push({ ...base, grupo: "Crédito", detalle: "cuota mensual", porDefecto: true });
     } else if (cat === "comision" && usaReg) {
