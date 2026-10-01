@@ -473,13 +473,13 @@ export async function cambiarEstadoFactura(formData: FormData) {
     `update public.factura_mensual
         set estado = $2,
             fecha_pago = case
-              when $2 = pagado then coalesce($3::date, fecha_pago, $4::date)
-              when $2 in (facturado,por_facturar,programado) then null
+              when $2 = 'pagado' then coalesce($3::date, fecha_pago, $4::date)
+              when $2 in ('facturado','por_facturar','programado') then null
               else fecha_pago end,
             fecha_factura = case
-              when $2 = pagado then coalesce(fecha_factura, $3::date, $4::date)
-              when $2 = facturado then coalesce($3::date, fecha_factura, $4::date)
-              when $2 in (por_facturar,programado) then coalesce($3::date, fecha_factura)
+              when $2 = 'pagado' then coalesce(fecha_factura, $3::date, $4::date)
+              when $2 = 'facturado' then coalesce($3::date, fecha_factura, $4::date)
+              when $2 in ('por_facturar','programado') then coalesce($3::date, fecha_factura)
               else fecha_factura end,
             actualizado_en = now()
       where id = $1`,
