@@ -77,6 +77,17 @@ export async function guardarTasaCalculo(formData: FormData) {
   revalidatePath(RUTA);
 }
 
+/** Ingreso Elite Agent que se le paga a Mauricio Ovalle (siempre en USD). */
+export async function guardarElite(formData: FormData) {
+  await soloAdmin();
+  const id = await borrador(mesDe(formData));
+  if (id == null) return;
+  const usd = parseMonto(formData.get("eliteUsd"));
+  await consulta(`update public.liquidacion set elite_usd = $2, actualizado_en = now() where id = $1`, [id, usd > 0 ? usd : null]);
+  await flash("Actualizado");
+  revalidatePath(RUTA);
+}
+
 /**
  * Registra el giro real y CIERRA la liquidación: congela las partidas incluidas
  * (aunque después cambien los egresos) y los totales para el historial.
@@ -104,9 +115,11 @@ export async function cerrarLiquidacion(formData: FormData) {
   }
   await consulta(
     `update public.liquidacion set estado = 'cerrada', tasa_calculo = $2, fecha_giro = $3, usd_enviado = $4, tasa_banco = $5,
-            cop_recibido = $6, comision_usd = $7, cop_necesario = $8, cop_adicional = $9, notas = $10, actualizado_en = now()
+            cop_recibido = $6, comision_usd = $7, cop_necesario = $8, cop_adicional = $9, notas = $10,
+            elite_cop = $11, actualizado_en = now()
       where id = $1`,
-    [id, v.tasaCalculo, fecha, usd, tasaBanco, copRecibido, comision, v.copNecesario, v.copAdicional, txt(formData.get("notas"))],
+    [id, v.tasaCalculo, fecha, usd, tasaBanco, copRecibido, comision, v.copNecesario, v.copAdicional, txt(formData.get("notas")),
+     v.eliteUsd > 0 ? v.eliteCop : null],
   );
   await flash("Liquidación cerrada");
   revalidatePath(RUTA);

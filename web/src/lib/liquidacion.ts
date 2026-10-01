@@ -11,11 +11,14 @@ import { primerDiaMes } from "@/lib/facturacion";
  *    freelance). Si REG del mes aún no existe, la nómina de Egresos.
  *  - Operativos fijos (arriendo, seguridad social, contadora, servicios…).
  *  - Cuota del crédito.
+ *  - Comisiones (CS si no van ya en REG, afiliados, equipo comercial).
+ *  - Gastos de caja (inversiones, grabaciones, cuotas…).
  *  - Gastos del mes pagados con un medio de COLOMBIA (TC Mauricio / Nu / María,
  *    Ahorros Ebenezer).
- * Fuera por defecto: herramientas y hosting (USD), gastos de caja, gastos pagados
- * en USA (grabación, representación…), automáticos de Leadtion. Todo se puede
- * incluir/excluir a mano (`ajustes`). El giro NO es egreso: no toca la utilidad.
+ *  - Elite Agent (Mauricio Ovalle): casilla aparte en USD → COP a la tasa de cálculo.
+ * Fuera por defecto: herramientas y hosting (USD), gastos variables sin medio de
+ * Colombia (representación…), API WhatsApp. Todo se puede incluir/excluir a mano
+ * (`ajustes`). El giro NO es egreso: no toca la utilidad.
  */
 
 export interface Partida {
@@ -32,6 +35,7 @@ export interface Liquidacion {
   id: number; mes: string; estado: "borrador" | "cerrada"; tasaCalculo: number | null; ajustes: Record<string, boolean>;
   fechaGiro: string | null; usdEnviado: number | null; tasaBanco: number | null; copRecibido: number | null;
   comisionUsd: number | null; copNecesario: number | null; copAdicional: number | null; notas: string | null;
+  eliteUsd: number | null; eliteCop: number | null;
 }
 export interface VistaLiquidacion {
   mes: string;
@@ -44,6 +48,9 @@ export interface VistaLiquidacion {
   fuenteNomina: "reg" | "egresos";
   copNecesario: number;
   copAdicional: number;
+  /** Elite Agent (Mauricio Ovalle): se digita en USD; COP = USD × tasa de cálculo (congelado al cerrar). */
+  eliteUsd: number;
+  eliteCop: number;
   copTotal: number;
   usdEstimado: number;
 }
@@ -61,6 +68,7 @@ function mapLiq(r: Record<string, unknown>): Liquidacion {
     fechaGiro: iso(r.fecha_giro), usdEnviado: numN(r.usd_enviado), tasaBanco: numN(r.tasa_banco),
     copRecibido: numN(r.cop_recibido), comisionUsd: numN(r.comision_usd),
     copNecesario: numN(r.cop_necesario), copAdicional: numN(r.cop_adicional), notas: (r.notas as string) ?? null,
+    eliteUsd: numN(r.elite_usd), eliteCop: numN(r.elite_cop),
   };
 }
 
@@ -117,13 +125,18 @@ export async function partidasPropuestas(mes: string, tasa: number, ajustes: Rec
       push({ ...base, grupo: "Crédito", detalle: "cuota mensual", porDefecto: true });
     } else if (cat === "comision" && usaReg) {
       continue; // ya va dentro de la cuenta de cobro de REG
+    } else if (["comision", "referido", "comision_comercial"].includes(cat)) {
+      // Comisiones (CS, afiliados, equipo comercial): se pagan desde Colombia.
+      push({ ...base, grupo: "Comisiones", detalle: (e.marca as string) ?? null, porDefecto: true });
+    } else if (!e.afecta_utilidad) {
+      // Gastos de caja (inversiones, grabaciones, cuotas…): se cubren desde Colombia.
+      push({ ...base, grupo: "Gastos de caja", detalle: medio, porDefecto: true });
     } else {
-      // Resto del mes: entra solo si se pagó con un medio de Colombia y no es de caja.
+      // Resto del mes: entra solo si se pagó con un medio de Colombia.
       const pagoCO = medio != null && co.has(medio);
-      const caja = !e.afecta_utilidad;
-      const grupo = pagoCO && !caja ? "Gastos pagados en Colombia" : "Otros egresos del mes (no incluidos)";
-      const motivo = caja ? "gasto de caja" : medio ? (pagoCO ? medio : `${medio} (USA)`) : "sin medio de pago";
-      push({ ...base, grupo, detalle: motivo, porDefecto: pagoCO && !caja });
+      const grupo = pagoCO ? "Gastos pagados en Colombia" : "Otros egresos del mes (no incluidos)";
+      const motivo = medio ? (pagoCO ? medio : `${medio} (USA)`) : "sin medio de pago";
+      push({ ...base, grupo, detalle: motivo, porDefecto: pagoCO });
     }
   }
   return { partidas, fuenteNomina: usaReg ? "reg" : "egresos" };
@@ -157,16 +170,20 @@ export async function vistaLiquidacion(mes: string): Promise<VistaLiquidacion> {
   }
   const copNecesario = r2(partidas.filter((p) => p.incluida).reduce((s, p) => s + p.cop, 0) + manuales.reduce((s, m) => s + m.cop, 0));
   const copAdicional = r2(adicionales.reduce((s, a) => s + a.cop, 0));
-  const copTotal = r2(copNecesario + copAdicional);
+  // Elite Agent: borrador = en vivo (USD × tasa de cálculo); cerrada = COP congelado.
+  const eliteUsd = liq?.eliteUsd ?? 0;
+  const eliteCop = liq?.estado === "cerrada" && liq.eliteCop != null ? liq.eliteCop : Math.round(eliteUsd * tasaCalculo);
+  const copTotal = r2(copNecesario + eliteCop + copAdicional);
   return {
     mes: mes.slice(0, 7), liq, tasaHoy: fx.cop, tasaCalculo, partidas, manuales, adicionales, fuenteNomina,
-    copNecesario, copAdicional, copTotal, usdEstimado: tasaCalculo > 0 ? r2(copTotal / tasaCalculo) : 0,
+    copNecesario, copAdicional, eliteUsd, eliteCop, copTotal, usdEstimado: tasaCalculo > 0 ? r2(copTotal / tasaCalculo) : 0,
   };
 }
 
 export interface FilaHistorial {
   mes: string; estado: "borrador" | "cerrada"; fechaGiro: string | null; usdEnviado: number | null; tasaBanco: number | null;
   copRecibido: number | null; copNecesario: number | null; copAdicional: number | null; tasaCalculo: number | null;
+  eliteCop: number | null;
 }
 
 /** Todas las liquidaciones (nuevo → viejo) para el historial y la gráfica. */
@@ -177,6 +194,7 @@ export async function historialLiquidaciones(): Promise<FilaHistorial[]> {
     return {
       mes: l.mes, estado: l.estado, fechaGiro: l.fechaGiro, usdEnviado: l.usdEnviado, tasaBanco: l.tasaBanco,
       copRecibido: l.copRecibido, copNecesario: l.copNecesario, copAdicional: l.copAdicional, tasaCalculo: l.tasaCalculo,
+      eliteCop: l.eliteCop,
     };
   });
 }

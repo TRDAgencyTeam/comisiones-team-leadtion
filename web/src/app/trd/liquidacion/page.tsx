@@ -5,6 +5,7 @@ import { ClientesHeader } from "@/components/ClientesHeader";
 import { BarChart } from "@/components/BarChart";
 import { InputMonto } from "@/components/InputMonto";
 import { LiquidacionGiroForm } from "@/components/LiquidacionGiroForm";
+import { EliteAgentCampo } from "@/components/EliteAgentCampo";
 import { IconoBorrar, IconoCheck } from "@/components/Iconos";
 import { marcarPartida, agregarLinea, eliminarLinea, guardarTasaCalculo, reabrirLiquidacion } from "./acciones";
 
@@ -76,7 +77,7 @@ export default async function LiquidacionPage({ searchParams }: { searchParams: 
           <div className="big">{usd(cerrada ? v.liq!.usdEnviado ?? 0 : v.usdEstimado)}</div>
           <div className="sub">{cerrada ? `giro del ${fFecha(v.liq!.fechaGiro)} · tasa banco ${cop(v.liq!.tasaBanco ?? 0)}` : `${cop(v.copTotal)} ÷ tasa ${cop(v.tasaCalculo)}`}</div>
         </div>
-        <div className="cf-kpi"><div className="lbl">A cubrir en Colombia</div><div className="big">{cop(v.copNecesario)}</div><div className="sub">nómina, operativos, crédito y gastos en COL</div></div>
+        <div className="cf-kpi"><div className="lbl">A cubrir en Colombia</div><div className="big">{cop(v.copNecesario)}</div><div className="sub">nómina, operativos, crédito, comisiones, caja y gastos en COL{v.eliteCop > 0 ? ` · + Elite ${cop(v.eliteCop)}` : ""}</div></div>
         <div className="cf-kpi"><div className="lbl">Adicional</div><div className="big">{cop(v.copAdicional)}</div><div className="sub">plata extra (no es gasto)</div></div>
         <div className="cf-kpi"><div className="lbl">Estado</div><div className="big" style={{ fontSize: "1.25rem" }}>{cerrada ? "Cerrada" : "Borrador"}</div>
           <div className="sub">{cerrada ? <>recibidos {cop(v.liq!.copRecibido ?? 0)}</> : "falta registrar el giro"}</div></div>
@@ -112,6 +113,17 @@ export default async function LiquidacionPage({ searchParams }: { searchParams: 
             </div>
           )}
 
+          <div className="liq-grupo elite">
+            <div className="liq-gh"><span>Elite Agent · Mauricio Ovalle</span><b>{cop(v.eliteCop)}</b></div>
+            {cerrada ? (
+              <div className="liq-row"><span className="liq-ck on"><IconoCheck size={13} /></span>
+                <span className="liq-nom">Ingreso Elite Agent<small>{usd(v.eliteUsd)} × tasa de cálculo {cop(v.tasaCalculo)}</small></span>
+                <b className="cf-mono">{cop(v.eliteCop)}</b></div>
+            ) : (
+              <EliteAgentCampo mes={mes} usdInicial={v.eliteUsd} tasa={v.tasaCalculo} />
+            )}
+          </div>
+
           <div className="liq-grupo adicional">
             <div className="liq-gh"><span>Adicional (no es gasto)</span><b>{cop(v.copAdicional)}</b></div>
             {v.adicionales.map((m) => (
@@ -133,7 +145,7 @@ export default async function LiquidacionPage({ searchParams }: { searchParams: 
 
           {!cerrada && noIncluidos.map(([g, ps]) => (
             <details key={g} className="liq-fuera">
-              <summary>{g} · {ps.length} <small>herramientas, caja, pagados en USA… márcalos si alguno sí va</small></summary>
+              <summary>{g} · {ps.length} <small>herramientas, pagados en USA, sin medio de Colombia… márcalos si alguno sí va</small></summary>
               {ps.map((p) => <Fila key={p.clave} p={p} />)}
             </details>
           ))}
@@ -186,10 +198,10 @@ export default async function LiquidacionPage({ searchParams }: { searchParams: 
       {barras.length > 0 && <div className="cf-card" style={{ marginTop: 14 }}><h3>USD bajados por mes</h3><BarChart data={barras} formatValue={usd0} ariaLabel="USD bajados por mes" /></div>}
       <div className="cf-table-wrap" style={{ marginTop: 14 }}>
         <table className="cf-table">
-          <thead><tr><th>Mes</th><th>Fecha giro</th><th className="r">USD enviados</th><th className="r">Tasa cálculo</th><th className="r">Tasa banco</th><th className="r">COP recibidos</th><th className="r">A cubrir + adicional</th><th className="r">Saldo en Ebenezer (aprox.)</th><th>Estado</th></tr></thead>
+          <thead><tr><th>Mes</th><th>Fecha giro</th><th className="r">USD enviados</th><th className="r">Tasa cálculo</th><th className="r">Tasa banco</th><th className="r">COP recibidos</th><th className="r">Total a bajar (COP)</th><th className="r">Saldo en Ebenezer (aprox.)</th><th>Estado</th></tr></thead>
           <tbody>
             {historial.map((h) => {
-              const total = (h.copNecesario ?? 0) + (h.copAdicional ?? 0);
+              const total = (h.copNecesario ?? 0) + (h.eliteCop ?? 0) + (h.copAdicional ?? 0);
               const dif = h.copRecibido != null ? h.copRecibido - total : null;
               return (
                 <tr key={h.mes}>
