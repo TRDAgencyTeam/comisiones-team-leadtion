@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { RenglonReg } from "@/lib/reg";
 import { calcularRetenciones, TARIFA_ICA_DEFAULT } from "@/lib/retenciones";
 import { guardarPago, toggleCheck, eliminarPago, enviarCorreoPago } from "@/app/trd/reg/acciones";
+import { IconoBorrar } from "@/components/Iconos";
 
 const cop = (n: number) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
@@ -109,7 +110,7 @@ export function RegFila({ r, mes, uvt }: { r: RenglonReg; mes: string; uvt: numb
         <td>
           <form action={eliminarPago}>
             <input type="hidden" name="pagoId" value={r.pagoId ?? ""} />
-            <button type="submit" className="btn-borrar" title="Eliminar">🗑️</button>
+            <button type="submit" className="btn-borrar icon-btn danger" title="Eliminar"><IconoBorrar /></button>
           </form>
         </td>
       </tr>

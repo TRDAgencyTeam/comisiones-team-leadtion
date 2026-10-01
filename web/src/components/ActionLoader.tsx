@@ -1,29 +1,99 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { EVENTO_CARGA } from "@/lib/carga";
 
 /**
- * Overlay global de carga: muestra el logo TRD palpitando cuando se envía
- * cualquier formulario/acción (guardar, agregar, marcar…) y lo oculta cuando el
- * contenido del área principal se actualiza (revalidación o navegación).
+ * Overlay global de carga: el logo TRD palpitando mientras la plataforma trabaja.
+ * Se activa con:
+ *  - cualquier formulario que se envía (guardar, agregar, eliminar, filtros…),
+ *  - cualquier enlace interno (cambiar de pestaña, opción o módulo),
+ *  - acciones sueltas que avisan con `conCarga()` (lib/carga.ts).
+ * Se oculta cuando cambia la ruta, cuando el contenido se actualiza o al llegar el
+ * aviso del servidor. Si un confirm() se cancela, no se queda pegado.
  */
 export function ActionLoader() {
   const [on, setOn] = useState(false);
+  const path = usePathname();
+  const qs = useSearchParams().toString();
+  const ref = useRef<{ hide: () => void }>({ hide: () => {} });
+
+  // Cambió la ruta o los filtros → terminó la navegación.
+  useEffect(() => { ref.current.hide(); }, [path, qs]);
+
   useEffect(() => {
-    let hideT: ReturnType<typeof setTimeout> | undefined;
+    let tSafe: ReturnType<typeof setTimeout> | undefined;
+    let tHide: ReturnType<typeof setTimeout> | undefined;
     let obs: MutationObserver | undefined;
-    const show = () => {
-      setOn(true);
-      clearTimeout(hideT);
-      hideT = setTimeout(() => setOn(false), 8000); // red de seguridad
-      const main = document.querySelector(".trd-main") ?? document.body;
-      obs?.disconnect();
-      obs = new MutationObserver(() => { clearTimeout(hideT); hideT = setTimeout(() => setOn(false), 150); });
-      obs.observe(main, { childList: true, subtree: true });
+    let formActivo: HTMLFormElement | null = null;
+    let manual = 0; // acciones con conCarga() en curso
+
+    const hide = () => {
+      if (manual > 0) return;
+      clearTimeout(tSafe); clearTimeout(tHide); obs?.disconnect(); formActivo = null; setOn(false);
     };
-    const onSubmit = (e: Event) => { if (e.target instanceof HTMLFormElement) show(); };
+    ref.current.hide = hide;
+
+    const show = (form: HTMLFormElement | null = null) => {
+      formActivo = form;
+      setOn(true);
+      clearTimeout(tSafe);
+      tSafe = setTimeout(() => { manual = 0; hide(); }, 15000); // red de seguridad
+      obs?.disconnect();
+      obs = new MutationObserver((recs) => {
+        // Ignora cambios del propio formulario (botón deshabilitado…), del overlay y de los avisos.
+        const propio = (n: Node) => {
+          const el = n instanceof Element ? n : n.parentElement;
+          return !el || !!el.closest(".trd-action-scrim, .trd-toasts") || !!(formActivo && formActivo.contains(el));
+        };
+        const relevante = recs.some((r) => {
+          if (propio(r.target)) return false;
+          // El overlay/aviso apareciendo o desapareciendo no cuenta como "contenido actualizado".
+          const nodos = [...Array.from(r.addedNodes), ...Array.from(r.removedNodes)];
+          return nodos.length === 0 || !nodos.every((n) => n instanceof Element && n.matches(".trd-action-scrim, .trd-toast"));
+        });
+        if (!relevante) return;
+        clearTimeout(tHide); tHide = setTimeout(hide, 180);
+      });
+      obs.observe(document.body, { childList: true, subtree: true, characterData: true });
+    };
+
+    const onSubmit = (e: Event) => {
+      const f = e.target;
+      if (!(f instanceof HTMLFormElement) || f.target === "_blank" || f.hasAttribute("data-sin-carga")) return;
+      show(f);
+    };
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!a || a.target === "_blank" || a.hasAttribute("download") || a.hasAttribute("data-sin-carga")) return;
+      const url = new URL(a.href, location.href);
+      if (url.origin !== location.origin) return;
+      if (url.pathname === location.pathname && url.search === location.search) return; // mismo lugar / ancla
+      show();
+    };
+    const onCarga = (e: Event) => {
+      if ((e as CustomEvent<boolean>).detail) { manual++; show(); return; }
+      manual = Math.max(0, manual - 1);
+      if (!manual) { clearTimeout(tHide); tHide = setTimeout(hide, 180); }
+    };
+    // confirm() cancelado (p. ej. "¿Eliminar…?") → no hay acción: quitar el loader.
+    const confirmOriginal = window.confirm;
+    window.confirm = (msg?: string) => { const ok = confirmOriginal.call(window, msg); if (!ok) hide(); return ok; };
+
     document.addEventListener("submit", onSubmit, true);
-    return () => { document.removeEventListener("submit", onSubmit, true); obs?.disconnect(); clearTimeout(hideT); };
+    window.addEventListener("click", onClick);
+    window.addEventListener(EVENTO_CARGA, onCarga);
+    window.addEventListener("trd:ocultar-carga", hide);
+    return () => {
+      document.removeEventListener("submit", onSubmit, true);
+      window.removeEventListener("click", onClick);
+      window.removeEventListener(EVENTO_CARGA, onCarga);
+      window.removeEventListener("trd:ocultar-carga", hide);
+      window.confirm = confirmOriginal;
+      obs?.disconnect(); clearTimeout(tSafe); clearTimeout(tHide);
+    };
   }, []);
 
   if (!on) return null;

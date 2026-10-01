@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Logo } from "@/components/Brand";
 import { logout } from "@/app/login/actions";
 import { soloAdmin } from "@/lib/sesion";
+import { TemaToggle } from "@/components/TemaToggle";
 
 export const metadata = { title: "Equipo Interno" };
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ export default async function ModulosEquipoPage() {
       <div className="modulos-top">
         <Logo height={30} variant="light" />
         <div className="topbar-right">
+          <TemaToggle />
           {usuario && <span className="user-email">{usuario.email}</span>}
           <form action={logout}>
             <button type="submit" className="logout">Salir</button>

@@ -8,6 +8,7 @@ import { primerDiaMes, uvtDeMes, recalcular, corteDeMes, comisionPendienteCop, t
 import { TARIFA_ICA_DEFAULT } from "@/lib/retenciones";
 import { enviarEmail, plantillaCorreoPago, REPLY_TO } from "@/lib/email";
 import { pagarCiclo, deshacerCiclo } from "@/lib/comisiones-pago";
+import { flash } from "@/lib/flash";
 
 // Los valores COP se digitan con puntos de miles; se limpian para guardar.
 const numCO = (v: FormDataEntryValue | null): number => {
@@ -56,6 +57,7 @@ export async function guardarPago(formData: FormData) {
   // El valor base de nómina "aprende" del pago fijo → pre-llena el próximo mes.
   await consulta(`update public.colaboradores set valor_nomina = $2 where id = $1`, [colaboradorId, pagoFijo]);
 
+  await flash("Actualizado");
   revalidatePath("/trd/reg");
 }
 
@@ -107,6 +109,7 @@ export async function toggleCheck(formData: FormData) {
       revalidatePath("/membresias/dashboard");
     }
   }
+  await flash("Actualizado");
   revalidatePath("/trd/reg");
 }
 

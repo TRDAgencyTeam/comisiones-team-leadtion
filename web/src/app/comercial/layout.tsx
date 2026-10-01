@@ -2,6 +2,7 @@ import Link from "next/link";
 import { logout } from "@/app/login/actions";
 import { Logo } from "@/components/Brand";
 import { soloAdmin } from "@/lib/sesion";
+import { TemaToggle } from "@/components/TemaToggle";
 
 export const metadata = { title: "Comercial" };
 
@@ -16,6 +17,7 @@ export default async function ComercialLayout({ children }: { children: React.Re
           <span className="brand-modulo brand-mem">Comercial</span>
         </div>
         <div className="topbar-right">
+          <TemaToggle />
           {sesion.email && <span className="user-email">{sesion.email}</span>}
           <Link href="/modulos/equipo" className="logout">Equipo interno</Link>
           <form action={logout}>

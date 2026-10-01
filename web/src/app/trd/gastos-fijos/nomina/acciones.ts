@@ -6,6 +6,7 @@ import { addMonths } from "comisiones-cs-engine/dates";
 import { consulta } from "@/lib/db";
 import { soloAdmin } from "@/lib/sesion";
 import { resyncFijosMesActual } from "@/lib/egresos";
+import { flash } from "@/lib/flash";
 
 // Valores en COP se digitan con puntos de miles; se quitan para guardar el número.
 const numCO = (v: FormDataEntryValue | null): number => {
@@ -90,6 +91,7 @@ export async function actualizarPersona(formData: FormData) {
   );
   // Propaga el cambio (área, salario, nombre) al mes en curso: Egresos + REG.
   await resyncFijosMesActual();
+  await flash("Actualizado");
   revalidatePath("/trd/gastos-fijos/nomina");
   revalidatePath(`/trd/gastos-fijos/nomina/${id}`);
   revalidatePath("/trd/clientes/egresos");
@@ -106,6 +108,7 @@ export async function cambiarEstadoPersona(formData: FormData) {
   await consulta(`update public.colaboradores set activo=$2 where id=$1`, [id, activar]);
   // Activar/desactivar cambia quién entra en la nómina del mes en curso.
   await resyncFijosMesActual();
+  await flash("Actualizado");
   revalidatePath("/trd/gastos-fijos/nomina");
   revalidatePath("/trd/clientes/egresos");
   revalidatePath("/trd/clientes");

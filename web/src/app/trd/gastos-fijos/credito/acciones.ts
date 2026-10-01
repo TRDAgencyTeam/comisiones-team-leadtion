@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { soloAdmin } from "@/lib/sesion";
+import { flash } from "@/lib/flash";
 
 const n = (v: FormDataEntryValue | null): number => {
   const x = Number(String(v ?? "").replace(/[^\d.-]/g, ""));
@@ -22,6 +23,7 @@ export async function actualizarCredito(formData: FormData) {
     `update public.credito set saldo=$2, cuota=$3, tasa_ea=$4, interes_corriente=$5, actualizado_en=now() where id=$1`,
     [id, saldo, cuota, tasaEa, interes],
   );
+  await flash("Actualizado");
   revalidatePath("/trd/gastos-fijos/credito");
   revalidatePath("/trd/gastos-fijos");
   redirect("/trd/gastos-fijos/credito");

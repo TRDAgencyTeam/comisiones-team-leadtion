@@ -1,6 +1,7 @@
 "use client";
 
 import { eliminarServicio } from "./acciones";
+import { IconoBorrar } from "@/components/Iconos";
 
 /** Botón para eliminar un servicio adquirido, con confirmación (recalcula el historial). */
 export function BotonEliminarServicio({
@@ -23,7 +24,7 @@ export function BotonEliminarServicio({
     >
       <input type="hidden" name="servicioId" value={servicioId} />
       <input type="hidden" name="clienteId" value={clienteId} />
-      <button type="submit" className="btn-borrar" title="Eliminar servicio" aria-label={`Eliminar ${etiqueta}`}>🗑️</button>
+      <button type="submit" className="btn-borrar icon-btn danger" title="Eliminar servicio" aria-label={`Eliminar ${etiqueta}`}><IconoBorrar /></button>
     </form>
   );
 }

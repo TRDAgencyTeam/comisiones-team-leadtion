@@ -1,5 +1,6 @@
 import { subirDocumento, eliminarDocumento } from "@/app/trd/gastos-fijos/nomina/acciones";
 import { TIPO_DOC_LABEL, type DocumentoMeta, type TipoDoc } from "@/lib/documentos";
+import { IconoBorrar } from "@/components/Iconos";
 
 const tamano = (b: number) => (b >= 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
 
@@ -13,7 +14,7 @@ function DocItem({ d, colaboradorId }: { d: DocumentoMeta; colaboradorId: number
       <form action={eliminarDocumento}>
         <input type="hidden" name="docId" value={d.id} />
         <input type="hidden" name="colaboradorId" value={colaboradorId} />
-        <button type="submit" className="btn-borrar" title="Eliminar">🗑️</button>
+        <button type="submit" className="btn-borrar icon-btn danger" title="Eliminar"><IconoBorrar /></button>
       </form>
     </li>
   );

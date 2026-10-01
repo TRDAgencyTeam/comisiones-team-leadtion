@@ -6,6 +6,7 @@ import { consulta } from "@/lib/db";
 import { getUsuario } from "@/lib/supabase/server";
 import { calendarioServicio, type TipoServicio } from "@/lib/servicios";
 import { mesHoyISO } from "@/lib/fecha";
+import { flash } from "@/lib/flash";
 
 /** Mapea la opción de API del formulario a (estado, valor). */
 function parseApi(op: string): { estado: string; valor: number | null } {
@@ -46,6 +47,7 @@ export async function actualizarMembresia(formData: FormData) {
       where id=$1`,
     [id, nombre, estado, esAgencia, planTipo, soporteValor, valorLicencia, api.estado, api.valor, bono, tipoCliente],
   );
+  await flash("Actualizado");
   revalidatePath(`/membresias/${id}`);
   revalidatePath("/membresias/clientes");
   revalidatePath("/membresias/dashboard");
@@ -73,6 +75,7 @@ export async function marcarAgencia(formData: FormData) {
       where id = $1`,
     [id, on],
   );
+  await flash("Actualizado");
   revalidatePath(`/membresias/${id}`);
   revalidatePath("/membresias/clientes");
   revalidatePath("/membresias/dashboard");
@@ -268,6 +271,7 @@ export async function editarServicio(formData: FormData) {
 
   await recomputarPagosDeCliente(clienteId);
   revalidarServicio(clienteId);
+  await flash("Actualizado");
   redirect(`/membresias/${clienteId}`);
 }
 
@@ -330,6 +334,7 @@ export async function editarSoporte(formData: FormData) {
   );
   await recomputarPagosDeCliente(clienteId);
   revalidarServicio(clienteId);
+  await flash("Actualizado");
   redirect(`/membresias/${clienteId}`);
 }
 
@@ -378,6 +383,7 @@ export async function guardarReselling(formData: FormData) {
       [mes, monto],
     );
   }
+  await flash("Actualizado");
   revalidatePath("/membresias/dashboard");
 }
 

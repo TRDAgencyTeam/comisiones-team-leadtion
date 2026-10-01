@@ -74,7 +74,7 @@ export function NuevoClienteModal({
               <h3>Nuevo cliente</h3>
               <button type="button" className="x" onClick={() => setOpen(false)}>✕</button>
             </div>
-            <form action={crearClienteCascada}>
+            <form action={async (fd) => { try { await crearClienteCascada(fd); } finally { setOpen(false); } }}>
               <input type="hidden" name="mes" value={mes} />
               <input type="hidden" name="entidad" value={entidad} />
               <input type="hidden" name="servicioClave" value={clave} />

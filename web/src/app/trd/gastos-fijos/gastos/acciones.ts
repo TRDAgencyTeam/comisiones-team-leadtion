@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { soloAdmin } from "@/lib/sesion";
 import { resyncFijosMesActual } from "@/lib/egresos";
+import { flash } from "@/lib/flash";
 
 const n = (v: FormDataEntryValue | null): number => {
   const x = Number(String(v ?? "").replace(/[^\d.-]/g, ""));
@@ -68,6 +69,7 @@ export async function actualizarGasto(formData: FormData) {
      d.reparto, d.amortizar, d.afectaUtilidad, d.negocio, d.notas],
   );
   await resyncFijosMesActual();
+  await flash("Actualizado");
   revalidatePath("/trd/gastos-fijos/gastos");
   revalidatePath("/trd/gastos-fijos/herramientas");
   revalidatePath("/trd/gastos-fijos");

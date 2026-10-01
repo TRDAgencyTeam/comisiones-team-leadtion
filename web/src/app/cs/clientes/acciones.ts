@@ -6,6 +6,7 @@ import { consulta } from "@/lib/db";
 import { fechaPago } from "@/lib/clientes";
 import { soloAdmin } from "@/lib/sesion";
 import { hoyISO } from "@/lib/fecha";
+import { flash } from "@/lib/flash";
 
 /** Crea un cliente nuevo para que el sistema lo tenga en cuenta en comisiones. */
 export async function crearCliente(formData: FormData) {
@@ -81,6 +82,7 @@ export async function guardarHistorial(formData: FormData) {
     );
   }
 
+  await flash("Actualizado");
   revalidatePath(`/cs/clientes/${id}`);
   revalidatePath("/cs/clientes");
   revalidatePath("/cs");
@@ -130,6 +132,7 @@ export async function actualizarCliente(formData: FormData) {
     }
   }
 
+  await flash("Actualizado");
   revalidatePath(`/cs/clientes/${id}`);
   revalidatePath("/cs/clientes");
   revalidatePath("/cs");
@@ -153,6 +156,7 @@ export async function guardarAsignados(formData: FormData) {
       [id, colId],
     );
   }
+  await flash("Actualizado");
   revalidatePath(`/cs/clientes/${id}`);
   revalidatePath("/cs/clientes");
   revalidatePath("/cs");
@@ -207,6 +211,7 @@ export async function cambiarEstadoCliente(formData: FormData) {
     [id, nuevoEstado, motivo],
   );
 
+  await flash("Actualizado");
   revalidatePath(`/cs/clientes/${id}`);
   revalidatePath("/cs/clientes");
   revalidatePath("/cs");

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { crearEgreso, crearIngreso, editarIngreso, editarEgreso } from "@/app/trd/clientes/acciones";
+import { IconoEditar } from "@/components/Iconos";
 
 export interface IngresoEdit { id: number; concepto: string; valorUsd: number; categoria: string | null }
 export interface EgresoEdit { id: number; concepto: string; marca: string | null; valorUsd: number; valorCop: number | null }
@@ -42,12 +43,14 @@ export function MovimientoModal({
   }, [open]);
 
   const accion = esEditIng ? editarIngreso : esEditEg ? editarEgreso : esEgreso ? crearEgreso : crearIngreso;
+  // Al guardar: espera al servidor y cierra el popup (el aviso "Actualizado" llega solo).
+  const guardar = async (fd: FormData) => { try { await accion(fd); } finally { setOpen(false); } };
   const titulo = esEditEg ? "Editar egreso" : esEditIng ? "Editar ingreso" : esEgreso ? "Nuevo egreso" : "Nuevo ingreso";
 
   return (
     <>
       {esEdit
-        ? <button type="button" className="link-ver" onClick={() => setOpen(true)} title="Editar">✎</button>
+        ? <button type="button" className="icon-btn" onClick={() => setOpen(true)} title="Editar" aria-label="Editar"><IconoEditar /></button>
         : compact
           ? <button type="button" className="cf-add-mini" onClick={() => setOpen(true)}>{label ?? "+ agregar"}</button>
           : <button type="button" className={`cf-btn ${esEgreso ? "cf-btn-primary" : "cf-btn-ghost"}`} onClick={() => setOpen(true)}>{label ?? (esEgreso ? "+ Agregar egreso" : "+ Agregar otro ingreso")}</button>}
@@ -55,7 +58,7 @@ export function MovimientoModal({
         <div className="cf-scrim" onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>
           <div className="cf-modal" style={{ maxWidth: 460 }}>
             <div className="cf-modal-head"><h3>{titulo}</h3><button type="button" className="x" onClick={() => setOpen(false)}>✕</button></div>
-            <form action={accion}>
+            <form action={guardar}>
               <input type="hidden" name="mes" value={mes} />
               {esEditIng && <input type="hidden" name="id" value={editar!.id} />}
               {esEditEg && <input type="hidden" name="id" value={editarEgresoData!.id} />}

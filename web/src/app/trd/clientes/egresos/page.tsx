@@ -11,6 +11,7 @@ import { CreditoForm } from "@/components/CreditoForm";
 import { eliminarEgreso } from "../acciones";
 import { actualizarCredito } from "@/app/trd/gastos-fijos/credito/acciones";
 import { mesHoyISO } from "@/lib/fecha";
+import { IconoBorrar } from "@/components/Iconos";
 
 export const metadata = { title: "Egresos" };
 export const dynamic = "force-dynamic";
@@ -60,7 +61,7 @@ function Grupo({ t, ic, filas, mes, edit, add, gestion }: {
             edit && !e.automatico && e.id > 0
               ? <span className="cf-acc-btns">
                   <MovimientoModal mes={mes} tipo="egreso" editarEgresoData={{ id: e.id, concepto: e.concepto, marca: e.marca, valorUsd: e.valorUsd, valorCop: e.valorCop }} />
-                  <form action={eliminarEgreso}><input type="hidden" name="id" value={e.id} /><button type="submit" className="btn-borrar" title="Eliminar">🗑️</button></form>
+                  <form action={eliminarEgreso}><input type="hidden" name="id" value={e.id} /><button type="submit" className="btn-borrar icon-btn danger" title="Eliminar"><IconoBorrar /></button></form>
                 </span>
               : e.automatico ? <span className="cf-hint" title="Automático">🔒</span> : null
           }</span>

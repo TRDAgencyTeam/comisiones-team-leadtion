@@ -9,6 +9,7 @@ import { tasaUsdCop } from "@/lib/fx";
 import { crearClienteCompleto, recomputarPagosDeCliente, type NuevoClienteInput } from "@/app/membresias/acciones";
 import { registrarComisionComercial, COMERCIAL_DESDE } from "@/lib/comercial";
 import { mesHoyISO } from "@/lib/fecha";
+import { flash } from "@/lib/flash";
 
 const n = (v: FormDataEntryValue | null): number => {
   const x = Number(String(v ?? "").replace(/[^\d.-]/g, ""));
@@ -151,6 +152,7 @@ export async function editarFactura(formData: FormData) {
     [id, d.entidad, d.clienteId, d.clienteNombre, d.mrr, d.reserva, d.recurrente, d.servicios, d.precioDesglose,
      d.facturado, d.medio, d.fechaFactura, d.fechaPago, d.ivaPct, d.estado],
   );
+  await flash("Actualizado");
   revalidatePath("/trd/clientes");
   revalidatePath("/trd/clientes/facturacion");
   redirect(`/trd/clientes/${id}`);
@@ -328,6 +330,7 @@ export async function editarEgreso(formData: FormData) {
     `update public.egreso_mensual set concepto=$2, marca=$3, valor_usd=$4, valor_cop=$5 where id=$1`,
     [id, concepto, marca, valorUsd, valorCop],
   );
+  await flash("Actualizado");
   revalidatePath("/trd/clientes/egresos");
   revalidatePath("/trd/clientes");
 }
@@ -368,6 +371,7 @@ export async function editarIngreso(formData: FormData) {
     `update public.ingreso_mensual set concepto=$2, valor_usd=$3, categoria=$4 where id=$1`,
     [id, concepto, valorUsd, categoria],
   );
+  await flash("Actualizado");
   revalidatePath("/trd/clientes/facturacion");
   revalidatePath("/trd/clientes");
 }
@@ -425,6 +429,7 @@ export async function guardarServiciosFactura(formData: FormData) {
       else await marcarMiembroPorMarketing(cid, clave);
     }
   }
+  await flash("Actualizado");
   revalidatePath("/trd/clientes");
   revalidatePath("/trd/clientes/facturacion");
   redirect(`/trd/clientes/${facturaId}`);
@@ -450,6 +455,7 @@ export async function cambiarEstadoFactura(formData: FormData) {
       where id = $1`,
     [id, estado, fechaPago],
   );
+  await flash("Actualizado");
   revalidatePath("/trd/clientes");
   revalidatePath("/trd/clientes/facturacion");
 }

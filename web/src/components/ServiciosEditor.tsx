@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CATEGORIA_LABEL, type ServicioCatalogo } from "@/lib/catalogo-tipos";
 import type { FacturaItem } from "@/lib/facturacion";
 import { guardarServiciosFactura } from "@/app/trd/clientes/acciones";
+import { IconoBorrar } from "@/components/Iconos";
 
 const money = (n: number, m: "USD" | "COP") => new Intl.NumberFormat("es-CO", { style: "currency", currency: m, maximumFractionDigits: m === "COP" ? 0 : 2 }).format(n);
 
@@ -86,7 +87,7 @@ export function ServiciosEditor({
             ) : (
               <input inputMode="decimal" value={it.monto || ""} onChange={(e) => setItem(i, { monto: Number(e.target.value) || 0 })} placeholder={`Monto ${moneda}`} />
             )}
-            <button type="button" className="btn-borrar" title="Quitar" onClick={() => remove(i)}>🗑️</button>
+            <button type="button" className="btn-borrar icon-btn danger" title="Quitar" aria-label="Quitar" onClick={() => remove(i)}><IconoBorrar /></button>
             <input type="hidden" name="itemClave" value={it.servicioClave ?? ""} />
             <input type="hidden" name="itemConcepto" value={conceptoEnvio} />
             <input type="hidden" name="itemMonto" value={it.monto || 0} />

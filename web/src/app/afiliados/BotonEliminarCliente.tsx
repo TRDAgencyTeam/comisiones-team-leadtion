@@ -1,6 +1,7 @@
 "use client";
 
 import { eliminarClienteAfiliado } from "./acciones";
+import { IconoBorrar } from "@/components/Iconos";
 
 /** Botón para eliminar un cliente referido (con confirmación). */
 export function BotonEliminarCliente({ refCliente, nombre }: { refCliente: string; nombre: string }) {
@@ -14,7 +15,7 @@ export function BotonEliminarCliente({ refCliente, nombre }: { refCliente: strin
       }}
     >
       <input type="hidden" name="ref" value={refCliente} />
-      <button type="submit" className="btn-borrar" title="Eliminar cliente de Afiliados">🗑️ Eliminar</button>
+      <button type="submit" className="btn-borrar icon-btn danger con-texto" title="Eliminar cliente de Afiliados"><IconoBorrar /><span className="lbl">Eliminar</span></button>
     </form>
   );
 }

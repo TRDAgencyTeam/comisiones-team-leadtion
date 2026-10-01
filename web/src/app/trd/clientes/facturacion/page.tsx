@@ -11,6 +11,7 @@ import { NuevoClienteModal } from "@/components/NuevoClienteModal";
 import { MovimientoModal } from "@/components/MovimientoModal";
 import { eliminarFactura, eliminarIngreso } from "../acciones";
 import { mesHoyISO } from "@/lib/fecha";
+import { IconoBorrar } from "@/components/Iconos";
 
 export const metadata = { title: "Facturación" };
 export const dynamic = "force-dynamic";
@@ -49,7 +50,7 @@ function Tabla({ filas, tasa, entidad }: { filas: FacturaRow[]; tasa: number; en
                 <td>
                   <span className="acc">
                     <Link href={`/trd/clientes/${f.id}`} className="link-ver">Ver</Link>
-                    <form action={eliminarFactura}><input type="hidden" name="id" value={f.id} /><button type="submit" className="btn-borrar" title="Eliminar">🗑️</button></form>
+                    <form action={eliminarFactura}><input type="hidden" name="id" value={f.id} /><button type="submit" className="btn-borrar icon-btn danger" title="Eliminar"><IconoBorrar /></button></form>
                   </span>
                 </td>
               </tr>
@@ -105,7 +106,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
                 <td className="nom">{o.concepto}</td>
                 <td><span className="cf-tag caja">{o.categoria ?? "otro"}</span></td>
                 <td className="r neto">{usd(o.valorUsd)}</td>
-                <td><span className="acc"><MovimientoModal mes={mes} tipo="ingreso" editar={{ id: o.id, concepto: o.concepto, valorUsd: o.valorUsd, categoria: o.categoria }} /><form action={eliminarIngreso}><input type="hidden" name="id" value={o.id} /><button type="submit" className="btn-borrar" title="Eliminar">🗑️</button></form></span></td>
+                <td><span className="acc"><MovimientoModal mes={mes} tipo="ingreso" editar={{ id: o.id, concepto: o.concepto, valorUsd: o.valorUsd, categoria: o.categoria }} /><form action={eliminarIngreso}><input type="hidden" name="id" value={o.id} /><button type="submit" className="btn-borrar icon-btn danger" title="Eliminar"><IconoBorrar /></button></form></span></td>
               </tr>
             ))}
             {otros.length === 0 && <tr><td colSpan={4} className="cf-empty" style={{ padding: 24 }}>Sin otros ingresos. Agrega reselling, mantenimientos, API vendida, afiliaciones…</td></tr>}

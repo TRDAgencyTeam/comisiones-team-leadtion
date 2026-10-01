@@ -3,6 +3,7 @@ import { logout } from "@/app/login/actions";
 import { AfiliadosNav } from "@/components/AfiliadosNav";
 import { Logo } from "@/components/Brand";
 import { soloAdmin } from "@/lib/sesion";
+import { TemaToggle } from "@/components/TemaToggle";
 
 export const metadata = { title: "Afiliados" };
 
@@ -22,6 +23,7 @@ export default async function AfiliadosLayout({
           <span className="brand-modulo">Afiliados</span>
         </div>
         <div className="topbar-right">
+          <TemaToggle />
           {usuario && <span className="user-email">{usuario.email}</span>}
           <Link href="/modulos" className="logout">Módulos</Link>
           <form action={logout}>

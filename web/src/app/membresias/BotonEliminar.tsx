@@ -1,6 +1,7 @@
 "use client";
 
 import { eliminarMembresia } from "./acciones";
+import { IconoBorrar } from "@/components/Iconos";
 
 /** Icono de basura para eliminar un cliente, con confirmación (acción irreversible). */
 export function BotonEliminar({ id, nombre }: { id: number; nombre: string }) {
@@ -14,9 +15,7 @@ export function BotonEliminar({ id, nombre }: { id: number; nombre: string }) {
       }}
     >
       <input type="hidden" name="id" value={id} />
-      <button type="submit" className="btn-borrar" title={`Eliminar ${nombre}`} aria-label={`Eliminar ${nombre}`}>
-        🗑️
-      </button>
+      <button type="submit" className="btn-borrar icon-btn danger" title={`Eliminar ${nombre}`} aria-label={`Eliminar ${nombre}`}><IconoBorrar /></button>
     </form>
   );
 }

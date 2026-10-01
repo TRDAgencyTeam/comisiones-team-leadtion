@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { consulta } from "@/lib/db";
 import { soloAdmin } from "@/lib/sesion";
 import { tasaUsdCop } from "@/lib/fx";
+import { flash } from "@/lib/flash";
 
 /** Marca una comisión comercial como pagada o pendiente. Al pagar, congela la tasa. */
 export async function marcarComisionComercial(formData: FormData) {
@@ -28,5 +29,6 @@ export async function marcarComisionComercial(formData: FormData) {
       [id],
     );
   }
+  await flash("Actualizado");
   revalidatePath("/comercial");
 }

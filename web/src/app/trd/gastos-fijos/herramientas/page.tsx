@@ -3,6 +3,7 @@ import { soloAdmin } from "@/lib/sesion";
 import { tasaUsdCop } from "@/lib/fx";
 import { listarGastos, periodos, RECURRENCIA_LABEL } from "@/lib/gastos-fijos";
 import { eliminarGasto } from "../gastos/acciones";
+import { IconoBorrar } from "@/components/Iconos";
 
 export const metadata = { title: "Herramientas" };
 export const dynamic = "force-dynamic";
@@ -63,7 +64,7 @@ export default async function HerramientasPage() {
                 <td>
                   <form action={eliminarGasto}>
                     <input type="hidden" name="id" value={g.id} />
-                    <button type="submit" className="btn-borrar" title="Eliminar">🗑️</button>
+                    <button type="submit" className="btn-borrar icon-btn danger" title="Eliminar"><IconoBorrar /></button>
                   </form>
                 </td>
               </tr>

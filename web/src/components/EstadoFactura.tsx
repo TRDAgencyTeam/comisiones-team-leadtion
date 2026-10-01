@@ -5,6 +5,7 @@ import { ESTADOS } from "@/lib/facturacion-calc";
 import { cambiarEstadoFactura } from "@/app/trd/clientes/acciones";
 import { CierreClienteModal } from "@/components/CierreClienteModal";
 import { PagoFechaModal } from "@/components/PagoFechaModal";
+import { conCarga } from "@/lib/carga";
 
 /**
  * Selector de estado (semáforo) CONTROLADO. "Anulado" abre el popup de cierre;
@@ -23,7 +24,7 @@ export function EstadoFactura({ id, estado }: { id: number; estado: string }) {
     fd.set("id", String(id));
     fd.set("estado", v);
     if (fechaPago) fd.set("fechaPago", fechaPago);
-    start(async () => { await cambiarEstadoFactura(fd); });
+    start(async () => { await conCarga(cambiarEstadoFactura(fd)); });
   };
 
   return (

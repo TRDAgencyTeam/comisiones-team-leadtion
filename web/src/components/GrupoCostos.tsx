@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MovimientoModal } from "@/components/MovimientoModal";
 import { eliminarEgreso } from "@/app/trd/clientes/acciones";
+import { IconoBorrar } from "@/components/Iconos";
 
 export interface FilaCosto {
   id: number;
@@ -71,7 +72,7 @@ export function GrupoCostos({
                       ? <span className="cf-hint" title="Automático">🔒</span>
                       : <span className="cf-acc-btns">
                           <MovimientoModal mes={mes} tipo="egreso" editarEgresoData={{ id: f.id, concepto: f.concepto, marca: f.marca, valorUsd: f.valorUsd, valorCop: f.valorCop }} />
-                          <form action={eliminarEgreso}><input type="hidden" name="id" value={f.id} /><button type="submit" className="btn-borrar" title="Eliminar">🗑️</button></form>
+                          <form action={eliminarEgreso}><input type="hidden" name="id" value={f.id} /><button type="submit" className="btn-borrar icon-btn danger" title="Eliminar"><IconoBorrar /></button></form>
                         </span>}
                   </td>
                 </tr>

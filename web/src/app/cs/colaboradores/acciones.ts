@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { addMonths } from "comisiones-cs-engine/dates";
 import { consulta } from "@/lib/db";
 import { soloAdmin } from "@/lib/sesion";
+import { flash } from "@/lib/flash";
 
 /** Normaliza los campos del formulario y calcula la fecha de fin de prueba. */
 function parseForm(formData: FormData) {
@@ -61,6 +62,7 @@ export async function actualizarColaborador(formData: FormData) {
     [id, nombre, rol, categoria, fechaIngreso, finPrueba, email],
   );
 
+  await flash("Actualizado");
   revalidatePath(`/cs/colaboradores/${id}`);
   revalidatePath("/cs/colaboradores");
   revalidatePath("/cs");
@@ -75,6 +77,7 @@ export async function cambiarEstadoColaborador(formData: FormData) {
 
   await consulta(`update public.colaboradores set activo=$2 where id=$1`, [id, activar]);
 
+  await flash("Actualizado");
   revalidatePath(`/cs/colaboradores/${id}`);
   revalidatePath("/cs/colaboradores");
   revalidatePath("/cs");

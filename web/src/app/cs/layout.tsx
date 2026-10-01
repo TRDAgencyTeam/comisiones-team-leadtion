@@ -3,6 +3,7 @@ import { logout } from "@/app/login/actions";
 import { NavLinks } from "@/components/NavLinks";
 import { Logo } from "@/components/Brand";
 import { sesionActual } from "@/lib/sesion";
+import { TemaToggle } from "@/components/TemaToggle";
 
 export const metadata = { title: "Customer Success" };
 
@@ -26,6 +27,7 @@ export default async function CSLayout({
           {!esAdmin && <span className="brand-modulo brand-mem">Portal Colaboradores</span>}
         </div>
         <div className="topbar-right">
+          <TemaToggle />
           {sesion.email && <span className="user-email">{esAdmin ? sesion.email : sesion.nombre ?? sesion.email}</span>}
           {esAdmin && <Link href="/modulos" className="logout">Módulos</Link>}
           <form action={logout}>

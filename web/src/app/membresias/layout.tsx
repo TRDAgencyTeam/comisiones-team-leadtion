@@ -3,6 +3,7 @@ import { logout } from "@/app/login/actions";
 import { MembresiasNav } from "@/components/MembresiasNav";
 import { Logo } from "@/components/Brand";
 import { soloAdmin } from "@/lib/sesion";
+import { TemaToggle } from "@/components/TemaToggle";
 
 export const metadata = { title: "Membresías" };
 
@@ -22,6 +23,7 @@ export default async function MembresiasLayout({
           <span className="brand-modulo brand-mem">Membresías</span>
         </div>
         <div className="topbar-right">
+          <TemaToggle />
           {usuario && <span className="user-email">{usuario.email}</span>}
           <Link href="/modulos" className="logout">Módulos</Link>
           <form action={logout}>

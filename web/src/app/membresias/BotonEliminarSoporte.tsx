@@ -1,6 +1,7 @@
 "use client";
 
 import { eliminarSoporte } from "./acciones";
+import { IconoBorrar } from "@/components/Iconos";
 
 /** Botón para eliminar un período de soporte, con confirmación (recalcula el historial). */
 export function BotonEliminarSoporte({ soporteId, clienteId }: { soporteId: number; clienteId: number }) {
@@ -13,7 +14,7 @@ export function BotonEliminarSoporte({ soporteId, clienteId }: { soporteId: numb
     >
       <input type="hidden" name="soporteId" value={soporteId} />
       <input type="hidden" name="clienteId" value={clienteId} />
-      <button type="submit" className="btn-borrar" title="Eliminar soporte" aria-label="Eliminar soporte">🗑️</button>
+      <button type="submit" className="btn-borrar icon-btn danger" title="Eliminar soporte" aria-label="Eliminar soporte"><IconoBorrar /></button>
     </form>
   );
 }

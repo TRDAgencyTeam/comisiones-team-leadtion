@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/app/login/actions";
+import { TemaToggle } from "@/components/TemaToggle";
 
 const NAV = [
   { href: "/trd/clientes", label: "Resumen del mes", ic: "◈", match: "/trd/clientes", exact: true },
@@ -45,6 +46,7 @@ export function TrdSidebar({ email }: { email: string | null }) {
         </nav>
       </div>
       <div className="side-foot">
+        <TemaToggle />
         {email && <span className="em">{email}</span>}
         <Link href="/modulos">Módulos</Link>
         <form action={logout}><button type="submit">Salir</button></form>

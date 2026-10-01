@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { getUsuario } from "@/lib/supabase/server";
 import { hoyISO } from "@/lib/fecha";
+import { flash } from "@/lib/flash";
 
 const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 /** '2026-08-15' -> "agosto 2026" (formato que usa el motor). */
@@ -88,6 +89,7 @@ export async function editarAfiliado(formData: FormData) {
     `update public.afiliados set nombre=$2, email=$3, tipo=$4, notas=$5, comision_agencia=$6 where ref=$1`,
     [ref, nombre, email, tipo, notas, comision],
   );
+  await flash("Actualizado");
   revalidatePath("/afiliados");
   revalidatePath(`/afiliados/afiliados/${ref}`);
   redirect(`/afiliados/afiliados/${ref}`);
