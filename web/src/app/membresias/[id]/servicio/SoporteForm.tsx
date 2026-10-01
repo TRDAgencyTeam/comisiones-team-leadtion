@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { hoyISO } from "@/lib/fecha";
 
-const hoyDia = () => new Date().toISOString().slice(0, 10);
+const hoyDia = () => hoyISO();
 
 /** Formulario de un período de soporte (nivel + rango; hasta o indefinido). */
 export function SoporteForm({

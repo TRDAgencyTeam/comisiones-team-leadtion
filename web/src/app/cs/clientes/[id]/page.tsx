@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { obtenerCliente, equipoYAsignados, fechaPago, mesLargo, fechaLarga } from "@/lib/clientes";
 import { cambiarEstadoCliente, guardarAsignados } from "../acciones";
+import { hoyISO } from "@/lib/fecha";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export default async function FichaClientePage({
   if (!c) notFound();
   const { equipo, asignados } = await equipoYAsignados(Number(id));
 
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyISO();
   const badge = ESTADO_MES[c.estado] ?? { txt: c.estado, cls: "em-gris" };
 
   return (

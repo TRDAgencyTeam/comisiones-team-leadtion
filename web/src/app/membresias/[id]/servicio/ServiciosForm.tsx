@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { hoyISO } from "@/lib/fecha";
 
 /** Precios estándar del mes 1 (placeholder; el usuario puede sobrescribir). */
 const ESTANDAR: Record<string, number> = { agente_ai: 847, reactivacion: 597, level_up: 497 };
-const hoyDia = () => new Date().toISOString().slice(0, 10);
+const hoyDia = () => hoyISO();
 
 let uid = 0;
 type Fila = { key: number; tipo: string };

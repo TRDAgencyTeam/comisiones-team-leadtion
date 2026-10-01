@@ -7,6 +7,7 @@ import {
   type ResultadoVista,
 } from "@/lib/comisiones";
 import { ProximosPagos, type FilaFutura } from "@/components/ProximosPagos";
+import { mesHoyISO } from "@/lib/fecha";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,7 @@ function cortesDe(r: ResultadoVista): CorteVista[] {
   return [...mapa.values()].sort((a, b) => a.mes.localeCompare(b.mes));
 }
 
-const mesHoy = () => { const h = new Date(); return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}`; };
+const mesHoy = () => mesHoyISO();
 
 /** Pendiente POR PAGAR = suma de cortes ya CERRADOS (meses anteriores al actual)
  *  y no pagados. El mes en curso no se cobra todavía. */

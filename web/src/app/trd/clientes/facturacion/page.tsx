@@ -10,13 +10,14 @@ import { ClientesHeader } from "@/components/ClientesHeader";
 import { NuevoClienteModal } from "@/components/NuevoClienteModal";
 import { MovimientoModal } from "@/components/MovimientoModal";
 import { eliminarFactura, eliminarIngreso } from "../acciones";
+import { mesHoyISO } from "@/lib/fecha";
 
 export const metadata = { title: "Facturación" };
 export const dynamic = "force-dynamic";
 
 const cop = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
 const usd = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(n);
-const mesISO = () => { const h = new Date(); return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}`; };
+const mesISO = () => mesHoyISO();
 const fFecha = (iso: string | null) => { if (!iso) return "—"; const [, m, d] = iso.split("-"); return `${d}/${m}`; };
 
 function Tabla({ filas, tasa, entidad }: { filas: FacturaRow[]; tasa: number; entidad: "LLC" | "COL" }) {

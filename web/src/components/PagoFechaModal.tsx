@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { hoyISO } from "@/lib/fecha";
 
 /** Popup al marcar una factura como Pagado: confirma con fecha de hoy o permite
  *  poner la fecha real en que se pagó (según Stripe). */
 export function PagoFechaModal({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: (fecha: string) => void }) {
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyISO();
   const [custom, setCustom] = useState(false);
   const [fecha, setFecha] = useState(hoy);
   useEffect(() => { document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = ""; }; }, []);

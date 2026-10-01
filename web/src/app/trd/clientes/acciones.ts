@@ -8,6 +8,7 @@ import { primerDiaMes } from "@/lib/facturacion";
 import { tasaUsdCop } from "@/lib/fx";
 import { crearClienteCompleto, recomputarPagosDeCliente, type NuevoClienteInput } from "@/app/membresias/acciones";
 import { registrarComisionComercial, COMERCIAL_DESDE } from "@/lib/comercial";
+import { mesHoyISO } from "@/lib/fecha";
 
 const n = (v: FormDataEntryValue | null): number => {
   const x = Number(String(v ?? "").replace(/[^\d.-]/g, ""));
@@ -561,7 +562,7 @@ export async function confirmarCierre(formData: FormData) {
         [clienteId, ltRes, ltRes === "soporte" ? valorMes : 0],
       );
       // Cobro mensual de ahí en adelante (mecanismo de Membresías: período de soporte indefinido).
-      const desde = `${new Date().toISOString().slice(0, 7)}-01`;
+      const desde = `${mesHoyISO()}-01`;
       await consulta(
         `insert into public.cliente_soportes (cliente_id, valor, desde, hasta, nota) values ($1,$2,$3,null,$4)`,
         [clienteId, valorMes, desde, ltRes === "licencia" ? "Solo licencia (cierre de agencia)" : "Plan de soporte (cierre de agencia)"],

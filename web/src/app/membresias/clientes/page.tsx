@@ -2,6 +2,7 @@ import Link from "next/link";
 import { listarMembresias, statsMembresias, PLAN_LABEL, TIPO_LABEL, type MembresiaRow } from "@/lib/membresias";
 import { cobrosPorCliente } from "@/lib/cobros";
 import { BotonEliminar } from "../BotonEliminar";
+import { mesHoyISO } from "@/lib/fecha";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ export default async function ClientesMembresiasPage({
     error = e instanceof Error ? e.message : String(e);
   }
 
-  const hoyYM = new Date().toISOString().slice(0, 7);
+  const hoyYM = mesHoyISO();
   const cobros = esCobros ? await cobrosPorCliente(lista.map((c) => c.id), 3) : null;
   const vistaHref = (v: string) => {
     const p = new URLSearchParams();

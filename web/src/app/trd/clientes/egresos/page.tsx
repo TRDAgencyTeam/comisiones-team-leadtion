@@ -10,6 +10,7 @@ import { EgresosCards } from "@/components/EgresosCards";
 import { CreditoForm } from "@/components/CreditoForm";
 import { eliminarEgreso } from "../acciones";
 import { actualizarCredito } from "@/app/trd/gastos-fijos/credito/acciones";
+import { mesHoyISO } from "@/lib/fecha";
 
 export const metadata = { title: "Egresos" };
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export const dynamic = "force-dynamic";
 const usd = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(n);
 const usd0 = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 const cop = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
-const mesISO = () => { const h = new Date(); return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}`; };
+const mesISO = () => mesHoyISO();
 const fFecha = (iso: string | null) => { if (!iso) return "—"; const [, m, d] = iso.split("-"); return `${d}/${m}`; };
 const AREA_LABEL: Record<string, string> = Object.fromEntries(AREAS.map((a) => [a.value, a.label]));
 

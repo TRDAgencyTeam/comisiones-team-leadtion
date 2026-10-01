@@ -1,4 +1,5 @@
 import "server-only";
+import { hoyISO } from "@/lib/fecha";
 
 /**
  * Tasa USD→COP en vivo (para convertir la nómina y egresos). Se refresca en cada
@@ -17,7 +18,7 @@ const RESPALDO_COP = 3150;
 const TTL_MS = 2 * 60 * 1000; // 2 minutos
 
 export async function tasaUsdCop(): Promise<{ cop: number; fecha: string; enVivo: boolean }> {
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyISO();
   const ahora = Date.now();
   // Reutiliza solo si el último valor es muy reciente (evita refetch en cascada).
   if (global._fxCache && ahora - global._fxCache.ts < TTL_MS) {

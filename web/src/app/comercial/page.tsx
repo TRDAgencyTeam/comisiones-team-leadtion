@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { comisionesComercialMes, totalComercialMes, PCT_COMERCIAL } from "@/lib/comercial";
 import { marcarComisionComercial } from "./acciones";
+import { hoyISO, mesHoyISO } from "@/lib/fecha";
 
 export const dynamic = "force-dynamic";
 
 const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
-const mesISO = () => { const h = new Date(); return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}`; };
+const mesISO = () => mesHoyISO();
 const MES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 const mesLargo = (m: string) => { const [y, mm] = m.split("-").map(Number); return `${MES[(mm ?? 1) - 1]} ${y}`; };
-const hoy = () => new Date().toISOString().slice(0, 10);
+const hoy = () => hoyISO();
 
 function mesVecino(mes: string, delta: number): string {
   const [y, m] = mes.split("-").map(Number);

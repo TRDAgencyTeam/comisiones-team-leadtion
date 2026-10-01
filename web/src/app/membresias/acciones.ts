@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { getUsuario } from "@/lib/supabase/server";
 import { calendarioServicio, type TipoServicio } from "@/lib/servicios";
+import { mesHoyISO } from "@/lib/fecha";
 
 /** Mapea la opción de API del formulario a (estado, valor). */
 function parseApi(op: string): { estado: string; valor: number | null } {
@@ -114,7 +115,7 @@ function mesesEntre(desdeYYYYMM: string, hastaYYYYMM: string): string[] {
 export async function recomputarPagosDeCliente(clienteId: number) {
   await consulta(`delete from public.pagos_mensuales where cliente_id=$1 and origen in ('servicio','soporte')`, [clienteId]);
 
-  const hoyMes = new Date().toISOString().slice(0, 7);
+  const hoyMes = mesHoyISO();
   const porMes = new Map<string, { valor: number; origen: string }>();
 
   // 1) Períodos de soporte (nivel mensual por rango; indefinido = hasta hoy).

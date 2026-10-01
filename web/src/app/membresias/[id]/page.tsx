@@ -7,6 +7,7 @@ import { BotonEliminar } from "../BotonEliminar";
 import { BotonEliminarServicio } from "../BotonEliminarServicio";
 import { BotonEliminarSoporte } from "../BotonEliminarSoporte";
 import { marcarAgencia } from "../acciones";
+import { mesHoyISO } from "@/lib/fecha";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
   const soportes = await soportesDeCliente(c.id);
   const badge = ESTADO[c.estado] ?? { txt: c.estado, cls: "" };
 
-  const hoyMes = new Date().toISOString().slice(0, 7);
+  const hoyMes = mesHoyISO();
   // Soporte efectivo hoy: período activo si lo hay; si no, el soporte base del cliente.
   const soporteActual = soporteEnMes(soportes, hoyMes, hoyMes) ?? c.soporteValor;
   const soporteEsPeriodo = soporteEnMes(soportes, hoyMes, hoyMes) != null;

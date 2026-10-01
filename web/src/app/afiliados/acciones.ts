@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { getUsuario } from "@/lib/supabase/server";
+import { hoyISO } from "@/lib/fecha";
 
 const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 /** '2026-08-15' -> "agosto 2026" (formato que usa el motor). */
@@ -17,7 +18,7 @@ export async function registrarPagoAfiliado(formData: FormData) {
   if (!(await getUsuario())) redirect("/login");
   const clienteRef = String(formData.get("clienteRef"));
   const mesNum = Number(formData.get("mesNum"));
-  const fecha = String(formData.get("fecha") ?? "").trim() || new Date().toISOString().slice(0, 10);
+  const fecha = String(formData.get("fecha") ?? "").trim() || hoyISO();
   const monto = Number(formData.get("monto"));
   const notas = String(formData.get("notas") ?? "").trim() || null;
   const comprobante = String(formData.get("comprobante") ?? "").trim() || null;

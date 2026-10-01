@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { dashboardAfiliados } from "@/lib/afiliados";
 import { registrarPagoAfiliado } from "../../acciones";
+import { hoyISO } from "@/lib/fecha";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export default async function RegistrarPagoPage({
   const fila = filas.find((f) => f.clienteRef === c && String(f.mesIdx) === m);
   if (!fila) notFound();
 
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyISO();
 
   return (
     <main className="wrap">

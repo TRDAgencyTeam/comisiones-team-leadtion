@@ -3,6 +3,7 @@ import { consulta } from "@/lib/db";
 import { tasaUsdCop } from "@/lib/fx";
 import { calcLLC, calcCOL } from "@/lib/facturacion-calc";
 import type { ServicioCatalogo } from "@/lib/catalogo-tipos";
+import { mesHoyISO } from "@/lib/fecha";
 
 export interface FacturaRow {
   id: number;
@@ -58,8 +59,7 @@ const toISO = (v: unknown): string | null =>
 
 export function primerDiaMes(mes: string): string {
   const m = /^(\d{4})-(\d{2})/.exec(mes);
-  const h = new Date();
-  return m ? `${m[1]}-${m[2]}-01` : `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}-01`;
+  return m ? `${m[1]}-${m[2]}-01` : `${mesHoyISO()}-01`;
 }
 export function mesAnteriorISO(mes: string): string {
   const [a, m] = primerDiaMes(mes).split("-").map(Number);
@@ -67,8 +67,7 @@ export function mesAnteriorISO(mes: string): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 export function mesActualISO(): string {
-  const h = new Date();
-  return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}`;
+  return mesHoyISO(); // hora Colombia (el servidor corre en UTC)
 }
 
 function mapRow(r: Record<string, unknown>): FacturaRow {

@@ -2,12 +2,13 @@ import { soloAdmin } from "@/lib/sesion";
 import { flujoCaja } from "@/lib/egresos";
 import { tasaUsdCop } from "@/lib/fx";
 import { ClientesHeader } from "@/components/ClientesHeader";
+import { mesHoyISO } from "@/lib/fecha";
 
 export const metadata = { title: "Caja" };
 export const dynamic = "force-dynamic";
 
 const usd = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
-const mesISO = () => { const h = new Date(); return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}`; };
+const mesISO = () => mesHoyISO();
 const nombreMes = (iso: string) => { const [a, m] = iso.split("-").map(Number); const s = new Date(a!, m! - 1, 1).toLocaleDateString("es-CO", { month: "long", year: "numeric" }); return s.charAt(0).toUpperCase() + s.slice(1); };
 
 export default async function CajaPage({ searchParams }: { searchParams: Promise<{ mes?: string }> }) {

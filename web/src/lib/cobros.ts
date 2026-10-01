@@ -1,6 +1,7 @@
 import "server-only";
 import { consulta } from "@/lib/db";
 import { calendarioServicio, type TipoServicio } from "@/lib/servicios";
+import { mesHoyISO } from "@/lib/fecha";
 
 /**
  * Cobros mensuales por cliente para la vista de cobros de la lista de clientes.
@@ -27,7 +28,7 @@ function mesMas(ym: string, n: number): string {
 }
 
 export async function cobrosPorCliente(ids: number[], nFuturo = 3): Promise<CobrosMatriz> {
-  const hoyYM = new Date().toISOString().slice(0, 7);
+  const hoyYM = mesHoyISO();
   const meses: string[] = [];
   for (let i = 0; i <= nFuturo; i++) meses.push(mesMas(hoyYM, i));
   const finVentana = meses[meses.length - 1]!;

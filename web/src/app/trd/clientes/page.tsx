@@ -10,13 +10,14 @@ import { RecurrenciaCard } from "@/components/RecurrenciaCard";
 import { TendenciaRecurrenciaCard } from "@/components/TendenciaRecurrenciaCard";
 import { CoberturaCard } from "@/components/CoberturaCard";
 import { coberturaPorNegocio } from "@/lib/cobertura";
+import { mesHoyISO } from "@/lib/fecha";
 
 export const metadata = { title: "Resumen del mes" };
 export const dynamic = "force-dynamic";
 
 const usd = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 const usd2 = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(n);
-const mesISO = () => { const h = new Date(); return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}`; };
+const mesISO = () => mesHoyISO();
 
 const enLista = (v: string | null, arr: string[]) => arr.includes(v ?? "");
 /** Agrupa los gastos que afectan la utilidad por categoría (resumen, no fila a fila).

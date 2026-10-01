@@ -311,34 +311,9 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
   const otrosSinResel = otros.filter((o) => o.categoria !== "reselling");
   const otrosTotal = r2(otrosSinResel.reduce((s, x) => s + x.valorUsd, 0));
 
-  // API WhatsApp vendida: ganancia neta ($2/cuenta) de las cuentas 'vendida' activas.
-  // Automático desde el maestro Leadtion; solo mes en curso/futuro (es foto de hoy).
-  let apiVendida = 0, apiVendidaCuentas = 0;
-  if (mes.slice(0, 7) >= mesActualISO()) {
-    const av = await consulta(
-      `select coalesce(sum(api_valor) filter (where api_estado='vendida' and estado_actual='activo' and es_leadtion),0)::float ing,
-              count(*) filter (where api_estado='vendida' and estado_actual='activo' and es_leadtion)::int n
-         from public.clientes`,
-    );
-    const ing = Number((av[0] as Record<string, unknown>)?.ing ?? 0);
-    apiVendidaCuentas = Number((av[0] as Record<string, unknown>)?.n ?? 0);
-    apiVendida = r2(ing - apiVendidaCuentas * 10); // ganancia = cobrado − $10 de costo
-  }
-
-  // Ingreso Leadtion de MEMBRESÍAS + SOPORTE (licencias): estándar + con soporte de
-  // todas las cuentas activas. Es EXACTAMENTE el dato del dashboard de Membresías.
-  // NO incluye servicios (Agente IA / Reactivación): esos se facturan por la LLC y ya
-  // están en la Facturación del mes (contarlos aquí duplicaría). Las licencias/soporte
-  // nunca van en Facturación, así que no hay doble conteo. Solo mes en curso/futuro.
-  let leadtion = 0;
-  if (mes.slice(0, 7) >= mesActualISO()) {
-    const lineas = await proyeccionLeadtionMes(mes.slice(0, 7));
-    leadtion = r2(
-      lineas
-        .filter((l) => l.categoria === "estandar" || l.categoria === "soporte")
-        .reduce((s, l) => s + l.valor, 0),
-    );
-  }
+  // Ingreso Leadtion automático (licencias+soporte, API vendida): en vivo para el
+  // mes en curso/futuro; los meses cerrados leen la foto guardada (leadtion_mes).
+  const { leadtion, apiVendida, apiVendidaCuentas } = await leadtionDelMes(mes);
   const totalIngresos = r2(clientesUsa + clientesCol + otrosTotal + reselling + leadtion + apiVendida);
 
   const afectan = egresos.filter((e) => e.afectaUtilidad);
@@ -376,6 +351,57 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
     recurrencia: { fijaNeto, fijaClientes: fijaN, momentoNeto, momentoClientes: momentoN },
     utilidadBruta, diezmo, utilidadNeta, margen, cajaOficial,
   };
+}
+
+interface LeadtionMes { leadtion: number; apiVendida: number; apiVendidaCuentas: number }
+
+/**
+ * Calcula en vivo el ingreso Leadtion automático de un mes desde Membresías.
+ * - API WhatsApp vendida: ganancia neta ($2/cuenta) de las cuentas vendida activas.
+ * - MEMBRESÍAS + SOPORTE (licencias): estándar + con soporte de todas las cuentas
+ *   activas. Es EXACTAMENTE el dato del dashboard de Membresías. NO incluye servicios
+ *   (Agente IA / Reactivación): esos se facturan por la LLC y ya están en la
+ *   Facturación del mes (contarlos aquí duplicaría).
+ * Es foto de HOY: solo vale para el mes en curso (o el que acaba de cerrar).
+ */
+async function leadtionEnVivo(mes: string): Promise<LeadtionMes> {
+  const [av, lineas] = await Promise.all([
+    consulta(
+      `select coalesce(sum(api_valor) filter (where api_estado=vendida and estado_actual=activo and es_leadtion),0)::float ing,
+              count(*) filter (where api_estado=vendida and estado_actual=activo and es_leadtion)::int n
+         from public.clientes`,
+    ),
+    proyeccionLeadtionMes(mes.slice(0, 7)),
+  ]);
+  const ing = Number((av[0] as Record<string, unknown>)?.ing ?? 0);
+  const apiVendidaCuentas = Number((av[0] as Record<string, unknown>)?.n ?? 0);
+  return {
+    leadtion: r2(lineas.filter((l) => l.categoria === "estandar" || l.categoria === "soporte").reduce((s, l) => s + l.valor, 0)),
+    apiVendida: r2(ing - apiVendidaCuentas * 10), // ganancia = cobrado − $10 de costo
+    apiVendidaCuentas,
+  };
+}
+
+/** Guarda la foto del mes. `sobrescribir=false` solo la crea si no existe (cron). */
+export async function guardarLeadtionMes(mes: string, sobrescribir = true): Promise<LeadtionMes> {
+  const v = await leadtionEnVivo(mes);
+  await consulta(
+    `insert into public.leadtion_mes (mes, leadtion, api_vendida, api_cuentas, actualizado)
+     values ($1, $2, $3, $4, now())
+     on conflict (mes) do ${sobrescribir ? "update set leadtion = excluded.leadtion, api_vendida = excluded.api_vendida, api_cuentas = excluded.api_cuentas, actualizado = now()" : "nothing"}`,
+    [primerDiaMes(mes), v.leadtion, v.apiVendida, v.apiVendidaCuentas],
+  );
+  return v;
+}
+
+/** Mes en curso: en vivo y actualiza la foto. Futuro: en vivo. Pasado: la foto (0 si no hay). */
+async function leadtionDelMes(mes: string): Promise<LeadtionMes> {
+  const ym = mes.slice(0, 7), actual = mesActualISO();
+  if (ym === actual) return guardarLeadtionMes(ym);
+  if (ym > actual) return leadtionEnVivo(ym);
+  const rows = await consulta(`select leadtion, api_vendida, api_cuentas from public.leadtion_mes where mes = $1`, [primerDiaMes(ym)]);
+  const r = rows[0] as Record<string, unknown> | undefined;
+  return { leadtion: num(r?.leadtion), apiVendida: num(r?.api_vendida), apiVendidaCuentas: Number(r?.api_cuentas ?? 0) };
 }
 
 export interface RecurrenciaMes { mes: string; fija: number; momento: number }

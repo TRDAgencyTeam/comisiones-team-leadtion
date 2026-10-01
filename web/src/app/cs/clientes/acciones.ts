@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { fechaPago } from "@/lib/clientes";
 import { soloAdmin } from "@/lib/sesion";
+import { hoyISO } from "@/lib/fecha";
 
 /** Crea un cliente nuevo para que el sistema lo tenga en cuenta en comisiones. */
 export async function crearCliente(formData: FormData) {
@@ -117,7 +118,7 @@ export async function actualizarCliente(formData: FormData) {
   // 23:59), sincroniza también el valor de ESE mes en el historial. Pasado ese
   // día, el mes se edita manualmente desde "Editar historial".
   if (valorLicencia !== null) {
-    const hoy = new Date().toISOString().slice(0, 10);
+    const hoy = hoyISO();
     const mesActual = hoy.slice(0, 7) + "-01";
     const fp = fechaPago(fechaActivacion, mesActual);
     if (hoy <= fp) {

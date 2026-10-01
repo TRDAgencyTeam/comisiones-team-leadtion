@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { obtenerCliente, fechaPago, mesLargo, fechaLarga } from "@/lib/clientes";
 import { guardarHistorial } from "../../acciones";
+import { hoyISO } from "@/lib/fecha";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export default async function EditarHistorialPage({
   const c = await obtenerCliente(Number(id), "2026-08-05");
   if (!c) notFound();
 
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyISO();
 
   return (
     <main className="wrap">
