@@ -4,26 +4,26 @@ import { useState, useTransition } from "react";
 import { ESTADOS } from "@/lib/facturacion-calc";
 import { cambiarEstadoFactura } from "@/app/trd/clientes/acciones";
 import { CierreClienteModal } from "@/components/CierreClienteModal";
-import { PagoFechaModal } from "@/components/PagoFechaModal";
+import { PagoFechaModal, FECHA_POR_ESTADO } from "@/components/PagoFechaModal";
 import { conCarga } from "@/lib/carga";
 
 /**
  * Selector de estado (semáforo) CONTROLADO. "Anulado" abre el popup de cierre;
- * "Pagado" abre el popup de confirmación de fecha (hoy o personalizada). Los demás
- * estados se aplican al instante.
+ * Pagado / Facturado / Por facturar / Programado abren el popup de fecha (hoy o
+ * personalizada). Los demás estados se aplican al instante.
  */
-export function EstadoFactura({ id, estado }: { id: number; estado: string }) {
+export function EstadoFactura({ id, estado, fechaFactura }: { id: number; estado: string; fechaFactura?: string | null }) {
   const [val, setVal] = useState(estado);
   const [prev, setPrev] = useState(estado);
-  const [modal, setModal] = useState<null | "anular" | "pago">(null);
+  const [modal, setModal] = useState<null | "anular" | "fecha">(null);
   const [pending, start] = useTransition();
   const opciones = ESTADOS.filter((e) => e.value !== "por_confirmar" || val === "por_confirmar");
 
-  const persist = (v: string, fechaPago?: string) => {
+  const persist = (v: string, fecha?: string) => {
     const fd = new FormData();
     fd.set("id", String(id));
     fd.set("estado", v);
-    if (fechaPago) fd.set("fechaPago", fechaPago);
+    if (fecha) fd.set("fecha", fecha);
     start(async () => { await conCarga(cambiarEstadoFactura(fd)); });
   };
 
@@ -35,9 +35,10 @@ export function EstadoFactura({ id, estado }: { id: number; estado: string }) {
         disabled={pending}
         onChange={(e) => {
           const v = e.target.value;
-          if (v === "anulado") { setPrev(val); setVal("anulado"); setModal("anular"); return; }
-          if (v === "pagado") { setPrev(val); setVal("pagado"); setModal("pago"); return; }
-          setPrev(val); setVal(v); persist(v);
+          setPrev(val); setVal(v);
+          if (v === "anulado") { setModal("anular"); return; }
+          if (FECHA_POR_ESTADO[v]) { setModal("fecha"); return; }
+          persist(v);
         }}
       >
         {opciones.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
@@ -49,10 +50,12 @@ export function EstadoFactura({ id, estado }: { id: number; estado: string }) {
           onConfirm={() => { setModal(null); }}
         />
       )}
-      {modal === "pago" && (
+      {modal === "fecha" && (
         <PagoFechaModal
+          estado={val}
+          fechaActual={fechaFactura}
           onCancel={() => { setModal(null); setVal(prev); }}
-          onConfirm={(fecha) => { setModal(null); persist("pagado", fecha); }}
+          onConfirm={(fecha) => { setModal(null); persist(val, fecha); }}
         />
       )}
     </>

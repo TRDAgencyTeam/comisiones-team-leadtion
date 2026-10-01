@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CATEGORIA_LABEL, type ServicioCatalogo } from "@/lib/catalogo-tipos";
 import { MEDIOS, ESTADOS } from "@/lib/facturacion-calc";
 import { crearClienteCascada } from "@/app/trd/clientes/acciones";
-import { formatoMonto, montoATexto } from "@/lib/numero";
+import { formatoMonto, montoATexto, parseMonto } from "@/lib/numero";
 
 const money = (n: number, moneda: "USD" | "COP") =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: moneda, maximumFractionDigits: moneda === "COP" ? 0 : 2 }).format(n);
@@ -36,8 +36,10 @@ export function NuevoClienteModal({
     if (!srv) return;
     const conv = (usd: number | null): string => {
       if (usd == null) return "";
-      const v = entidad === "COL" ? Math.round(usd * tasa) : Math.round(usd);
-      return montoATexto(v, entidad !== "COL");
+      // Colombia: el precio se escribe en pesos (antes de IVA); no se convierte el
+      // precio en dólares del catálogo a COP. Solo se pre-llena para clientes USA.
+      if (entidad === "COL") return "";
+      return montoATexto(Math.round(usd), true);
     };
     if (srv.porPersona) {
       const totalUsd = (srv.precioPersona ?? 0) * Math.max(1, personas);
@@ -124,13 +126,13 @@ export function NuevoClienteModal({
 
                 {srv?.porPersona && (
                   <div className="cf-f">
-                    <label>Cantidad de {srv.unidad === "hora" ? "horas" : "personas"} ({money(srv.precioPersona ?? 0, "USD")} c/u{entidad === "COL" ? ` ≈ ${money(Math.round((srv.precioPersona ?? 0) * tasa), "COP")}` : ""})</label>
+                    <label>Cantidad de {srv.unidad === "hora" ? "horas" : "personas"} ({money(srv.precioPersona ?? 0, "USD")} c/u{entidad === "COL" ? " en USA · para Colombia escribe el total en COP" : ""})</label>
                     <input type="number" min={1} value={personas} onChange={(e) => setPersonas(Math.max(1, Number(e.target.value) || 1))} />
                   </div>
                 )}
 
                 <div className="cf-f">
-                  <label>{srv?.precioVariable ? `Precio (${moneda}) — este cliente` : srv?.porPersona ? `Total (${moneda}) — editable` : `Precio por mes (${moneda}) — editable`}</label>
+                  <label>{srv?.precioVariable ? `Precio (${moneda}) — este cliente` : srv?.porPersona ? `Total (${moneda}) — editable` : `Precio por mes (${moneda}${moneda === "COP" ? " antes de IVA" : ""}) — editable`}</label>
                   <div className="cf-price-grid" style={{ gridTemplateColumns: `repeat(${Math.min(nMeses, precios.length || 1)}, 1fr)` }}>
                     {Array.from({ length: nMeses }).map((_, i) => (
                       <div className="pc" key={i}>
@@ -140,7 +142,12 @@ export function NuevoClienteModal({
                     ))}
                   </div>
                   {srv?.precioVariable && <span className="cf-hint">Valor variable: escribe el acordado con el cliente.</span>}
-                  {entidad === "COL" && !srv?.precioVariable && <span className="cf-hint">Convertido a la tasa de hoy ({money(tasa, "COP")}). Puedes ajustarlo.</span>}
+                  {entidad === "COL" && (
+                    <span className="cf-hint">
+                      Escribe el valor en <b>pesos, antes de IVA</b> (el IVA se suma aparte y no es ganancia).
+                      {parseMonto(precios[0] ?? "") > 0 && <> Ingreso ≈ <b>{money(parseMonto(precios[0] ?? "") / tasa, "USD")}</b> (÷ tasa de hoy {money(tasa, "COP")}).</>}
+                    </span>
+                  )}
                 </div>
 
                 <div className="cf-f">

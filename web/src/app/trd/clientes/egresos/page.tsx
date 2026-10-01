@@ -54,13 +54,13 @@ function Grupo({ t, ic, filas, mes, edit, add, gestion }: {
       {filas.length === 0 && edit && <div className="cf-erow"><span className="nom" style={{ color: "var(--faint)" }}>Sin gastos este mes.</span><span></span><span></span><span></span></div>}
       {filas.map((e) => (
         <div key={`${e.id}-${e.concepto}`} className="cf-erow">
-          <span className="nom">{e.concepto}{e.marca ? <small>{e.marca}{e.fecha ? ` · ${fFecha(e.fecha)}` : ""}</small> : null}</span>
+          <span className="nom">{e.concepto}{e.marca || e.medioPago ? <small>{[e.marca, e.fecha ? fFecha(e.fecha) : null, e.medioPago ?? null].filter(Boolean).join(" · ")}</small> : null}</span>
           <span className="cop">{e.valorCop != null ? cop(e.valorCop) : ""}</span>
           <span className="val"><span className="cf-mono">{usd(e.valorUsd)}</span></span>
           <span className="del">{
             edit && !e.automatico && e.id > 0
               ? <span className="cf-acc-btns">
-                  <MovimientoModal mes={mes} tipo="egreso" editarEgresoData={{ id: e.id, concepto: e.concepto, marca: e.marca, valorUsd: e.valorUsd, valorCop: e.valorCop }} />
+                  <MovimientoModal mes={mes} tipo="egreso" editarEgresoData={{ id: e.id, concepto: e.concepto, marca: e.marca, valorUsd: e.valorUsd, valorCop: e.valorCop, medioPago: e.medioPago }} />
                   <form action={eliminarEgreso}><input type="hidden" name="id" value={e.id} /><button type="submit" className="btn-borrar icon-btn danger" title="Eliminar"><IconoBorrar /></button></form>
                 </span>
               : e.automatico ? <span className="cf-hint" title="Automático">🔒</span> : null

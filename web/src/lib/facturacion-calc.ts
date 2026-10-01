@@ -1,4 +1,5 @@
 /** Cálculo de facturación (puro, cliente+servidor). Verificado con el Excel. */
+import { parseMonto } from "@/lib/numero";
 
 export const MEDIOS = [
   { value: "stripe", label: "Stripe" },
@@ -36,4 +37,29 @@ export function calcLLC(facturado: number, medio: string | null) {
 export function calcCOL(facturadoCop: number, ivaPct: number, tasa: number) {
   const iva = r2(facturadoCop * (ivaPct / 100));
   return { iva, copConIva: r2(facturadoCop + iva), netoUsd: tasa > 0 ? r2(facturadoCop / tasa) : 0 };
+}
+
+export interface LineaServicio { concepto: string; monto: number | null }
+
+/** "$345.000" / "$520" → número; null si el trozo no es solo un monto (ej. "$897 (mes 6)"). */
+function montoSuelto(s: string): number | null {
+  const t = s.trim();
+  if (!/^\$?\s*[\d.,]+$/.test(t)) return null;
+  return parseMonto(t);
+}
+
+/**
+ * Líneas de una factura SIN ítems guardados, reconstruidas del texto importado del
+ * Excel: servicios "Meta Ads + Google Ads" con desglose "$345.000 + $590.000".
+ * Solo se reparte si cada servicio tiene su monto y la suma cuadra con el total;
+ * si no (paquetes como "Meta Ads + LEADTION Text AI" a un solo precio), cada
+ * servicio va sin monto y el total es el de la factura.
+ */
+export function lineasDesdeTexto(servicios: string | null, precioDesglose: string | null, facturado: number): LineaServicio[] {
+  const nombres = (servicios ?? "").split(" + ").map((x) => x.trim()).filter(Boolean);
+  if (nombres.length <= 1) return [{ concepto: nombres[0] ?? "Servicio", monto: facturado }];
+  const montos = (precioDesglose ?? "").split(" + ").map(montoSuelto);
+  const cuadra = montos.length === nombres.length && montos.every((m) => m != null)
+    && Math.abs(montos.reduce((s, m) => s + (m ?? 0), 0) - facturado) < 1;
+  return nombres.map((concepto, i) => ({ concepto, monto: cuadra ? montos[i]! : null }));
 }

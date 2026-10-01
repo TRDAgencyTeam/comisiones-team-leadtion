@@ -1447,3 +1447,36 @@ button.ck:hover { border-color: var(--muted); }
 .trd-side .tema-toggle button { color: #b7b5c9; }
 .trd-side .tema-toggle button:hover { color: #fff; }
 .trd-side .tema-toggle button.on { background: #6d5ac0; color: #fff; }
+
+/* Facturación: detalle de servicios al pasar el cursor */
+.srv-hover { cursor: help; border-bottom: 1px dashed color-mix(in srgb, var(--muted) 55%, transparent); outline: none; }
+.srv-hover:hover, .srv-hover:focus-visible { color: var(--accent); border-bottom-color: var(--accent); }
+.srv-pop { position: fixed; z-index: 110; width: 300px; display: flex; flex-direction: column; gap: 2px; padding: 12px 14px;
+  background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(10, 10, 25, 0.28); font-size: 0.82rem; cursor: default; pointer-events: none;
+  animation: trd-toast-in 0.12s ease-out; }
+.srv-pop.arriba { transform: translateY(-100%); }
+.srv-pop-h { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 700; margin-bottom: 4px; }
+.srv-pop-l { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; }
+.srv-pop-l > span { color: var(--text); font-weight: 500; }
+.srv-pop-l b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.srv-pop-l.tot { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 8px; font-weight: 700; }
+.srv-pop-l.sub > span, .srv-pop-l.sub b { color: var(--muted); font-weight: 600; font-size: 0.78rem; }
+.srv-pop-nota { color: var(--faint); font-size: 0.72rem; font-style: italic; }
+
+/* Colombia: antes de IVA / IVA / total a cobrar / ingreso real */
+.cf-iva-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 0 0 10px; }
+.cf-iva-strip > div { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; }
+.cf-iva-strip span { font-size: 0.72rem; color: var(--muted); font-weight: 600; }
+.cf-iva-strip b { font-variant-numeric: tabular-nums; font-size: 1rem; }
+.cf-iva-strip .hl { background: var(--accent-soft); border-color: transparent; }
+.cf-iva-strip .hl b { color: var(--accent); }
+@media (max-width: 760px) { .cf-iva-strip { grid-template-columns: repeat(2, 1fr); } }
+.cf-muted-num { color: var(--muted); }
+.cf-li-det { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 4px 0 8px 14px; border-bottom: 1px dashed var(--border);
+  font-size: 0.78rem; color: var(--muted); }
+.cf-li-det b { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+
+/* Moneda explícita en el editor de servicios */
+.cf-moneda-badge { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 0.82rem; color: var(--muted); }
+.cf-moneda-nota { display: block; font-weight: 500; font-size: 0.76rem; color: var(--muted); margin-top: 2px; }

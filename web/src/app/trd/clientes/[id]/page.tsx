@@ -50,7 +50,7 @@ export default async function FichaClientePage({ params }: { params: Promise<{ i
 
       <div className="cf-sec-head"><h2>Servicios de este mes ({nombreMes(mes)})</h2></div>
       <p className="cf-hint" style={{ margin: "0 0 8px" }}>Elige los servicios de la lista. Puedes sumar varios (ej. plan recurrente + una grabación). El total de la factura se recalcula solo.</p>
-      <ServiciosEditor facturaId={factura.id} entidad={factura.entidad} tasa={tasa} catalogo={catalogo} iniciales={items} />
+      <ServiciosEditor facturaId={factura.id} entidad={factura.entidad} tasa={factura.tasa ?? tasa} catalogo={catalogo} iniciales={items} ivaPct={factura.ivaPct} />
 
       {servicios.length > 0 && (
         <div className="cf-sec-head" style={{ marginBottom: 6 }}><h2 style={{ fontSize: "0.95rem" }}>Historial de servicios (todos los meses)</h2></div>
@@ -73,7 +73,7 @@ export default async function FichaClientePage({ params }: { params: Promise<{ i
                 <td className="r">{f.entidad === "LLC" ? usd(f.facturado) : cop(f.facturado)}</td>
                 <td className="r neto">{usd(netoUsdDeFactura(f, tasa))}</td>
                 <td>{f.fechaPago ?? "—"}</td>
-                <td>{f.id === factura.id ? <EstadoFactura id={f.id} estado={f.estado} /> : <span className={`estado-sel est-${f.estado}`}>{ESTADOS.find((e) => e.value === f.estado)?.label}</span>}</td>
+                <td>{f.id === factura.id ? <EstadoFactura id={f.id} estado={f.estado} fechaFactura={f.fechaFactura} /> : <span className={`estado-sel est-${f.estado}`}>{ESTADOS.find((e) => e.value === f.estado)?.label}</span>}</td>
               </tr>
             ))}
           </tbody>
@@ -95,7 +95,7 @@ export default async function FichaClientePage({ params }: { params: Promise<{ i
           <div className="cf-f"><label>Nombre del cliente</label><input name="clienteNombre" defaultValue={factura.clienteNombre} /></div>
           <div className="cf-price-grid" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
             <div className="cf-f"><label>Medio de pago</label><select name="medio" defaultValue={factura.medio ?? "stripe"}>{MEDIOS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}</select></div>
-            <div className="cf-f"><label>Total actual</label><input value={esLLC ? usd(factura.facturado) : cop(factura.facturado)} disabled /></div>
+            <div className="cf-f"><label>{esLLC ? "Total actual (USD)" : "Total actual (COP antes de IVA)"}</label><input value={esLLC ? usd(factura.facturado) : cop(factura.facturado)} disabled /></div>
           </div>
           {!esLLC && <div className="cf-f"><label>IVA %</label><input name="ivaPct" inputMode="decimal" defaultValue={factura.ivaPct} /></div>}
           <div className="cf-price-grid" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>

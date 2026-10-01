@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { crearEgreso, crearIngreso, editarIngreso, editarEgreso } from "@/app/trd/clientes/acciones";
+import { crearEgreso, crearIngreso, editarIngreso, editarEgreso, mediosPagoActivos } from "@/app/trd/clientes/acciones";
 import { IconoEditar } from "@/components/Iconos";
 import { InputMonto } from "@/components/InputMonto";
 
 export interface IngresoEdit { id: number; concepto: string; valorUsd: number; categoria: string | null }
-export interface EgresoEdit { id: number; concepto: string; marca: string | null; valorUsd: number; valorCop: number | null }
+export interface EgresoEdit { id: number; concepto: string; marca: string | null; valorUsd: number; valorCop: number | null; medioPago?: string | null }
 
 // Grupos de egreso → (categoria, subcategoria, afectaUtilidad)
 const GRUPOS_EGRESO: Record<string, { label: string; categoria: string; subcategoria: string | null; afecta: boolean }> = {
@@ -35,6 +35,15 @@ export function MovimientoModal({
   const esEdit = esEditIng || esEditEg;
   const grupoFijo = !!grupoInicial; // agregar directo a un grupo (sin selector)
   const g = GRUPOS_EGRESO[grupo] ?? GRUPOS_EGRESO.variable!;
+  // Medios de pago (tarjetas/cuentas): se cargan al abrir un egreso.
+  const [medios, setMedios] = useState<string[] | null>(null);
+  const [medio, setMedio] = useState(editarEgresoData?.medioPago ?? "");
+  useEffect(() => {
+    if (!open || !esEgreso || medios) return;
+    mediosPagoActivos().then(setMedios).catch(() => setMedios([]));
+  }, [open, esEgreso, medios]);
+  // Si el medio guardado ya no está en la lista (renombrado/desactivado), igual se muestra.
+  const opcionesMedio = medios ? (medio && medio !== "__otro" && !medios.includes(medio) ? [medio, ...medios] : medios) : [];
 
   useEffect(() => {
     if (!open) return;
@@ -83,6 +92,16 @@ export function MovimientoModal({
                 {!esEgreso && (
                   <div className="cf-f"><label>Categoría</label>
                     <select name="categoria" defaultValue={editar?.categoria ?? "reselling"}>{CAT_INGRESO.map((c) => <option key={c} value={c}>{c}</option>)}</select>
+                  </div>
+                )}
+                {esEgreso && (
+                  <div className="cf-f"><label>Medio de pago</label>
+                    <select name="medioPago" value={medio} onChange={(e) => setMedio(e.target.value)} required={!esEdit}>
+                      <option value="" disabled={!esEdit}>{medios ? "— ¿Con qué se pagó? —" : "Cargando…"}</option>
+                      {opcionesMedio.map((m) => <option key={m} value={m}>{m}</option>)}
+                      <option value="__otro">Otro…</option>
+                    </select>
+                    {medio === "__otro" && <input name="medioPagoNuevo" required placeholder="Ej. TC Davivienda · Mauricio" style={{ marginTop: 8 }} />}
                   </div>
                 )}
                 {esEgreso && !esEdit && <div className="cf-f"><label>Fecha</label><input type="date" name="fecha" defaultValue={`${mes}-01`} /></div>}

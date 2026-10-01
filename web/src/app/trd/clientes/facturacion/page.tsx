@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { soloAdmin } from "@/lib/sesion";
-import { vistaFacturacion, catalogoServicios, clientesParaFactura, netoUsdDeFactura, type FacturaRow } from "@/lib/facturacion";
-import { calcLLC } from "@/lib/facturacion-calc";
+import { vistaFacturacion, catalogoServicios, clientesParaFactura, netoUsdDeFactura, lineasDeFacturas, type FacturaRow } from "@/lib/facturacion";
+import { calcLLC, calcCOL, type LineaServicio } from "@/lib/facturacion-calc";
+import { ServiciosHover } from "@/components/ServiciosHover";
 import { otrosIngresosDelMes } from "@/lib/egresos";
 import { opcionesFormulario } from "@/lib/membresias";
 import { comercialesActivos } from "@/lib/comercial";
@@ -21,32 +22,40 @@ const usd = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", c
 const mesISO = () => mesHoyISO();
 const fFecha = (iso: string | null) => { if (!iso) return "—"; const [, m, d] = iso.split("-"); return `${d}/${m}`; };
 
-function Tabla({ filas, tasa, entidad }: { filas: FacturaRow[]; tasa: number; entidad: "LLC" | "COL" }) {
+function Tabla({ filas, tasa, entidad, lineas }: { filas: FacturaRow[]; tasa: number; entidad: "LLC" | "COL"; lineas: Map<number, LineaServicio[]> }) {
   const esLLC = entidad === "LLC";
+  const esCOL = entidad === "COL";
   return (
     <div className="cf-table-wrap">
       <table className="cf-table">
         <thead>
           <tr>
             <th>Cliente</th><th>Servicio</th>{esLLC && <th>Mes</th>}
-            <th className="r">Facturado</th>{esLLC && <th className="r">Pasarela</th>}<th className="r">Neto USD</th>
+            {esCOL
+              ? <><th className="r">Antes de IVA</th><th className="r">IVA</th><th className="r">Total con IVA</th></>
+              : <th className="r">Facturado</th>}
+            {esLLC && <th className="r">Pasarela</th>}<th className="r">Neto USD</th>
             <th>F. factura</th><th>F. pago</th><th>Estado</th><th></th>
           </tr>
         </thead>
         <tbody>
           {filas.map((f) => {
             const pasarela = esLLC ? calcLLC(f.facturado, f.medio).pasarela : 0;
+            const filaCOL = f.entidad === "COL";
+            const col = filaCOL ? calcCOL(f.facturado, f.ivaPct, f.tasa ?? tasa) : null;
             return (
               <tr key={f.id} className={`fila-${f.estado}`}>
                 <td className="nom">{f.clienteNombre}<small>{f.reserva ? "reserva · " : ""}{f.medio ?? ""}</small></td>
-                <td className="srv">{f.servicios ?? "—"}</td>
+                <td className="srv"><ServiciosHover texto={f.servicios ?? "—"} lineas={lineas.get(f.id) ?? []} moneda={filaCOL ? "COP" : "USD"} total={f.facturado} ivaPct={filaCOL ? f.ivaPct : undefined} /></td>
                 {esLLC && <td>{f.mesContrato ? `mes ${f.mesContrato}` : "—"}</td>}
-                <td className="r">{esLLC ? usd(f.facturado) : cop(f.facturado)}</td>
+                {esCOL
+                  ? <><td className="r">{cop(f.facturado)}</td><td className="r cf-muted-num">{cop(col!.iva)}</td><td className="r">{cop(col!.copConIva)}</td></>
+                  : <td className="r">{filaCOL ? cop(f.facturado) : usd(f.facturado)}</td>}
                 {esLLC && <td className="r">{pasarela ? usd(pasarela) : "—"}</td>}
                 <td className="r neto">{usd(netoUsdDeFactura(f, tasa))}</td>
                 <td>{fFecha(f.fechaFactura)}</td>
                 <td>{fFecha(f.fechaPago)}</td>
-                <td><EstadoFactura id={f.id} estado={f.estado} /></td>
+                <td><EstadoFactura id={f.id} estado={f.estado} fechaFactura={f.fechaFactura} /></td>
                 <td>
                   <span className="acc">
                     <Link href={`/trd/clientes/${f.id}`} className="link-ver">Ver</Link>
@@ -56,7 +65,7 @@ function Tabla({ filas, tasa, entidad }: { filas: FacturaRow[]; tasa: number; en
               </tr>
             );
           })}
-          {filas.length === 0 && <tr><td colSpan={esLLC ? 10 : 9} className="cf-empty" style={{ padding: 24 }}>Sin registros este mes.</td></tr>}
+          {filas.length === 0 && <tr><td colSpan={esLLC ? 10 : 11} className="cf-empty" style={{ padding: 24 }}>Sin registros este mes.</td></tr>}
         </tbody>
       </table>
     </div>
@@ -72,6 +81,12 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
   const recLLC = v.recurrentes.filter((f) => f.entidad === "LLC");
   const recCOL = v.recurrentes.filter((f) => f.entidad === "COL");
   const otrosTotal = otros.reduce((s, o) => s + o.valorUsd, 0);
+  const lineas = await lineasDeFacturas([...v.recurrentes, ...v.delMomento]);
+  // Colombia: lo que se cobra al cliente vs. lo que es ingreso (antes de IVA → USD).
+  const totCOL = recCOL.filter((f) => f.estado !== "anulado").reduce((t, f) => {
+    const c = calcCOL(f.facturado, f.ivaPct, f.tasa ?? v.tasa);
+    return { antes: t.antes + f.facturado, iva: t.iva + c.iva, con: t.con + c.copConIva, usd: t.usd + c.netoUsd };
+  }, { antes: 0, iva: 0, con: 0, usd: 0 });
 
   return (
     <main className="cf">
@@ -85,13 +100,21 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
           <Link href={`/trd/clientes/nuevo?mes=${mes}`} className="cf-btn cf-btn-ghost">+ Nueva factura</Link>
         </div>
       </div>
-      <Tabla filas={recLLC} tasa={v.tasa} entidad="LLC" />
+      <Tabla filas={recLLC} tasa={v.tasa} entidad="LLC" lineas={lineas} />
 
       <div className="cf-sec-head"><h2>Clientes recurrentes · Colombia (COP) <span className="count">{recCOL.length}</span></h2></div>
-      <Tabla filas={recCOL} tasa={v.tasa} entidad="COL" />
+      {recCOL.length > 0 && (
+        <div className="cf-iva-strip">
+          <div><span>Antes de IVA</span><b>{cop(totCOL.antes)}</b></div>
+          <div><span>+ IVA (no es ganancia)</span><b>{cop(totCOL.iva)}</b></div>
+          <div><span>= Total a cobrar</span><b>{cop(totCOL.con)}</b></div>
+          <div className="hl"><span>Ingreso real (antes de IVA ÷ tasa)</span><b>{usd(totCOL.usd)}</b></div>
+        </div>
+      )}
+      <Tabla filas={recCOL} tasa={v.tasa} entidad="COL" lineas={lineas} />
 
       <div className="cf-sec-head"><h2>Servicios del momento <span className="count">{v.delMomento.length}</span></h2></div>
-      <Tabla filas={v.delMomento} tasa={v.tasa} entidad="LLC" />
+      <Tabla filas={v.delMomento} tasa={v.tasa} entidad="LLC" lineas={lineas} />
 
       <div className="cf-sec-head">
         <h2>Otros ingresos del mes <span className="count">{usd(otrosTotal)}</span></h2>
@@ -117,7 +140,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
       <p className="cf-nota">
         <b>Otros ingresos</b> = plata que entra y no es cliente de agencia: reselling Leadtion, licencias de afiliado, mantenimientos web, reservas P2P, API vendida, afiliación de herramientas. Se cargan aquí (ya no en Leadtion).<br />
         <b>Servicios del momento</b> = compras de una sola vez o servicios Leadtion puntuales (Agente IA, Reactivación, grabación, evento…). Los recurrentes se autogeneran cada mes;
-        al terminar el contrato el cliente pasa a <b>“¿Continúa?”</b> (automático) para confirmar. Neto USD = facturado − pasarela (LLC) / antes de IVA ÷ tasa (COL).
+        al terminar el contrato el cliente pasa a <b>“¿Continúa?”</b> (automático) para confirmar. Neto USD = facturado − pasarela (LLC) / antes de IVA ÷ tasa (COL): el IVA se cobra pero no es ganancia. Pasa el cursor por el servicio para ver el detalle.
       </p>
     </main>
   );

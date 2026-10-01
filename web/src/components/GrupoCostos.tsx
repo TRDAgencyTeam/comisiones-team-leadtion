@@ -12,6 +12,7 @@ export interface FilaCosto {
   valorUsd: number;
   valorCop: number | null;
   automatico: boolean;
+  medioPago?: string | null;
 }
 
 /**
@@ -63,7 +64,7 @@ export function GrupoCostos({
               const mesV = f.valorUsd, dia = mesV / 30, hora = dia / 8, anio = mesV * 12;
               return (
                 <tr key={f.id}>
-                  <td className="nom">{f.concepto}{f.marca ? <small>{f.marca}</small> : null}</td>
+                  <td className="nom">{f.concepto}{f.marca || f.medioPago ? <small>{[f.marca, f.medioPago].filter(Boolean).join(" · ")}</small> : null}</td>
                   {modo === "nomina"
                     ? <><td className="r">{fmt(hora)}</td><td className="r">{fmt(dia)}</td><td className="r cf-mono">{fmt(mesV)}</td></>
                     : <><td className="r">{fmt(dia)}</td><td className="r cf-mono">{fmt(mesV)}</td><td className="r">{fmt(anio)}</td></>}
@@ -71,7 +72,7 @@ export function GrupoCostos({
                     {f.automatico
                       ? <span className="cf-hint" title="Automático">🔒</span>
                       : <span className="cf-acc-btns">
-                          <MovimientoModal mes={mes} tipo="egreso" editarEgresoData={{ id: f.id, concepto: f.concepto, marca: f.marca, valorUsd: f.valorUsd, valorCop: f.valorCop }} />
+                          <MovimientoModal mes={mes} tipo="egreso" editarEgresoData={{ id: f.id, concepto: f.concepto, marca: f.marca, valorUsd: f.valorUsd, valorCop: f.valorCop, medioPago: f.medioPago }} />
                           <form action={eliminarEgreso}><input type="hidden" name="id" value={f.id} /><button type="submit" className="btn-borrar icon-btn danger" title="Eliminar"><IconoBorrar /></button></form>
                         </span>}
                   </td>

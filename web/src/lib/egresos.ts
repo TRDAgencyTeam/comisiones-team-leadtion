@@ -18,6 +18,8 @@ export interface EgresoRow {
   categoria: string | null;
   subcategoria: string | null;
   automatico: boolean;
+  /** Con qué se pagó (tarjeta/cuenta). */
+  medioPago?: string | null;
 }
 
 /**
@@ -225,6 +227,7 @@ export async function egresosDelMes(mes: string): Promise<EgresoRow[]> {
     afectaUtilidad: Boolean(r.afecta_utilidad), categoria: (r.categoria as string) ?? null,
     subcategoria: (r.subcategoria as string) ?? null,
     automatico: Boolean(r.automatico),
+    medioPago: (r.medio_pago as string) ?? null,
   }));
 }
 
@@ -244,6 +247,8 @@ export interface ResumenMes {
   ingresos: {
     clientesUsa: number;
     clientesCol: number;
+    /** Colombia en pesos: antes de IVA (lo que es ingreso), IVA (se cobra, no es ganancia) y total cobrado. */
+    colombiaCop: { antes: number; iva: number; conIva: number };
     otros: IngresoRow[];
     /** Ingreso Leadtion de membresías + soporte (licencias estándar y con soporte);
      *  NO incluye servicios (esos se facturan por la LLC). = dato del dashboard. */
@@ -294,6 +299,7 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
   const tasa = fx.cop;
 
   let clientesUsa = 0, clientesCol = 0;
+  const colombiaCop = { antes: 0, iva: 0, conIva: 0 };
   // Recurrencia: separa la facturación de clientes recurrentes (base fija) vs del momento.
   let fijaNeto = 0, fijaN = 0, momentoNeto = 0, momentoN = 0;
   for (const f of facturas as Record<string, unknown>[]) {
@@ -301,7 +307,12 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
     const neto = f.entidad === "LLC"
       ? calcLLC(num(f.facturado), (f.medio as string) ?? null).neto
       : calcCOL(num(f.facturado), num(f.iva_pct), f.tasa != null ? Number(f.tasa) : tasa).netoUsd;
-    if (f.entidad === "LLC") clientesUsa += neto; else clientesCol += neto;
+    if (f.entidad === "LLC") clientesUsa += neto;
+    else {
+      clientesCol += neto;
+      const c = calcCOL(num(f.facturado), num(f.iva_pct), 1);
+      colombiaCop.antes += num(f.facturado); colombiaCop.iva += c.iva; colombiaCop.conIva += c.copConIva;
+    }
     if (Boolean(f.recurrente)) { fijaNeto += neto; fijaN += 1; } else { momentoNeto += neto; momentoN += 1; }
   }
   clientesUsa = r2(clientesUsa); clientesCol = r2(clientesCol);
@@ -337,7 +348,7 @@ export async function resumenDelMes(mes: string): Promise<ResumenMes> {
   return {
     tasa,
     ingresos: {
-      clientesUsa, clientesCol, otros: otrosSinResel, leadtion, apiVendida, apiVendidaCuentas, reselling, total: totalIngresos,
+      clientesUsa, clientesCol, colombiaCop, otros: otrosSinResel, leadtion, apiVendida, apiVendidaCuentas, reselling, total: totalIngresos,
       porFuente: [
         { etiqueta: "Clientes USA", valor: clientesUsa },
         { etiqueta: "Clientes Colombia", valor: clientesCol },

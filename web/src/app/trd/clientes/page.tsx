@@ -16,6 +16,7 @@ export const metadata = { title: "Resumen del mes" };
 export const dynamic = "force-dynamic";
 
 const usd = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+const cop = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
 const usd2 = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(n);
 const mesISO = () => mesHoyISO();
 
@@ -125,7 +126,14 @@ export default async function ResumenPage({ searchParams }: { searchParams: Prom
         <div className="cf-card">
           <h3>Ingresos</h3>
           <div className="cf-li"><span>Clientes USA (LLC)</span><b>{usd2(r.ingresos.clientesUsa)}</b></div>
-          <div className="cf-li"><span>Clientes Colombia</span><b>{usd2(r.ingresos.clientesCol)}</b></div>
+          <div className="cf-li"><span>Clientes Colombia <small style={{ color: "var(--faint)" }}>antes de IVA ÷ tasa</small></span><b>{usd2(r.ingresos.clientesCol)}</b></div>
+          {r.ingresos.colombiaCop.antes > 0 && (
+            <div className="cf-li-det">
+              <span>Facturado antes de IVA</span><b>{cop(r.ingresos.colombiaCop.antes)}</b>
+              <span>+ IVA (se cobra, no es ganancia)</span><b>{cop(r.ingresos.colombiaCop.iva)}</b>
+              <span>= Total cobrado con IVA</span><b>{cop(r.ingresos.colombiaCop.conIva)}</b>
+            </div>
+          )}
           {r.ingresos.leadtion > 0 && <div className="cf-li"><span>Leadtion (membresías + soporte) <small style={{ color: "var(--faint)" }}>licencias</small></span><b>{usd2(r.ingresos.leadtion)}</b></div>}
           {r.ingresos.apiVendida > 0 && <div className="cf-li"><span>API WhatsApp vendida <small style={{ color: "var(--faint)" }}>{r.ingresos.apiVendidaCuentas} cuentas · $2 c/u</small></span><b>{usd2(r.ingresos.apiVendida)}</b></div>}
           <div className="cf-li"><span>Reselling (Leadtion) <small style={{ color: "var(--faint)" }}>lo reportas a fin de mes</small></span><b>{usd2(r.ingresos.reselling)}</b></div>

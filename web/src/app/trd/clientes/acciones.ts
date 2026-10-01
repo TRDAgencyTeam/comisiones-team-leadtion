@@ -8,7 +8,7 @@ import { primerDiaMes } from "@/lib/facturacion";
 import { tasaUsdCop } from "@/lib/fx";
 import { crearClienteCompleto, recomputarPagosDeCliente, type NuevoClienteInput } from "@/app/membresias/acciones";
 import { registrarComisionComercial, COMERCIAL_DESDE } from "@/lib/comercial";
-import { mesHoyISO } from "@/lib/fecha";
+import { hoyISO, mesHoyISO } from "@/lib/fecha";
 import { flash } from "@/lib/flash";
 import { parseMonto } from "@/lib/numero";
 
@@ -291,6 +291,23 @@ export async function crearClienteCascada(formData: FormData) {
 }
 
 /* --- Egresos e ingresos del mes ------------------------------------------- */
+/** Medios de pago activos (para el selector del popup de egreso). */
+export async function mediosPagoActivos(): Promise<string[]> {
+  await soloAdmin();
+  const rows = await consulta(`select nombre from public.medio_pago where activo order by orden, nombre`);
+  return rows.map((r: Record<string, unknown>) => String(r.nombre));
+}
+
+/** Medio elegido en el popup. "Otro" con nombre nuevo → se agrega al catálogo para la próxima. */
+async function medioPagoDe(formData: FormData): Promise<string | null> {
+  let medio = txt(formData.get("medioPago"));
+  if (medio === "__otro") {
+    medio = txt(formData.get("medioPagoNuevo"));
+    if (medio) await consulta(`insert into public.medio_pago (nombre) values ($1) on conflict (nombre) do nothing`, [medio]);
+  }
+  return medio;
+}
+
 export async function crearEgreso(formData: FormData) {
   await soloAdmin();
   const mes = primerDiaMes(String(formData.get("mes") ?? ""));
@@ -306,10 +323,11 @@ export async function crearEgreso(formData: FormData) {
   const afectaUtilidad = String(formData.get("afectaUtilidad")) === "1";
   const categoria = txt(formData.get("categoria"));
   const subcategoria = txt(formData.get("subcategoria"));
+  const medioPago = await medioPagoDe(formData);
   await consulta(
-    `insert into public.egreso_mensual (mes, concepto, marca, fecha, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-    [mes, concepto, marca, fecha, valorUsd, valorCop, afectaUtilidad, categoria, subcategoria],
+    `insert into public.egreso_mensual (mes, concepto, marca, fecha, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria, medio_pago)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+    [mes, concepto, marca, fecha, valorUsd, valorCop, afectaUtilidad, categoria, subcategoria, medioPago],
   );
   revalidatePath("/trd/clientes/egresos");
   revalidatePath("/trd/clientes");
@@ -325,9 +343,10 @@ export async function editarEgreso(formData: FormData) {
   let valorUsd = n(formData.get("valorUsd"));
   const valorCop = txt(formData.get("valorCop")) ? n(formData.get("valorCop")) : null;
   if (!valorUsd && valorCop) { const { cop: tasa } = await tasaUsdCop(); valorUsd = Math.round((valorCop / tasa) * 100) / 100; }
+  const medioPago = await medioPagoDe(formData);
   await consulta(
-    `update public.egreso_mensual set concepto=$2, marca=$3, valor_usd=$4, valor_cop=$5 where id=$1`,
-    [id, concepto, marca, valorUsd, valorCop],
+    `update public.egreso_mensual set concepto=$2, marca=$3, valor_usd=$4, valor_cop=$5, medio_pago=$6 where id=$1`,
+    [id, concepto, marca, valorUsd, valorCop, medioPago],
   );
   await flash("Actualizado");
   revalidatePath("/trd/clientes/egresos");
@@ -441,18 +460,30 @@ export async function cambiarEstadoFactura(formData: FormData) {
   const estado = String(formData.get("estado"));
   const ok = ["pagado", "facturado", "por_facturar", "por_confirmar", "programado", "anulado"];
   if (!ok.includes(estado)) return;
-  // Fecha de pago: si viene del popup de confirmación (fechaPago) se usa esa (el
-  // cliente pudo pagar otro día, ej. fin de semana); si no, la de hoy cuando aún
-  // no había. Al Facturar/Pagar, la fecha de factura se pone si faltaba.
-  const fechaPago = /^\d{4}-\d{2}-\d{2}$/.test(String(formData.get("fechaPago") ?? "")) ? String(formData.get("fechaPago")) : null;
+  // Fecha del popup (hoy o personalizada) según el estado:
+  //  pagado       → fecha de pago (y fecha de factura si faltaba)
+  //  facturado    → fecha de factura
+  //  por_facturar / programado → fecha prevista/programada de facturación
+  // Al volver a un estado NO pagado se borra la fecha de pago (ya no está pagada).
+  // "Hoy" = día de Colombia (la base está en UTC: de noche ya sería mañana).
+  const leida = String(formData.get("fecha") ?? formData.get("fechaPago") ?? "");
+  const fecha = /^d{4}-d{2}-d{2}$/.test(leida) ? leida : null;
+  const hoy = hoyISO();
   await consulta(
     `update public.factura_mensual
         set estado = $2,
-            fecha_pago    = case when $2 = 'pagado' then coalesce($3::date, case when fecha_pago is null then current_date else fecha_pago end) else fecha_pago end,
-            fecha_factura = case when $2 in ('facturado','pagado') and fecha_factura is null then current_date else fecha_factura end,
+            fecha_pago = case
+              when $2 = pagado then coalesce($3::date, fecha_pago, $4::date)
+              when $2 in (facturado,por_facturar,programado) then null
+              else fecha_pago end,
+            fecha_factura = case
+              when $2 = pagado then coalesce(fecha_factura, $3::date, $4::date)
+              when $2 = facturado then coalesce($3::date, fecha_factura, $4::date)
+              when $2 in (por_facturar,programado) then coalesce($3::date, fecha_factura)
+              else fecha_factura end,
             actualizado_en = now()
       where id = $1`,
-    [id, estado, fechaPago],
+    [id, estado, fecha, hoy],
   );
   await flash("Actualizado");
   revalidatePath("/trd/clientes");

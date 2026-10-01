@@ -1,7 +1,7 @@
 import "server-only";
 import { consulta } from "@/lib/db";
 import { tasaUsdCop } from "@/lib/fx";
-import { calcLLC, calcCOL } from "@/lib/facturacion-calc";
+import { calcLLC, calcCOL, lineasDesdeTexto, type LineaServicio } from "@/lib/facturacion-calc";
 import type { ServicioCatalogo } from "@/lib/catalogo-tipos";
 import { mesHoyISO } from "@/lib/fecha";
 
@@ -241,7 +241,34 @@ export async function itemsDeFactura(f: FacturaRow): Promise<FacturaItem[]> {
       concepto: String(r.concepto), monto: num(r.monto),
     }));
   }
+  // Sin ítems: si el texto importado trae cada servicio con su monto ("Meta Ads +
+  // Google Ads" / "$345.000 + $590.000") se separa en líneas y se enlaza al catálogo
+  // por nombre; si no, una sola línea con el total (paquete).
+  const lineas = lineasDesdeTexto(f.servicios, f.precioDesglose, f.facturado);
+  if (lineas.length > 1 && lineas.every((l) => l.monto != null)) {
+    const cat = await consulta(`select clave, lower(nombre) nombre from public.servicio_catalogo where activo = true`);
+    const porNombre = new Map(cat.map((c: Record<string, unknown>) => [String(c.nombre), String(c.clave)]));
+    return lineas.map((l) => ({ id: null, servicioClave: porNombre.get(l.concepto.toLowerCase()) ?? null, concepto: l.concepto, monto: l.monto! }));
+  }
   return [{ id: null, servicioClave: f.servicioClave, concepto: f.servicios ?? "Servicio", monto: f.facturado }];
+}
+
+/** Líneas (concepto + monto) de varias facturas, para el detalle al pasar el cursor
+ *  en Facturación. Usa los ítems guardados; si no hay, las reconstruye del texto. */
+export async function lineasDeFacturas(filas: FacturaRow[]): Promise<Map<number, LineaServicio[]>> {
+  const out = new Map<number, LineaServicio[]>();
+  if (!filas.length) return out;
+  const rows = await consulta(
+    `select factura_id, concepto, monto from public.factura_item where factura_id = any($1::bigint[]) order by factura_id, orden, id`,
+    [filas.map((f) => f.id)],
+  );
+  for (const r of rows as Record<string, unknown>[]) {
+    const id = Number(r.factura_id);
+    if (!out.has(id)) out.set(id, []);
+    out.get(id)!.push({ concepto: String(r.concepto), monto: num(r.monto) });
+  }
+  for (const f of filas) if (!out.has(f.id)) out.set(f.id, lineasDesdeTexto(f.servicios, f.precioDesglose, f.facturado));
+  return out;
 }
 
 /** Historial de todas las facturas de un cliente (por nombre), viejo→nuevo. */
