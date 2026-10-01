@@ -32,5 +32,29 @@ function getPool(): Pool {
 export const consulta = async (sql: string, params?: unknown[]) =>
   (await getPool().query(sql, params)).rows;
 
+/**
+ * Ejecuta `fn` en UNA transacción (misma conexión). Con `candado` toma un lock
+ * por clave (pg_advisory_xact_lock) para que dos requests simultáneos no
+ * intercalen un "borrar y volver a insertar" (evita filas duplicadas).
+ */
+export async function transaccion<T>(
+  fn: (q: (sql: string, params?: unknown[]) => Promise<Record<string, unknown>[]>) => Promise<T>,
+  candado?: string,
+): Promise<T> {
+  const client = await getPool().connect();
+  try {
+    await client.query("begin");
+    if (candado) await client.query("select pg_advisory_xact_lock(hashtext($1))", [candado]);
+    const r = await fn(async (sql, params) => (await client.query(sql, params)).rows);
+    await client.query("commit");
+    return r;
+  } catch (e) {
+    await client.query("rollback").catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 /** Fuente de datos del motor conectada a Supabase. */
 export const fuente = new FuentePostgres(consulta);

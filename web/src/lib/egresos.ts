@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { consulta } from "@/lib/db";
+import { consulta, transaccion } from "@/lib/db";
 import { tasaUsdCop } from "@/lib/fx";
 import { calcLLC, calcCOL } from "@/lib/facturacion-calc";
 import { primerDiaMes, mesActualISO } from "@/lib/facturacion";
@@ -34,8 +34,8 @@ export interface EgresoRow {
  * Cuota mensual del crédito (Libre Inversión Bancolombia, en COP) como egreso fijo
  * del mes. Es fija y se paga cada mes, así que entra con los demás fijos.
  */
-async function insertarCreditoDelMes(primer: string, tasa: number) {
-  await consulta(
+async function insertarCreditoDelMes(primer: string, tasa: number, q: typeof consulta = consulta) {
+  await q(
     `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
      select $1, 'Cuota crédito · ' || nombre, 'TRD', round((cuota/$2)::numeric,2), cuota, true, 'fijo', 'credito'
        from public.credito where activo and coalesce(cuota,0) > 0`,
@@ -45,14 +45,21 @@ async function insertarCreditoDelMes(primer: string, tasa: number) {
 
 export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<number> => {
   const primer = primerDiaMes(mes);
+  // Lo lento (tasa en vivo, P&L de Leadtion) se calcula ANTES de tomar el candado.
+  const enCurso = primer >= primerDiaMes(mesActualISO());
+  const tasa = enCurso ? (await tasaUsdCop()).cop : 0;
+  const pnl = mes.slice(0, 7) === mesActualISO() ? await calcularPnL() : null;
 
+  // Todo el "borrar y volver a insertar" va en UNA transacción con candado por mes:
+  // dos pantallas abiertas a la vez (Resumen, Egresos, Liquidación) no duplican filas.
+  return transaccion(async (q) => {
   // 0) COMISIONES EQUIPO COMERCIAL: egreso derivado de `comision_comercial` del mes.
   //    Aplica a CUALQUIER mes (una venta pasada deja su comisión en su propio mes),
   //    por eso va antes del corte de backfill. Es agencia-wide (NO Operación Leadtion).
-  await consulta(`delete from public.egreso_mensual where mes = $1 and categoria = 'comision_comercial'`, [primer]);
+  await q(`delete from public.egreso_mensual where mes = $1 and categoria = 'comision_comercial'`, [primer]);
   {
     // Una fila por comercial: concepto = su nombre, marca = "N cuentas".
-    const cc = await consulta(
+    const cc = await q(
       `select co.nombre, count(*)::int n, coalesce(sum(cc.monto_usd),0)::float t
          from public.comision_comercial cc
          join public.colaboradores co on co.id = cc.colaborador_id
@@ -63,7 +70,7 @@ export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<num
     for (const row of cc as Record<string, unknown>[]) {
       const t = Number(row.t ?? 0);
       if (t <= 0) continue;
-      await consulta(
+      await q(
         `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, afecta_utilidad, categoria)
          values ($1, $2, $3, $4, true, 'comision_comercial')`,
         [primer, String(row.nombre), `${Number(row.n)} cuenta${Number(row.n) === 1 ? "" : "s"}`, Math.round(t * 100) / 100],
@@ -71,13 +78,12 @@ export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<num
     }
   }
 
-  if (primer < primerDiaMes(mesActualISO())) return 0; // no backfill histórico (fijos)
-  const { cop: tasa } = await tasaUsdCop();
+  if (!enCurso) return 0; // no backfill histórico (fijos)
 
   // 1) FIJOS: snapshot 1 vez.
-  const yaFijo = await consulta(`select 1 from public.egreso_mensual where mes = $1 and categoria = 'fijo' limit 1`, [primer]);
+  const yaFijo = await q(`select 1 from public.egreso_mensual where mes = $1 and categoria = 'fijo' limit 1`, [primer]);
   if (yaFijo.length === 0) {
-    await consulta(
+    await q(
       `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
        select $1, nombre, coalesce(area,'Equipo'),
               round((coalesce(case when to_char(fecha_inicio_contrato,'YYYY-MM')=to_char($1::date,'YYYY-MM') and valor_primer_mes is not null then valor_primer_mes else valor_nomina end,0)/$2)::numeric,2),
@@ -87,7 +93,7 @@ export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<num
       [primer, tasa],
     );
     // "share" = valor mensual × % que asume la empresa (seg. social 60%, etc.).
-    await consulta(
+    await q(
       `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
        select $1, nombre, 'TRD',
           round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
@@ -103,32 +109,31 @@ export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<num
           and (recurrencia='mensual' or (recurrencia='anual' and amortizar) or recurrencia='diario')`,
       [primer, tasa],
     );
-    await insertarCreditoDelMes(primer, tasa);
+    await insertarCreditoDelMes(primer, tasa, q);
   }
 
   // 2) AUTO LEADTION (solo mes en curso): comisiones CS, comisiones afiliados y API
   //    incluida se toman del P&L NATIVO de Leadtion (calcularPnL), así Egresos cuadra
   //    con el dashboard de Leadtion. NO se toma GoHighLevel (ya está en Herramientas)
   //    ni la nómina de pnl (la madre tiene la suya). Se refrescan en cada lectura.
-  await consulta(`delete from public.egreso_mensual where mes = $1 and categoria in ('comision','referido','api')`, [primer]);
-  if (mes.slice(0, 7) === mesActualISO()) {
-    const pnl = await calcularPnL();
+  await q(`delete from public.egreso_mensual where mes = $1 and categoria in ('comision','referido','api')`, [primer]);
+  if (pnl) {
     if (pnl.costos.comisionesCS > 0) {
-      await consulta(
+      await q(
         `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, afecta_utilidad, categoria)
          values ($1, 'Comisiones CS Team', 'Leadtion', $2, true, 'comision')`,
         [primer, pnl.costos.comisionesCS],
       );
     }
     if (pnl.costos.comisionesAfiliados > 0) {
-      await consulta(
+      await q(
         `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, afecta_utilidad, categoria)
          values ($1, 'Comisiones afiliados (Leadtion)', 'Leadtion', $2, true, 'referido')`,
         [primer, pnl.costos.comisionesAfiliados],
       );
     }
     if (pnl.costos.apisIncluidas > 0) {
-      await consulta(
+      await q(
         `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, afecta_utilidad, categoria)
          values ($1, $2, 'Leadtion', $3, true, 'api')`,
         [primer, `API WhatsApp (${pnl.costos.apisIncluidasCuentas} incluidas × $10)`, pnl.costos.apisIncluidas],
@@ -136,6 +141,7 @@ export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<num
     }
   }
   return 1;
+  }, `egresos-auto:${primer}`);
 });
 /**
  * Al agregar una persona (colaborador) o un gasto fijo (herramienta/operativo) en

@@ -2,6 +2,7 @@ import "server-only";
 import { consulta } from "@/lib/db";
 import { tasaUsdCop } from "@/lib/fx";
 import { primerDiaMes } from "@/lib/facturacion";
+import { resumenDelMes } from "@/lib/egresos";
 
 /**
  * Liquidación mensual USA → Colombia (TRD Investment → Ebenezer).
@@ -13,6 +14,7 @@ import { primerDiaMes } from "@/lib/facturacion";
  *  - Cuota del crédito.
  *  - Comisiones (CS si no van ya en REG, afiliados, equipo comercial).
  *  - Gastos de caja (inversiones, grabaciones, cuotas…).
+ *  - Diezmo: el del Resumen (10% de la utilidad bruta), convertido a COP.
  *  - Gastos del mes pagados con un medio de COLOMBIA (TC Mauricio / Nu / María,
  *    Ahorros Ebenezer).
  *  - Elite Agent (Mauricio Ovalle): casilla aparte en USD → COP a la tasa de cálculo.
@@ -81,6 +83,10 @@ export async function obtenerLiquidacion(mes: string): Promise<Liquidacion | nul
 export async function partidasPropuestas(mes: string, tasa: number, ajustes: Record<string, boolean> = {}):
   Promise<{ partidas: Partida[]; fuenteNomina: "reg" | "egresos" }> {
   const primer = primerDiaMes(mes);
+  // Primero el Resumen (diezmo = 10% de la utilidad; no se guarda como egreso). Va
+  // ANTES de leer egresos porque regenera las filas automáticas de Leadtion
+  // (comisiones, referidos, API): leerlas en paralelo las puede encontrar borradas.
+  const resumen = await resumenDelMes(mes);
   const [reg, egresos, mediosCO] = await Promise.all([
     consulta(
       `select r.id, coalesce(co.nombre, r.nombre_libre, 'Freelance') nombre, r.colaborador_id is null freelance,
@@ -115,7 +121,12 @@ export async function partidasPropuestas(mes: string, tasa: number, ajustes: Rec
     const cat = (e.categoria as string) ?? "", sub = (e.subcategoria as string) ?? "";
     const cop = e.cop != null && num(e.cop) > 0 ? num(e.cop) : r2(num(e.usd) * tasa);
     const medio = (e.medio_pago as string) ?? null;
-    const base = { clave: `eg:${e.id}`, concepto: String(e.concepto), cop: r2(cop) };
+    // Las filas automáticas (comisiones, referidos, API, comercial) se borran y se
+    // recrean en cada cálculo (cambian de id): su clave va por categoría + concepto
+    // para que incluir/excluir a mano se conserve.
+    const regenerada = ["comision", "referido", "api", "comision_comercial"].includes(cat);
+    const clave = regenerada ? `auto:${cat}:${String(e.concepto).slice(0, 100)}` : `eg:${e.id}`;
+    const base = { clave, concepto: String(e.concepto), cop: r2(cop) };
     if (cat === "fijo" && sub === "nomina") {
       if (usaReg) continue; // la nómina sale de REG (completa)
       push({ ...base, grupo: "Nómina (Egresos · REG aún no generado)", detalle: (e.marca as string) ?? null, porDefecto: true });
@@ -139,6 +150,15 @@ export async function partidasPropuestas(mes: string, tasa: number, ajustes: Rec
       push({ ...base, grupo, detalle: motivo, porDefecto: pagoCO });
     }
   }
+  // Diezmo: el mismo del Resumen (10% sobre la utilidad bruta, en USD), pagado en COP.
+  const diezmoUsd = resumen.diezmo;
+  push({
+    clave: "diezmo", grupo: "Diezmo", concepto: "Diezmo (10% de la utilidad del mes)",
+    detalle: diezmoUsd > 0
+      ? `${new Intl.NumberFormat("es-CO", { style: "currency", currency: "USD" }).format(diezmoUsd)} × tasa de cálculo`
+      : "utilidad del mes negativa o en cero: no hay diezmo",
+    cop: Math.round(diezmoUsd * tasa), porDefecto: true,
+  });
   return { partidas, fuenteNomina: usaReg ? "reg" : "egresos" };
 }
 

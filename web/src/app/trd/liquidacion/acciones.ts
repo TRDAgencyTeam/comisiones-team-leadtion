@@ -31,7 +31,7 @@ export async function marcarPartida(formData: FormData) {
   if (id == null) return;
   const clave = String(formData.get("clave") ?? "");
   const incluida = String(formData.get("incluida")) === "1";
-  if (!/^(reg|eg):\d+$/.test(clave)) return;
+  if (!/^((reg|eg):\d+|diezmo|auto:[a-z_]+:.{1,100})$/.test(clave)) return;
   await consulta(
     `update public.liquidacion set ajustes = ajustes || jsonb_build_object($2::text, $3::boolean), actualizado_en = now() where id = $1`,
     [id, clave, incluida],
