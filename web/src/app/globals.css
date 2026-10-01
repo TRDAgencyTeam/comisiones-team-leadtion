@@ -691,6 +691,21 @@ a.btn-pagar { text-decoration: none; display: inline-block; }
 .trd-side nav a .ic { width: 26px; height: 26px; border-radius: 7px; background: rgba(255,255,255,.06);
   display: grid; place-items: center; font-size: 0.8rem; }
 .trd-side nav a.on .ic { background: linear-gradient(120deg, #2e2a6e, #6d5ac0); color: #fff; }
+/* Grupos desplegables (Egresos, Contabilidad) */
+.trd-side .side-grupo-h { display: flex; align-items: center; gap: 2px; }
+.trd-side .side-grupo-h > a { flex: 1 1 auto; cursor: pointer; }
+.trd-side .side-grupo.activo .side-grupo-btn { color: #fff; }
+.trd-side .side-chev { width: 28px; height: 28px; flex: 0 0 auto; display: grid; place-items: center; border: none; border-radius: 8px;
+  background: transparent; color: #8f8da6; cursor: pointer; transition: transform 0.18s, background 0.15s, color 0.15s; }
+.trd-side .side-chev:hover { background: rgba(255,255,255,.06); color: #fff; }
+.trd-side .side-chev.open { transform: rotate(90deg); color: #fff; }
+.trd-side .side-scroll { flex: 1 1 auto; min-width: 0; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.12) transparent; margin-right: -6px; padding-right: 6px; }
+.trd-side .side-hijos { display: flex; flex-direction: column; gap: 2px; margin: 2px 0 4px 14px; padding-left: 8px;
+  border-left: 1px solid rgba(255,255,255,.08); animation: trd-toast-in 0.15s ease-out; }
+.trd-side .side-hijos a { padding: 7px 8px; font-size: 0.85rem; gap: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trd-side .side-hijos a .ic { flex: 0 0 auto; }
+.trd-side .side-hijos a .ic { width: 22px; height: 22px; font-size: 0.72rem; }
 .trd-side .side-foot { margin-top: auto; border-top: 1px solid rgba(255,255,255,.08); padding-top: 14px; display: flex;
   flex-direction: column; gap: 8px; font-size: 0.8rem; }
 .trd-side .side-foot .em { color: #8f8da6; font-size: 0.72rem; word-break: break-all; }
@@ -1420,6 +1435,8 @@ button.ck:hover { border-color: var(--muted); }
 .trd-toast.out { animation: trd-toast-out 0.25s ease-in forwards; }
 .trd-toast .ok { width: 26px; height: 26px; flex: 0 0 auto; border-radius: 8px; display: grid; place-items: center;
   background: var(--paid-soft); color: var(--paid); }
+.trd-toast.caja { border-color: color-mix(in srgb, var(--brand-cyan) 45%, var(--border)); }
+.trd-toast.caja .ok { background: color-mix(in srgb, var(--brand-cyan) 18%, transparent); color: var(--brand-cyan); font-weight: 800; }
 @keyframes trd-toast-in { from { opacity: 0; transform: translateY(-8px) scale(0.98); } to { opacity: 1; transform: none; } }
 @keyframes trd-toast-out { to { opacity: 0; transform: translateY(-6px); } }
 @media (max-width: 640px) { .trd-toasts { left: 16px; right: 16px; } .trd-toast { max-width: none; } }

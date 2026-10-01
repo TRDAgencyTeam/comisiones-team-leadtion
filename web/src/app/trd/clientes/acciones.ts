@@ -133,6 +133,7 @@ export async function crearFactura(formData: FormData) {
   await registrarServicioLeadtion(d.clienteId, servicioClave, mes, d.facturado);
   // Si es un plan de marketing con Leadtion incluida, lo vuelve miembro (licencia $0).
   await marcarMiembroPorMarketing(d.clienteId, servicioClave);
+  await flash("¡Buen trabajo!", "caja");
   revalidatePath("/trd/clientes");
   revalidatePath("/trd/clientes/facturacion");
   redirect(back);
@@ -285,6 +286,7 @@ export async function crearClienteCascada(formData: FormData) {
     revalidatePath("/comercial");
   }
 
+  await flash("¡Buen trabajo!", "caja");
   revalidatePath("/trd/clientes");
   revalidatePath("/trd/clientes/facturacion");
   redirect(`/trd/clientes/facturacion?mes=${mes.slice(0, 7)}`);
@@ -365,7 +367,8 @@ export async function crearIngreso(formData: FormData) {
   await soloAdmin();
   const mes = primerDiaMes(String(formData.get("mes") ?? ""));
   const concepto = String(formData.get("concepto") ?? "").trim();
-  const back = `/trd/clientes/egresos?mes=${mes.slice(0, 7)}`;
+  // Los otros ingresos se cargan en Facturación: se vuelve ahí (antes mandaba a Egresos).
+  const back = `/trd/clientes/facturacion?mes=${mes.slice(0, 7)}`;
   if (!concepto) redirect(`${back}&error=` + encodeURIComponent("El concepto es obligatorio."));
   const valorUsd = n(formData.get("valorUsd"));
   const categoria = txt(formData.get("categoria"));
@@ -373,7 +376,8 @@ export async function crearIngreso(formData: FormData) {
     `insert into public.ingreso_mensual (mes, concepto, valor_usd, categoria) values ($1,$2,$3,$4)`,
     [mes, concepto, valorUsd, categoria],
   );
-  revalidatePath("/trd/clientes/egresos");
+  await flash("¡Buen trabajo!", "caja");
+  revalidatePath("/trd/clientes/facturacion");
   revalidatePath("/trd/clientes");
   redirect(back);
 }
