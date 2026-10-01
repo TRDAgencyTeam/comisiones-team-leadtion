@@ -29,6 +29,7 @@ const GRUPOS: GrupoDef[] = [
   { key: "nomina", t: "Nómina", ic: "👥", edit: false, gestion: { href: "/trd/gastos-fijos/nomina", label: "Gestionar en Nómina" }, f: (e) => e.categoria === "fijo" && e.subcategoria === "nomina" },
   { key: "oper", t: "Operativos fijos", ic: "🏢", edit: false, gestion: { href: "/trd/gastos-fijos/gastos", label: "Gestionar en Operativos" }, f: (e) => e.categoria === "fijo" && inList(e.subcategoria, ["servicio_publico", "otro"]) },
   { key: "tools", t: "Herramientas & Hosting", ic: "🧰", edit: false, gestion: { href: "/trd/gastos-fijos/herramientas", label: "Gestionar en Herramientas" }, f: (e) => e.categoria === "fijo" && inList(e.subcategoria, ["herramienta", "hosting"]) },
+  { key: "credito", t: "Crédito", ic: "🏦", edit: false, gestion: { href: "/trd/gastos-fijos/credito", label: "Gestionar en Crédito" }, f: (e) => e.categoria === "fijo" && e.subcategoria === "credito" },
   { key: "fijohist", t: "Fijos (histórico)", ic: "📌", edit: false, f: (e) => e.categoria === "fijo" && !e.subcategoria },
   { key: "lead", t: "Operación Leadtion del mes", ic: "⚡", edit: false, f: (e) => e.afectaUtilidad && inList(e.categoria, ["comision", "api", "bono", "referido", "comision_banco"]) },
   { key: "comercial", t: "Comisiones equipo comercial", ic: "💼", edit: false, gestion: { href: "/comercial", label: "Ver en Comercial" }, f: (e) => e.afectaUtilidad && e.categoria === "comision_comercial" },

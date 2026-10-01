@@ -31,6 +31,7 @@ function agruparGastos(filas: { categoria: string | null; subcategoria: string |
     nomina: nuevo("Nómina", "personas"),
     oper: nuevo("Operativos fijos", "conceptos"),
     tools: nuevo("Herramientas & Hosting", "herramientas"),
+    credito: nuevo("Cuota crédito", "cuotas"),
     fijo: nuevo("Gastos fijos", "conceptos"),
     lead: nuevo("Operación Leadtion", "conceptos"),
     comercial: nuevo("Comisiones equipo comercial", "conceptos"),
@@ -42,6 +43,7 @@ function agruparGastos(filas: { categoria: string | null; subcategoria: string |
     if (e.categoria === "fijo" && e.subcategoria === "nomina") k = "nomina";
     else if (e.categoria === "fijo" && enLista(e.subcategoria, ["servicio_publico", "otro"])) k = "oper";
     else if (e.categoria === "fijo" && enLista(e.subcategoria, ["herramienta", "hosting"])) k = "tools";
+    else if (e.categoria === "fijo" && e.subcategoria === "credito") k = "credito";
     else if (e.categoria === "fijo") k = "fijo";
     else if (e.categoria === "comision_comercial") k = "comercial";
     else if (enLista(e.categoria, ["comision", "api", "bono", "referido", "comision_banco"])) k = "lead";

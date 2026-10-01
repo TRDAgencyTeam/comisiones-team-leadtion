@@ -13,6 +13,7 @@ const NAV = [
   { href: "/trd/gastos-fijos/herramientas", label: "Herramientas", ic: "🧰", match: "/trd/gastos-fijos/herramientas" },
   { href: "/trd/gastos-fijos/gastos", label: "Operativos fijos", ic: "🏢", match: "/trd/gastos-fijos/gastos" },
   { href: "/trd/clientes/caja", label: "Caja", ic: "🏦", match: "/trd/clientes/caja" },
+  { href: "/trd/liquidacion", label: "Liquidación USA → COL", ic: "⇄", match: "/trd/liquidacion" },
   { href: "/trd/reg", label: "Registro contable", ic: "▤", match: "/trd/reg" },
 ];
 

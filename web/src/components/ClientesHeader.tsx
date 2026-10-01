@@ -8,13 +8,13 @@ const nombreMes = (iso: string) => {
 /** Encabezado común de las vistas del módulo: eyebrow + título + selector de mes + tasa. */
 export function ClientesHeader({
   mes, activo, tasa, titulo,
-}: { mes: string; activo: "resumen" | "facturacion" | "egresos" | "caja"; tasa: number; titulo?: string }) {
-  const tituloTab = { resumen: `Resumen de ${nombreMes(mes)}`, facturacion: `Facturación de ${nombreMes(mes)}`, egresos: `Egresos de ${nombreMes(mes)}`, caja: "Caja LLC" };
+}: { mes: string; activo: "resumen" | "facturacion" | "egresos" | "caja" | "liquidacion"; tasa: number; titulo?: string }) {
+  const tituloTab = { resumen: `Resumen de ${nombreMes(mes)}`, facturacion: `Facturación de ${nombreMes(mes)}`, egresos: `Egresos de ${nombreMes(mes)}`, caja: "Caja LLC", liquidacion: `Liquidación de ${nombreMes(mes)}` };
   return (
     <>
       <div className="cf-top">
         <div>
-          <div className="cf-eyebrow">Módulo madre · Ingresos</div>
+          <div className="cf-eyebrow">Módulo madre · {activo === "liquidacion" ? "Liquidación USA → COL" : "Ingresos"}</div>
           <h1 className="cf-title">{titulo ?? tituloTab[activo]}</h1>
         </div>
         <div className="cf-monthbox">

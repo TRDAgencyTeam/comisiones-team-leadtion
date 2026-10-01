@@ -30,6 +30,19 @@ export interface EgresoRow {
  *     lectura desde su fuente (motor de comisiones, afiliados, clientes) para que
  *     estén siempre al día. No hace backfill de meses pasados.
  */
+/**
+ * Cuota mensual del crédito (Libre Inversión Bancolombia, en COP) como egreso fijo
+ * del mes. Es fija y se paga cada mes, así que entra con los demás fijos.
+ */
+async function insertarCreditoDelMes(primer: string, tasa: number) {
+  await consulta(
+    `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
+     select $1, 'Cuota crédito · ' || nombre, 'TRD', round((cuota/$2)::numeric,2), cuota, true, 'fijo', 'credito'
+       from public.credito where activo and coalesce(cuota,0) > 0`,
+    [primer, tasa],
+  );
+}
+
 export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<number> => {
   const primer = primerDiaMes(mes);
 
@@ -90,6 +103,7 @@ export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<num
           and (recurrencia='mensual' or (recurrencia='anual' and amortizar) or recurrencia='diario')`,
       [primer, tasa],
     );
+    await insertarCreditoDelMes(primer, tasa);
   }
 
   // 2) AUTO LEADTION (solo mes en curso): comisiones CS, comisiones afiliados y API
@@ -199,6 +213,7 @@ export async function resyncFijosMesActual(): Promise<void> {
         and (recurrencia='mensual' or (recurrencia='anual' and amortizar) or recurrencia='diario')`,
     [primer, tasa],
   );
+  await insertarCreditoDelMes(primer, tasa);
 }
 
 export interface IngresoRow {

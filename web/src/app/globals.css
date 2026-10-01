@@ -1480,3 +1480,45 @@ button.ck:hover { border-color: var(--muted); }
 /* Moneda explícita en el editor de servicios */
 .cf-moneda-badge { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 0.82rem; color: var(--muted); }
 .cf-moneda-nota { display: block; font-weight: 500; font-size: 0.76rem; color: var(--muted); margin-top: 2px; }
+
+/* Liquidación mensual USA → COL */
+.liq-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 14px; margin-top: 14px; align-items: start; }
+@media (max-width: 980px) { .liq-grid { grid-template-columns: 1fr; } }
+.liq-side { display: flex; flex-direction: column; gap: 14px; }
+.liq-grupo { margin-top: 12px; }
+.liq-gh { display: flex; justify-content: space-between; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--muted); font-weight: 700; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.liq-gh b { font-variant-numeric: tabular-nums; color: var(--text); }
+.liq-row { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px dashed var(--border); font-size: 0.86rem; }
+.liq-row.off .liq-nom, .liq-row.off b { color: var(--faint); }
+.liq-row.off b { text-decoration: line-through; }
+.liq-nom { display: flex; flex-direction: column; min-width: 0; }
+.liq-nom small { color: var(--faint); font-size: 0.72rem; }
+.liq-row form { margin: 0; display: inline-flex; }
+.liq-ck { width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid var(--border); background: transparent; color: #fff;
+  display: inline-grid; place-items: center; cursor: pointer; padding: 0; }
+.liq-ck.on { background: var(--accent); border-color: var(--accent); }
+.liq-ck:hover { border-color: var(--accent); }
+.liq-add { display: grid; grid-template-columns: 1fr 150px auto; gap: 8px; margin-top: 8px; }
+.liq-add input { border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; background: var(--bg); color: var(--text); font: inherit; font-size: 0.85rem; }
+@media (max-width: 640px) { .liq-add { grid-template-columns: 1fr; } }
+.liq-grupo.adicional .liq-gh { color: var(--accent); }
+.liq-total { display: flex; justify-content: space-between; margin-top: 14px; padding-top: 12px; border-top: 2px solid var(--border); font-weight: 700; font-size: 1.02rem; }
+.liq-total b { font-variant-numeric: tabular-nums; }
+.liq-fuera { margin-top: 14px; border: 1px solid var(--border); border-radius: 12px; padding: 8px 12px; }
+.liq-fuera summary { cursor: pointer; font-weight: 700; font-size: 0.84rem; }
+.liq-fuera summary small { color: var(--faint); font-weight: 500; margin-left: 6px; }
+.liq-tasa { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.liq-tasa input, .liq-giro input { border: 1px solid var(--border); border-radius: 10px; padding: 9px 11px; background: var(--bg); color: var(--text); font: inherit; width: 100%; }
+.liq-giro { display: flex; flex-direction: column; gap: 12px; }
+.liq-giro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 640px) { .liq-giro-grid { grid-template-columns: 1fr; } }
+.liq-cuadre { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: 12px; font-size: 0.84rem; }
+.liq-cuadre.ok { background: var(--paid-soft); color: var(--paid); }
+.liq-cuadre.falta { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
+.liq-cuadre span, .liq-cuadre small { color: var(--text); }
+.liq-cuadre small { color: var(--muted); }
+.liq-res { display: flex; flex-direction: column; gap: 8px; }
+.liq-res > div:not(.liq-cuadre) { display: flex; justify-content: space-between; font-size: 0.88rem; }
+.liq-res > div:not(.liq-cuadre) span { color: var(--muted); }
+.liq-neg { color: var(--danger); }
