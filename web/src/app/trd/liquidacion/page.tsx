@@ -150,8 +150,8 @@ export default async function LiquidacionPage({ searchParams }: { searchParams: 
                 <div><span>COP recibidos</span><b>{cop(v.liq!.copRecibido ?? 0)}</b></div>
                 {v.liq!.comisionUsd ? <div><span>Costo del giro</span><b>{usd(v.liq!.comisionUsd)}</b></div> : null}
                 <div className={`liq-cuadre ${(v.liq!.copRecibido ?? 0) - v.copTotal >= 0 ? "ok" : "falta"}`}>
-                  <b>{(v.liq!.copRecibido ?? 0) - v.copTotal >= 0 ? `Sobraron ${cop((v.liq!.copRecibido ?? 0) - v.copTotal)}` : `Faltaron ${cop(v.copTotal - (v.liq!.copRecibido ?? 0))}`}</b>
-                  <small>Tasa de cálculo {cop(v.tasaCalculo)} → banco {cop(v.liq!.tasaBanco ?? 0)}.</small>
+                  <b>{(v.liq!.copRecibido ?? 0) - v.copTotal >= 0 ? `Saldo a favor en Ebenezer ≈ ${cop((v.liq!.copRecibido ?? 0) - v.copTotal)}` : `Faltaron ≈ ${cop(v.copTotal - (v.liq!.copRecibido ?? 0))}`}</b>
+                  <small>Solo informativo: queda en las cuentas de Ebenezer y no se suma ni se resta al mes siguiente. Tasa de cálculo {cop(v.tasaCalculo)} → banco {cop(v.liq!.tasaBanco ?? 0)}.</small>
                 </div>
                 {v.liq!.notas && <p className="cf-hint">{v.liq!.notas}</p>}
                 <form action={reabrirLiquidacion}><input type="hidden" name="mes" value={mes} /><button type="submit" className="tasa-link">Reabrir para corregir</button></form>
@@ -186,7 +186,7 @@ export default async function LiquidacionPage({ searchParams }: { searchParams: 
       {barras.length > 0 && <div className="cf-card" style={{ marginTop: 14 }}><h3>USD bajados por mes</h3><BarChart data={barras} formatValue={usd0} ariaLabel="USD bajados por mes" /></div>}
       <div className="cf-table-wrap" style={{ marginTop: 14 }}>
         <table className="cf-table">
-          <thead><tr><th>Mes</th><th>Fecha giro</th><th className="r">USD enviados</th><th className="r">Tasa cálculo</th><th className="r">Tasa banco</th><th className="r">COP recibidos</th><th className="r">A cubrir + adicional</th><th className="r">Diferencia</th><th>Estado</th></tr></thead>
+          <thead><tr><th>Mes</th><th>Fecha giro</th><th className="r">USD enviados</th><th className="r">Tasa cálculo</th><th className="r">Tasa banco</th><th className="r">COP recibidos</th><th className="r">A cubrir + adicional</th><th className="r">Saldo en Ebenezer (aprox.)</th><th>Estado</th></tr></thead>
           <tbody>
             {historial.map((h) => {
               const total = (h.copNecesario ?? 0) + (h.copAdicional ?? 0);

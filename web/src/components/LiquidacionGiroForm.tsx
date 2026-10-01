@@ -37,7 +37,8 @@ export function LiquidacionGiroForm({ mes, usdEstimado, copTotal, tasaCalculo }:
       {tasaBanco > 0 && (
         <div className={`liq-cuadre ${dif >= 0 ? "ok" : "falta"}`}>
           <span>Recibes <b>{cop(copRec)}</b> · necesitas <b>{cop(copTotal)}</b></span>
-          <b>{dif >= 0 ? `Sobran ${cop(dif)}` : `Faltan ${cop(-dif)}`}</b>
+          <b>{dif >= 0 ? `Quedaría saldo a favor en Ebenezer ≈ ${cop(dif)}` : `Faltarían ≈ ${cop(-dif)}`}</b>
+          <small>Informativo: no se suma ni se resta en la liquidación del mes siguiente.</small>
           {tasaCalculo > 0 && <small>Frente a la tasa de cálculo ({cop(tasaCalculo)}): {usd(usdEnv)} × {cop(tasaBanco - tasaCalculo)} = {cop(Math.round(usdEnv * (tasaBanco - tasaCalculo)))} de diferencia cambiaria.</small>}
         </div>
       )}
