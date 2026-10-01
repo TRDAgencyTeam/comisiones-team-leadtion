@@ -367,8 +367,8 @@ interface LeadtionMes { leadtion: number; apiVendida: number; apiVendidaCuentas:
 async function leadtionEnVivo(mes: string): Promise<LeadtionMes> {
   const [av, lineas] = await Promise.all([
     consulta(
-      `select coalesce(sum(api_valor) filter (where api_estado=vendida and estado_actual=activo and es_leadtion),0)::float ing,
-              count(*) filter (where api_estado=vendida and estado_actual=activo and es_leadtion)::int n
+      `select coalesce(sum(api_valor) filter (where api_estado='vendida' and estado_actual='activo' and es_leadtion),0)::float ing,
+              count(*) filter (where api_estado='vendida' and estado_actual='activo' and es_leadtion)::int n
          from public.clientes`,
     ),
     proyeccionLeadtionMes(mes.slice(0, 7)),
