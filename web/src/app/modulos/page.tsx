@@ -28,10 +28,10 @@ export default async function ModulosPage() {
         <p className="sub">Elige el área con la que vas a trabajar.</p>
 
         <div className="modulos-grid">
-          <Link href="/trd/reg" className="modulo-card activa modulo-trd">
+          <Link href="/trd/clientes" className="modulo-card activa modulo-trd">
             <span className="modulo-icono">▲</span>
             <span className="modulo-nombre">TRD Investment (madre)</span>
-            <span className="modulo-desc">Finanzas de la matriz. Ahora: Registro contable (retenciones y pagos).</span>
+            <span className="modulo-desc">Finanzas de la matriz: resumen del mes, facturación, egresos y contabilidad.</span>
             <span className="modulo-cta">Entrar →</span>
           </Link>
 

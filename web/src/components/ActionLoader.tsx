@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { EVENTO_CARGA } from "@/lib/carga";
+import { LeadtionSymbol } from "@/components/Brand";
 
 /**
  * Overlay global de carga: el logo TRD palpitando mientras la plataforma trabaja.
@@ -100,12 +101,18 @@ export function ActionLoader() {
   }, []);
 
   if (!on) return null;
+  // Logo según la plataforma: Leadtion en sus módulos; TRD en todo lo demás.
+  const esLeadtion = /^\/(membresias|cs|afiliados)(\/|$)/.test(path);
   return (
     <div className="trd-action-scrim" role="status" aria-label="Cargando">
-      <div className="trd-loading-badge">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/trd/trd-symbol-white.png" alt="" width={40} height={40} />
-      </div>
+      {esLeadtion ? (
+        <LeadtionSymbol size={84} color="white" className="pulse" />
+      ) : (
+        <div className="trd-loading-badge">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/trd/trd-symbol-white.png" alt="" width={40} height={40} />
+        </div>
+      )}
     </div>
   );
 }
