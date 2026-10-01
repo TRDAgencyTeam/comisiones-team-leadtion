@@ -35,12 +35,14 @@ export function ActionLoader() {
     };
     ref.current.hide = hide;
 
-    const show = (form: HTMLFormElement | null = null) => {
+    const show = (form: HTMLFormElement | null = null, observar = true) => {
       formActivo = form;
       setOn(true);
       clearTimeout(tSafe);
       tSafe = setTimeout(() => { manual = 0; hide(); }, 15000); // red de seguridad
       obs?.disconnect();
+      // Navegación por enlace: solo se oculta cuando cambia la ruta (no por cambios sueltos del DOM).
+      if (!observar) return;
       obs = new MutationObserver((recs) => {
         // Ignora cambios del propio formulario (botón deshabilitado…), del overlay y de los avisos.
         const propio = (n: Node) => {
@@ -65,13 +67,14 @@ export function ActionLoader() {
       show(f);
     };
     const onClick = (e: MouseEvent) => {
-      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      // Fase de captura: los <Link> de Next cancelan el clic (preventDefault) para navegar sin recargar.
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
       if (!a || a.target === "_blank" || a.hasAttribute("download") || a.hasAttribute("data-sin-carga")) return;
       const url = new URL(a.href, location.href);
       if (url.origin !== location.origin) return;
       if (url.pathname === location.pathname && url.search === location.search) return; // mismo lugar / ancla
-      show();
+      show(null, false);
     };
     const onCarga = (e: Event) => {
       if ((e as CustomEvent<boolean>).detail) { manual++; show(); return; }
@@ -83,12 +86,12 @@ export function ActionLoader() {
     window.confirm = (msg?: string) => { const ok = confirmOriginal.call(window, msg); if (!ok) hide(); return ok; };
 
     document.addEventListener("submit", onSubmit, true);
-    window.addEventListener("click", onClick);
+    window.addEventListener("click", onClick, true);
     window.addEventListener(EVENTO_CARGA, onCarga);
     window.addEventListener("trd:ocultar-carga", hide);
     return () => {
       document.removeEventListener("submit", onSubmit, true);
-      window.removeEventListener("click", onClick);
+      window.removeEventListener("click", onClick, true);
       window.removeEventListener(EVENTO_CARGA, onCarga);
       window.removeEventListener("trd:ocultar-carga", hide);
       window.confirm = confirmOriginal;

@@ -10,11 +10,10 @@ import { crearClienteCompleto, recomputarPagosDeCliente, type NuevoClienteInput 
 import { registrarComisionComercial, COMERCIAL_DESDE } from "@/lib/comercial";
 import { mesHoyISO } from "@/lib/fecha";
 import { flash } from "@/lib/flash";
+import { parseMonto } from "@/lib/numero";
 
-const n = (v: FormDataEntryValue | null): number => {
-  const x = Number(String(v ?? "").replace(/[^\d.-]/g, ""));
-  return Number.isFinite(x) ? x : 0;
-};
+// Montos en formato colombiano ("1.234,56", "623.000", "12,71"): ver lib/numero.ts.
+const n = (v: FormDataEntryValue | null): number => parseMonto(v);
 const txt = (v: FormDataEntryValue | null): string | null => {
   const s = String(v ?? "").trim();
   return s === "" ? null : s;

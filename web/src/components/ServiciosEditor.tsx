@@ -5,6 +5,7 @@ import { CATEGORIA_LABEL, type ServicioCatalogo } from "@/lib/catalogo-tipos";
 import type { FacturaItem } from "@/lib/facturacion";
 import { guardarServiciosFactura } from "@/app/trd/clientes/acciones";
 import { IconoBorrar } from "@/components/Iconos";
+import { InputMonto } from "@/components/InputMonto";
 
 const money = (n: number, m: "USD" | "COP") => new Intl.NumberFormat("es-CO", { style: "currency", currency: m, maximumFractionDigits: m === "COP" ? 0 : 2 }).format(n);
 
@@ -81,16 +82,16 @@ export function ServiciosEditor({
               <span className="cf-perpersona">
                 <input type="number" min="1" inputMode="numeric" value={it.personas || ""} onChange={(e) => setPersonas(i, Number(e.target.value) || 0)} placeholder="Personas" title="Cantidad de personas" />
                 <span className="x">×</span>
-                <input inputMode="decimal" value={it.valorPersona || ""} onChange={(e) => setValorP(i, Number(e.target.value) || 0)} placeholder={`Valor/persona`} title="Valor por persona" />
+                <InputMonto valor={it.valorPersona || 0} decimales={moneda !== "COP"} onValor={(v) => setValorP(i, v)} placeholder={`Valor/persona`} title="Valor por persona" />
                 <span className="eq">= <b className="cf-mono">{money(it.monto || 0, moneda)}</b></span>
               </span>
             ) : (
-              <input inputMode="decimal" value={it.monto || ""} onChange={(e) => setItem(i, { monto: Number(e.target.value) || 0 })} placeholder={`Monto ${moneda}`} />
+              <InputMonto valor={it.monto || 0} decimales={moneda !== "COP"} onValor={(v) => setItem(i, { monto: v })} placeholder={`Monto ${moneda}`} />
             )}
             <button type="button" className="btn-borrar icon-btn danger" title="Quitar" aria-label="Quitar" onClick={() => remove(i)}><IconoBorrar /></button>
             <input type="hidden" name="itemClave" value={it.servicioClave ?? ""} />
             <input type="hidden" name="itemConcepto" value={conceptoEnvio} />
-            <input type="hidden" name="itemMonto" value={it.monto || 0} />
+            <input type="hidden" name="itemMonto" value={Math.round((it.monto || 0) * 100) / 100} />
           </div>
         );
       })}

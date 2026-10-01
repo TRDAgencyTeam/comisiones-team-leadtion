@@ -5,11 +5,10 @@ import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { soloAdmin } from "@/lib/sesion";
 import { flash } from "@/lib/flash";
+import { parseMonto } from "@/lib/numero";
 
-const n = (v: FormDataEntryValue | null): number => {
-  const x = Number(String(v ?? "").replace(/[^\d.-]/g, ""));
-  return Number.isFinite(x) ? x : 0;
-};
+// Montos en formato colombiano ("1.234,56", "623.000", "12,71"): ver lib/numero.ts.
+const n = (v: FormDataEntryValue | null): number => parseMonto(v);
 
 /** Actualiza los datos del crédito (saldo, cuota, interés…). */
 export async function actualizarCredito(formData: FormData) {

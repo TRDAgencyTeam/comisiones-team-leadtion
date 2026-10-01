@@ -4,6 +4,7 @@ import { useState } from "react";
 import { guardarTasaCorte, usarTasaEnVivo } from "@/app/trd/reg/acciones";
 import type { TasaCorte } from "@/lib/reg";
 import type { PuntoFx } from "@/lib/fx-historial";
+import { InputMonto } from "@/components/InputMonto";
 
 const cop2 = (n: number) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 2 }).format(n);
@@ -59,13 +60,12 @@ export function RegTasaWidget({ mes, tasa, historial }: { mes: string; tasa: Tas
           <input type="hidden" name="mes" value={mes} />
           <label htmlFor="cop-tasa">Tasa pactada (COP por 1 USD)</label>
           <div className="tasa-editar-row">
-            <input
+            <InputMonto
               id="cop-tasa"
               name="cop"
-              inputMode="decimal"
               autoFocus
               placeholder="3.161,50"
-              defaultValue={tasa.manual ? String(tasa.cop) : ""}
+              defaultValue={tasa.manual ? tasa.cop : ""}
             />
             <button type="submit" className="btn-primary">Aplicar</button>
             <button type="button" className="tasa-link" onClick={() => setAbierto(null)}>Cancelar</button>

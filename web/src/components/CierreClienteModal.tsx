@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { analizarCierre, confirmarCierre, type AnalisisCierre } from "@/app/trd/clientes/acciones";
+import { formatoMonto } from "@/lib/numero";
 
 const LT_OPCIONES = [
   { v: "igual", label: "Sigue igual" },
@@ -91,7 +92,7 @@ export function CierreClienteModal({ facturaId, onCancel, onConfirm }: { factura
                 </div>
               )}
               {data.leadtion && ltRes === "soporte" && (
-                <div className="cf-f"><input inputMode="decimal" value={ltValor} onChange={(e) => setLtValor(e.target.value)} placeholder={`Valor del soporte / mes (${moneda})`} /></div>
+                <div className="cf-f"><input inputMode="decimal" value={ltValor} onChange={(e) => setLtValor(formatoMonto(e.target.value, moneda !== "COP"))} placeholder={`Valor del soporte / mes (${moneda})`} /></div>
               )}
               <div className="cf-f" style={{ marginTop: 12 }}><input name="motivo" placeholder="Motivo (opcional)" /></div>
             </div>

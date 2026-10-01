@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { GastoFijo, CategoriaGasto } from "@/lib/gastos-tipos";
 import { CATEGORIA_LABEL, RECURRENCIA_LABEL } from "@/lib/gastos-tipos";
+import { InputMonto } from "@/components/InputMonto";
 
 export function GastoForm({
   action, gasto, error,
@@ -41,7 +42,7 @@ export function GastoForm({
           </select>
         </label>
         <label>Valor
-          <input name="valor" type="number" step="0.01" defaultValue={gasto?.valor || ""} placeholder="0" />
+          <InputMonto name="valor" defaultValue={gasto?.valor || ""} placeholder="0" />
         </label>
         <label>Recurrencia
           <select name="recurrencia" defaultValue={gasto?.recurrencia ?? "mensual"}>

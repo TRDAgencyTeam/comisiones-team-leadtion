@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CATEGORIA_LABEL, type ServicioCatalogo } from "@/lib/catalogo-tipos";
 import { MEDIOS, ESTADOS } from "@/lib/facturacion-calc";
 import { crearFactura } from "@/app/trd/clientes/acciones";
+import { InputMonto } from "@/components/InputMonto";
 
 const money = (n: number, m: "USD" | "COP") => new Intl.NumberFormat("es-CO", { style: "currency", currency: m, maximumFractionDigits: m === "COP" ? 0 : 2 }).format(n);
 
@@ -82,7 +83,7 @@ export function NuevaFacturaForm({ mes, tasa, catalogo, clientes }: { mes: strin
         <div className="cf-f"><label>Servicios (texto en la factura)</label><input name="servicios" value={servicios} onChange={(e) => setServicios(e.target.value)} /></div>
 
         <div className="cf-price-grid" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
-          <div className="cf-f"><label>{esLabel(entidad)}</label><input name="facturado" inputMode="decimal" value={facturado} onChange={(e) => setFacturado(e.target.value)} placeholder="0" /></div>
+          <div className="cf-f"><label>{esLabel(entidad)}</label><InputMonto name="facturado" decimales={entidad !== "COL"} onValor={(v) => setFacturado(v ? String(v) : "")} placeholder="0" /></div>
           <div className="cf-f"><label>Medio de pago</label><select name="medio" defaultValue={entidad === "COL" ? "bancolombia" : "stripe"}>{MEDIOS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}</select></div>
         </div>
         {entidad === "COL" && <input type="hidden" name="ivaPct" value="19" />}

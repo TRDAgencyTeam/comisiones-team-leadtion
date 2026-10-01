@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CATEGORIA_LABEL, type ServicioCatalogo } from "@/lib/catalogo-tipos";
 import { MEDIOS, ESTADOS } from "@/lib/facturacion-calc";
 import { crearClienteCascada } from "@/app/trd/clientes/acciones";
+import { formatoMonto, montoATexto } from "@/lib/numero";
 
 const money = (n: number, moneda: "USD" | "COP") =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: moneda, maximumFractionDigits: moneda === "COP" ? 0 : 2 }).format(n);
@@ -36,7 +37,7 @@ export function NuevoClienteModal({
     const conv = (usd: number | null): string => {
       if (usd == null) return "";
       const v = entidad === "COL" ? Math.round(usd * tasa) : Math.round(usd);
-      return String(v);
+      return montoATexto(v, entidad !== "COL");
     };
     if (srv.porPersona) {
       const totalUsd = (srv.precioPersona ?? 0) * Math.max(1, personas);
@@ -134,7 +135,7 @@ export function NuevoClienteModal({
                     {Array.from({ length: nMeses }).map((_, i) => (
                       <div className="pc" key={i}>
                         <label>{srv?.porPersona ? "Total" : `Mes ${i + 1}`}</label>
-                        <input name={`precioMes${i + 1}`} inputMode="decimal" value={precios[i] ?? ""} onChange={(e) => setPrecio(i, e.target.value)} placeholder={srv?.precioVariable ? "—" : ""} />
+                        <input name={`precioMes${i + 1}`} inputMode="decimal" value={precios[i] ?? ""} onChange={(e) => setPrecio(i, formatoMonto(e.target.value, moneda !== "COP"))} placeholder={srv?.precioVariable ? "—" : ""} />
                       </div>
                     ))}
                   </div>

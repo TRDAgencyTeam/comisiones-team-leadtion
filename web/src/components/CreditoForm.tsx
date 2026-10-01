@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Credito } from "@/lib/credito";
+import { InputMonto } from "@/components/InputMonto";
 
 const cop = (n: number) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
@@ -28,16 +29,16 @@ export function CreditoForm({ action, credito }: { action: (fd: FormData) => voi
         <input type="hidden" name="id" value={credito.id} />
         <div className="pf-grid">
           <label>Saldo actual (COP)
-            <input name="saldo" type="number" step="1" value={saldo} onChange={(e) => setSaldo(Number(e.target.value) || 0)} />
+            <InputMonto name="saldo" decimales={false} valor={saldo} onValor={setSaldo} />
           </label>
           <label>Cuota mensual (COP)
-            <input name="cuota" type="number" step="1" value={cuota} onChange={(e) => setCuota(Number(e.target.value) || 0)} />
+            <InputMonto name="cuota" decimales={false} valor={cuota} onValor={setCuota} />
           </label>
           <label>Tasa E.A. (%)
             <input name="tasaEa" type="number" step="0.01" value={tasaEa} onChange={(e) => setTasaEa(Number(e.target.value) || 0)} />
           </label>
           <label>Interés corriente última cuota (COP)
-            <input name="interesCorriente" type="number" step="1" defaultValue={credito.interesCorriente || ""} />
+            <InputMonto name="interesCorriente" decimales={false} defaultValue={credito.interesCorriente || ""} />
           </label>
         </div>
         <div className="pf-acciones">
@@ -50,7 +51,7 @@ export function CreditoForm({ action, credito }: { action: (fd: FormData) => voi
         <p className="sub">Con los valores de arriba, faltan <strong>{nActual ?? "—"}</strong> cuotas
           {nActual != null && <> (~{Math.ceil(nActual / 12)} años)</>}.</p>
         <label className="sim-abono">Abono extra a capital
-          <input type="number" step="1" value={abono || ""} onChange={(e) => setAbono(Number(e.target.value) || 0)} placeholder="0" />
+          <InputMonto decimales={false} valor={abono} onValor={setAbono} placeholder="0" />
         </label>
         {abono > 0 && nConAbono != null && (
           <p className="sim-res">

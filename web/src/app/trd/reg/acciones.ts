@@ -9,12 +9,11 @@ import { TARIFA_ICA_DEFAULT } from "@/lib/retenciones";
 import { enviarEmail, plantillaCorreoPago, REPLY_TO } from "@/lib/email";
 import { pagarCiclo, deshacerCiclo } from "@/lib/comisiones-pago";
 import { flash } from "@/lib/flash";
+import { parseMonto } from "@/lib/numero";
 
 // Los valores COP se digitan con puntos de miles; se limpian para guardar.
-const numCO = (v: FormDataEntryValue | null): number => {
-  const x = Number(String(v ?? "").replace(/[^\d]/g, ""));
-  return Number.isFinite(x) ? x : 0;
-};
+// Montos en formato colombiano ("1.234.567", "8,66"): ver lib/numero.ts.
+const numCO = (v: FormDataEntryValue | null): number => parseMonto(v);
 const num = (v: unknown): number => (v == null ? 0 : Number(v));
 
 /**

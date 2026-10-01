@@ -1,4 +1,5 @@
 import { agregarFreelance } from "@/app/trd/reg/acciones";
+import { InputMonto } from "@/components/InputMonto";
 
 /**
  * Alta de un pago a freelance ocasional (no está en nómina). Se guarda como un
@@ -14,10 +15,10 @@ export function FreelanceForm({ mes }: { mes: string }) {
           <label>Nombre<input name="nombre" required placeholder="Nombre del freelance" /></label>
           <label>Identificación<input name="identificacion" placeholder="C.C." /></label>
           <label>Actividad CIIU<input name="actividad" placeholder="7410" /></label>
-          <label>Tarifa ICA ‰<input name="tarifa" type="number" step="0.01" placeholder="8.66" /></label>
-          <label>Cuenta de cobro<input name="valor" type="number" step="1" placeholder="0" required /></label>
-          <label>Aporte salud<input name="salud" type="number" step="1" placeholder="0" /></label>
-          <label>Aporte pensión<input name="pension" type="number" step="1" placeholder="0" /></label>
+          <label>Tarifa ICA ‰<InputMonto name="tarifa" placeholder="8,66" /></label>
+          <label>Cuenta de cobro<InputMonto name="valor" decimales={false} placeholder="0" required /></label>
+          <label>Aporte salud<InputMonto name="salud" decimales={false} placeholder="0" /></label>
+          <label>Aporte pensión<InputMonto name="pension" decimales={false} placeholder="0" /></label>
         </div>
         <button type="submit" className="btn-primary">Agregar</button>
       </form>
