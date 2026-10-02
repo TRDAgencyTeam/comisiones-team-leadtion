@@ -7,9 +7,9 @@
  *
  * - ReteICA  = valor × (tarifa por mil de la actividad CIIU) / 1000.
  * - ReteRenta (Art. 383 ET) sobre base depurada = (valor − aportes) × 75%,
- *   convertida a UVT y aplicada a la tabla marginal. OJO: el tramo de $0 está en
- *   `< 94 UVT` (la plantilla usa 94, no 95) — se respeta tal cual para cuadrar
- *   con el Excel (una base de 94–95 UVT arroja una retención mínima, no $0).
+ *   convertida a UVT y aplicada a la tabla marginal. El primer tramo (0–95 UVT)
+ *   es 0% según la DIAN: una base ≤ 95 UVT NO retiene. (Antes el umbral estaba
+ *   mal en 94, lo que generaba una retención absurda entre 94 y 95 UVT.)
  * - Valor a girar = valor + ICA(negativo) + renta(con signo). Como en la celda
  *   `=B6+E6+F6` del Sheet, donde ICA y renta se guardan con su signo.
  */
@@ -61,13 +61,14 @@ export interface ResultadoRetencion {
 /** Retención de renta "cruda" (resultado del IFS de la plantilla, con su signo). */
 function rentaCruda(baseUvt: number, uvt: number): number {
   const u = baseUvt;
-  if (u < 94) return 0;
-  if (u < 149) return (u - 95) * 0.19 * uvt;
-  if (u < 359) return ((u - 150) * 0.28 + 10) * uvt;
-  if (u < 639) return ((u - 360) * 0.33 + 69) * uvt;
-  if (u < 944) return ((u - 640) * 0.35 + 162) * uvt;
-  if (u < 2300) return ((u - 945) * 0.37 + 268) * uvt;
-  return ((u - 2300) * 0.39 + 770) * uvt; // >2300
+  // Tabla Art. 383 ET (base gravable en UVT → impuesto en UVT × valor UVT).
+  if (u <= 95) return 0;                                   // 0–95 UVT: 0%
+  if (u <= 150) return (u - 95) * 0.19 * uvt;              // >95–150: 19%
+  if (u <= 360) return ((u - 150) * 0.28 + 10) * uvt;      // >150–360: 28%
+  if (u <= 640) return ((u - 360) * 0.33 + 69) * uvt;      // >360–640: 33%
+  if (u <= 945) return ((u - 640) * 0.35 + 162) * uvt;     // >640–945: 35%
+  if (u <= 2300) return ((u - 945) * 0.37 + 268) * uvt;    // >945–2300: 37%
+  return ((u - 2300) * 0.39 + 770) * uvt;                  // >2300: 39%
 }
 
 /** Calcula ICA, renta y valor a girar para una cuenta de cobro. */
