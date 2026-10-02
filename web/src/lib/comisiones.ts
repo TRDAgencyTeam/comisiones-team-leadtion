@@ -153,3 +153,39 @@ function construirVista(
 
 const suma = (hs: HitoVista[]) => round2(hs.reduce((s, h) => s + h.monto, 0));
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+export interface CorteComision {
+  /** Mes del corte (YYYY-MM) = mes en que cae el hito. */
+  mes: string;
+  filas: { clienteId: number; clienteNombre: string; hito: string; monto: number; estado: EstadoHito; pagadoEn: string | null }[];
+  pendiente: number;
+  pagado: number;
+}
+
+/**
+ * Agrupa los hitos de un colaborador por CORTE (mes del hito), NO acumulado.
+ * Cada corte es un mes que se paga por separado. Fuente única para el admin y
+ * el portal del colaborador.
+ */
+export function cortesDe(r: ResultadoVista): CorteComision[] {
+  const mapa = new Map<string, CorteComision>();
+  for (const l of r.lineas) {
+    for (const h of l.hitos) {
+      const mes = h.fechaHito.slice(0, 7);
+      let c = mapa.get(mes);
+      if (!c) { c = { mes, filas: [], pendiente: 0, pagado: 0 }; mapa.set(mes, c); }
+      c.filas.push({ clienteId: l.clienteId, clienteNombre: l.clienteNombre, hito: h.hito, monto: h.monto, estado: h.estado, pagadoEn: h.pagadoEn });
+      if (h.estado === "pagado") c.pagado = round2(c.pagado + h.monto); else c.pendiente = round2(c.pendiente + h.monto);
+    }
+  }
+  return [...mapa.values()].sort((a, b) => a.mes.localeCompare(b.mes));
+}
+
+/**
+ * Pendiente POR PAGAR = suma de los cortes ya CERRADOS (meses anteriores al
+ * actual) que siguen pendientes. El mes en curso NO se cobra todavía (se paga a
+ * inicios del mes siguiente), así que no entra en este total.
+ */
+export function pendientePorPagar(r: ResultadoVista, mesActual: string): number {
+  return round2(cortesDe(r).filter((c) => c.mes < mesActual).reduce((s, c) => s + c.pendiente, 0));
+}

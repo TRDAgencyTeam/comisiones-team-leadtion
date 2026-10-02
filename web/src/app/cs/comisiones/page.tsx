@@ -4,6 +4,8 @@ import {
   resultadoDeColaborador,
   corteFinDeMes,
   corteProyeccion,
+  cortesDe,
+  pendientePorPagar,
   type ResultadoVista,
 } from "@/lib/comisiones";
 import { ProximosPagos, type FilaFutura } from "@/components/ProximosPagos";
@@ -20,36 +22,7 @@ const nombreMes = (ym: string) => {
   return s.charAt(0).toUpperCase() + s.slice(1);
 };
 
-interface CorteVista {
-  mes: string;
-  filas: { clienteId: number; clienteNombre: string; hito: string; monto: number; estado: string; pagadoEn: string | null }[];
-  pendiente: number;
-  pagado: number;
-}
-
-/** Agrupa los hitos del colaborador por CORTE (mes del hito), no acumulado. */
-function cortesDe(r: ResultadoVista): CorteVista[] {
-  const mapa = new Map<string, CorteVista>();
-  for (const l of r.lineas) {
-    for (const h of l.hitos) {
-      const mes = h.fechaHito.slice(0, 7);
-      let c = mapa.get(mes);
-      if (!c) { c = { mes, filas: [], pendiente: 0, pagado: 0 }; mapa.set(mes, c); }
-      c.filas.push({ clienteId: l.clienteId, clienteNombre: l.clienteNombre, hito: h.hito, monto: h.monto, estado: h.estado, pagadoEn: h.pagadoEn });
-      if (h.estado === "pagado") c.pagado += h.monto; else c.pendiente += h.monto;
-    }
-  }
-  return [...mapa.values()].sort((a, b) => a.mes.localeCompare(b.mes));
-}
-
 const mesHoy = () => mesHoyISO();
-
-/** Pendiente POR PAGAR = suma de cortes ya CERRADOS (meses anteriores al actual)
- *  y no pagados. El mes en curso no se cobra todavía. */
-function pendientePorPagar(r: ResultadoVista): number {
-  const hoy = mesHoy();
-  return cortesDe(r).filter((c) => c.mes < hoy).reduce((s, c) => s + c.pendiente, 0);
-}
 
 export default async function ComisionesPage({
   searchParams,
@@ -124,7 +97,7 @@ export default async function ComisionesPage({
                 className={activa ? "col-tab activa" : "col-tab"}
               >
                 <span className="col-tab-nombre">{r.colaboradorNombre}</span>
-                <span className="col-tab-monto">{(() => { const p = pendientePorPagar(r); return p > 0 ? `Por pagar ${usd(p)}` : "al día"; })()}</span>
+                <span className="col-tab-monto">{(() => { const p = pendientePorPagar(r, mesHoy()); return p > 0 ? `Por pagar ${usd(p)}` : "al día"; })()}</span>
               </Link>
             );
           })}
@@ -139,7 +112,7 @@ export default async function ComisionesPage({
 function ColaboradorCard({ r, corte, futuros }: { r: ResultadoVista; corte: string; futuros: FilaFutura[] }) {
   const cortes = cortesDe(r);
   const hoy = mesHoy();
-  const porPagar = pendientePorPagar(r);
+  const porPagar = pendientePorPagar(r, mesHoy());
   return (
     <>
     <section className="card">
