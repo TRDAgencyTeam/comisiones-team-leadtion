@@ -1,100 +1,89 @@
 import {
-  resultadoDeColaborador, corteFinDeMes, corteProyeccion, cortesDe, pendientePorPagar,
+  resultadoDeColaborador, corteProyeccion, cortesDe, pendientePorPagar,
   type CorteComision,
 } from "@/lib/comisiones";
-import { ProximosPagos, HitoTag, type FilaFutura } from "@/components/ProximosPagos";
+import { HitoTag } from "@/components/ProximosPagos";
 import { mesHoyISO } from "@/lib/fecha";
 
 /**
- * Portal del colaborador de Customer Success. Vista limitada (solo lo suyo),
- * organizada POR CORTE (un corte = un mes, se paga por separado), igual que el
- * panel admin:
- *  - "Por cobrar (aplica a este pago)" = SOLO los cortes ya cerrados y pendientes
- *    (los meses anteriores). El mes en curso NO se cobra todavía.
- *  - El mes en curso se muestra como "en curso" (se paga a inicios del siguiente).
- *  - Historial de cortes pasados (pagados y por pagar) + proyección futura.
+ * Portal del colaborador de Customer Success. Dashboard SIMPLE y explícito:
+ *  - Hero: "Tu próximo pago" = SOLO los cortes ya cerrados y pendientes (lo que
+ *    de verdad se le va a pagar en el siguiente pago). Nombra el/los mes(es).
+ *  - "Pagado hasta el momento" = histórico liquidado.
+ *  - Historial de cortes cerrados (pagados y por pagar) con detalle.
+ *  - Meses que vienen (incluido el mes en curso): solo TOTAL aproximado, SIN
+ *    nombres de cuentas, para que no se confunda con lo que se cobra ahora.
+ * Es dinámico: al marcar un corte como Pagado en TRD→REG, ese mes pasa a
+ * "pagado" y el hero muestra el siguiente mes pendiente.
  */
 
 const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 const nombreMes = (ym: string) => { const [a, m] = ym.split("-").map(Number); return `${MESES[(m ?? 1) - 1]} ${a}`; };
-const capitalizar = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const mesSiguienteNombre = (ym: string) => { const [a, m] = ym.split("-").map(Number); const d = new Date(a!, m!, 1); return `${MESES[d.getMonth()]} ${d.getFullYear()}`; };
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const mesSiguiente = (ym: string) => { const [a, m] = ym.split("-").map(Number); const d = new Date(a!, m!, 1); return `${MESES[d.getMonth()]} ${d.getFullYear()}`; };
+const fechaCorta = (iso: string | null) => (iso ? iso.slice(0, 10) : "");
 
 export async function PortalColaborador({ colaboradorId, nombre }: { colaboradorId: number; nombre: string }) {
-  const now = new Date();
-  const finMes = corteFinDeMes(now);
   const mesActual = mesHoyISO();
 
   let error: string | null = null;
   let cortes: CorteComision[] = [];
   let porCobrar = 0;
   let yaPagado = 0;
-  let futuros: FilaFutura[] = [];
   try {
-    const r = await resultadoDeColaborador(colaboradorId, corteProyeccion(now));
+    const r = await resultadoDeColaborador(colaboradorId, corteProyeccion(new Date()));
     if (r) {
       cortes = cortesDe(r);
       porCobrar = pendientePorPagar(r, mesActual);
       yaPagado = r.totalPagado;
-      futuros = r.lineas.flatMap((l) =>
-        l.hitos.filter((h) => h.fechaHito > finMes).map((h) => ({
-          clienteNombre: l.clienteNombre, hito: h.hito, fechaHito: h.fechaHito, monto: h.monto,
-        })),
-      );
     }
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
 
-  const cerrados = cortes.filter((c) => c.mes < mesActual).sort((a, b) => b.mes.localeCompare(a.mes)); // recientes primero
-  const enCurso = cortes.find((c) => c.mes === mesActual) ?? null;
-  const cuentas = new Set(
-    cortes.filter((c) => c.mes <= mesActual).flatMap((c) => c.filas.map((f) => f.clienteId)),
-  ).size;
+  // Cortes cerrados (meses anteriores al actual): historial, más reciente primero.
+  const cerrados = cortes.filter((c) => c.mes < mesActual).sort((a, b) => b.mes.localeCompare(a.mes));
+  // Meses pendientes (nombres) para el subtítulo del hero.
+  const mesesPend = cerrados.filter((c) => c.pendiente > 0).map((c) => cap(nombreMes(c.mes)));
+  // Mes en curso + próximos: SOLO total aproximado, sin nombres (máx 4 meses).
+  const proximos = cortes.filter((c) => c.mes >= mesActual).slice(0, 4);
+
+  const subHero = mesesPend.length === 0
+    ? "Estás al día ✓"
+    : mesesPend.length === 1
+      ? `Corte de ${mesesPend[0]}`
+      : `Cortes pendientes: ${mesesPend.join(" + ")}`;
 
   return (
     <main className="wrap">
       <header className="page">
         <h1>Hola, {nombre.split(" ")[0]} 👋</h1>
-        <p>Tu resumen de comisiones de Customer Success · {capitalizar(nombreMes(mesActual))}</p>
+        <p>Tu resumen de comisiones de Customer Success</p>
       </header>
 
       {error ? (
         <div className="card"><strong>No se pudo cargar.</strong><p className="empty">{error}</p></div>
       ) : (
         <>
-          <div className="kpis">
+          <div className="kpis kpis-2">
             <div className="kpi kpi-pend">
-              <span className="kpi-label">Por cobrar (aplica a este pago)</span>
+              <span className="kpi-label">Tu próximo pago</span>
               <span className="kpi-num">{usd(porCobrar)}</span>
+              <span className="kpi-sub">{subHero}</span>
             </div>
             <div className="kpi kpi-pag">
-              <span className="kpi-label">Ya pagado (histórico)</span>
+              <span className="kpi-label">Pagado hasta el momento</span>
               <span className="kpi-num">{usd(yaPagado)}</span>
-            </div>
-            <div className="kpi kpi-total">
-              <span className="kpi-label">Cuentas con comisión</span>
-              <span className="kpi-num">{cuentas}</span>
+              <span className="kpi-sub">histórico liquidado</span>
             </div>
           </div>
 
           <div className="callout-pago">
-            <b>¿Cuándo se paga?</b> Cada corte es un mes y se paga por separado, dentro de los primeros
-            ~5 días del mes siguiente, junto con tu salario. <b>“Por cobrar”</b> es solo lo de los meses
-            ya cerrados; el mes en curso todavía está sumando y se paga el mes siguiente.
+            <b>¿Cuándo se paga?</b> Cada mes (corte) se paga por separado, dentro de los primeros ~5 días
+            del mes siguiente, junto con tu salario. <b>“Tu próximo pago”</b> es solo lo de los meses ya
+            cerrados; el mes en curso todavía está sumando.
           </div>
-
-          {enCurso && (
-            <section className="card">
-              <div className="card-head">
-                <span className="who">Mes en curso · {capitalizar(nombreMes(enCurso.mes))} <span className="badge">en curso</span></span>
-                <span className="t-pagado">Va sumando <b>{usd(enCurso.pendiente + enCurso.pagado)}</b></span>
-              </div>
-              <p className="ciclo-nota">Este mes aún no cierra: se paga a inicios de <b>{mesSiguienteNombre(enCurso.mes)}</b>. No entra en “Por cobrar” todavía.</p>
-              <CorteTabla filas={enCurso.filas} enCurso />
-            </section>
-          )}
 
           <section className="card">
             <div className="card-head"><span className="who">Historial de cortes</span></div>
@@ -104,57 +93,65 @@ export async function PortalColaborador({ colaboradorId, nombre }: { colaborador
               cerrados.map((c) => (
                 <div key={c.mes} className="corte-bloque">
                   <div className="corte-head">
-                    <span className="corte-mes">Corte {capitalizar(nombreMes(c.mes))}</span>
+                    <span className="corte-mes">Corte {cap(nombreMes(c.mes))}</span>
                     <span className="corte-montos">
                       {c.pendiente > 0 && <span className="estado-pendiente">Por pagar {usd(c.pendiente)}</span>}
                       {c.pagado > 0 && <span className="estado-pagado">Pagado {usd(c.pagado)}</span>}
                     </span>
                   </div>
-                  <CorteTabla filas={c.filas} />
+                  <div className="table-scroll">
+                    <table>
+                      <thead><tr><th>Cliente</th><th>Hito</th><th className="num">Monto</th><th>Estado</th></tr></thead>
+                      <tbody>
+                        {c.filas.map((f, i) => (
+                          <tr key={`${f.clienteId}-${f.hito}-${i}`}>
+                            <td>{f.clienteNombre}</td>
+                            <td><HitoTag h={f.hito} /></td>
+                            <td className="num">{usd(f.monto)}</td>
+                            <td>{f.estado === "pagado"
+                              ? <span className="estado-pagado">✓ Pagado {fechaCorta(f.pagadoEn)}</span>
+                              : <span className="estado-pendiente">Pendiente</span>}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               ))
             )}
           </section>
 
-          <section className="card">
-            <div className="card-head"><span className="who">Próximos pagos (proyección)</span></div>
-            <ProximosPagos futuros={futuros} now={now} />
-          </section>
-
-          <p className="foot">
-            <b>Nota:</b> cada hito es un pago único (<b>% mensual × meses × licencia</b>; la licencia es
-            $67 o $69 según cuándo se activó la cuenta). Cuando el administrador registre el pago de un
-            corte, ese mes pasará a <b>Pagado</b> aquí mismo. Los montos futuros dependen de que cada
-            cuenta siga activa.
-          </p>
+          {proximos.length > 0 && (
+            <section className="card">
+              <div className="card-head"><span className="who">Lo que viene (aproximado)</span></div>
+              <p className="ciclo-nota">
+                Estimado de los próximos meses. Son <b>aproximados</b> y dependen de que cada cuenta siga
+                activa; no se cobran hasta que el mes cierre.
+              </p>
+              <ul className="aprox-list">
+                {proximos.map((c) => {
+                  const total = c.pendiente + c.pagado;
+                  const enCurso = c.mes === mesActual;
+                  return (
+                    <li key={c.mes} className="aprox-row">
+                      <span className="aprox-mes">
+                        {cap(nombreMes(c.mes))}
+                        {enCurso
+                          ? <span className="badge">en curso</span>
+                          : <span className="aprox-tag">aprox.</span>}
+                      </span>
+                      <span className="aprox-val">~{usd(total)}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="foot" style={{ marginTop: 10 }}>
+                El <b>mes en curso</b> ({cap(nombreMes(mesActual))}) se paga a inicios de <b>{mesSiguiente(mesActual)}</b>.
+              </p>
+            </section>
+          )}
         </>
       )}
     </main>
-  );
-}
-
-const fechaCorta = (iso: string | null) => (iso ? iso.slice(0, 10) : "");
-
-function CorteTabla({ filas, enCurso = false }: { filas: CorteComision["filas"]; enCurso?: boolean }) {
-  return (
-    <div className="table-scroll">
-      <table>
-        <thead><tr><th>Cliente</th><th>Hito</th><th className="num">Monto</th><th>Estado</th></tr></thead>
-        <tbody>
-          {filas.map((f, i) => (
-            <tr key={`${f.clienteId}-${f.hito}-${i}`}>
-              <td>{f.clienteNombre}</td>
-              <td><HitoTag h={f.hito} /></td>
-              <td className="num">{usd(f.monto)}</td>
-              <td>
-                {f.estado === "pagado"
-                  ? <span className="estado-pagado">✓ Pagado {fechaCorta(f.pagadoEn)}</span>
-                  : <span className={enCurso ? "estado-programado" : "estado-pendiente"}>{enCurso ? "En curso" : "Pendiente"}</span>}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   );
 }

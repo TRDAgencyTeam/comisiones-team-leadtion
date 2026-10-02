@@ -131,6 +131,18 @@ h1, h2, h3, .brand, .who, .kpi-num, .card .total {
 .kpi-total .kpi-num { color: var(--text); }
 .kpi-pend .kpi-num { color: var(--pending); }
 .kpi-pag .kpi-num { color: var(--paid); }
+.kpis-2 { grid-template-columns: repeat(2, 1fr); }
+@media (max-width: 640px) { .kpis-2 { grid-template-columns: 1fr; } }
+.kpi-sub { font-size: 0.82rem; color: var(--muted); }
+.kpi-pend .kpi-sub { color: var(--pending); font-weight: 600; }
+
+/* Portal: meses que vienen (aproximado, sin nombres) */
+.aprox-list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.aprox-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 10px; }
+.aprox-row:nth-child(odd) { background: var(--bg); }
+.aprox-mes { display: flex; align-items: center; gap: 8px; color: var(--text); }
+.aprox-tag { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--faint); border: 1px solid var(--border); border-radius: 999px; padding: 1px 7px; }
+.aprox-val { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 600; }
 
 .link-ver, .fila-total td { font-size: 0.9rem; }
 .link-ver { color: var(--accent); text-decoration: none; font-weight: 600; }
