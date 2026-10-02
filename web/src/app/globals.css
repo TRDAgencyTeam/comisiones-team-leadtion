@@ -782,6 +782,34 @@ a.btn-pagar { text-decoration: none; display: inline-block; }
   text-decoration: underline; padding: 0; }
 .tasa-link:hover { color: var(--text); }
 
+/* Widget de MES de pago (prominente, al lado del de tasa) */
+.mes-widget {
+  display: flex; flex-direction: column; gap: 3px; min-width: 210px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  padding: 8px 12px; box-shadow: var(--shadow);
+}
+.mes-widget.actual { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+.mes-cab { display: flex; align-items: center; gap: 8px; }
+.mes-lbl { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; }
+.mes-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.62rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.04em; padding: 1px 7px 1px 5px; border-radius: 999px; }
+.mes-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.mes-badge.actual { color: var(--paid); background: var(--paid-soft); }
+.mes-badge.pasado { color: var(--pending); background: var(--pending-soft); }
+.mes-val { font-size: 1.35rem; font-weight: 800; color: var(--text); letter-spacing: -0.01em; text-transform: capitalize; }
+.mes-pick { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
+.mes-pick span { font-size: 0.7rem; color: var(--muted); }
+.mes-pick input { padding: 5px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); }
+
+/* Aviso antes de pagar: verifica el mes correcto */
+.reg-aviso-pago {
+  display: flex; align-items: center; gap: 10px; margin: 14px 0 4px;
+  background: var(--pending-soft); border: 1px solid color-mix(in srgb, var(--pending) 45%, transparent);
+  border-left: 4px solid var(--pending); border-radius: 10px; padding: 11px 14px;
+  color: var(--text); font-size: 0.92rem;
+}
+.reg-aviso-ico { font-size: 1.1rem; line-height: 1; }
+
 .tasa-editar { margin-top: 8px; background: var(--panel); border: 1px solid var(--border);
   border-radius: 12px; padding: 10px 12px; box-shadow: var(--shadow); max-width: 340px; }
 .tasa-editar label { font-size: 0.75rem; color: var(--muted); font-weight: 600; }

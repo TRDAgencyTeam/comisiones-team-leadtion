@@ -143,6 +143,7 @@ export async function renglonesDelMes(mes: string): Promise<RenglonReg[]> {
 
   const colabs = await consulta(
     `select c.id, c.nombre, c.email, c.banco, c.identificacion, c.valor_nomina,
+            c.valor_primer_mes, to_char(c.fecha_inicio_contrato,'YYYY-MM') as inicio_ym,
             p.id as pago_id, p.pago_fijo, p.adicional, p.adicional_desc, p.comision,
             p.valor_cuenta_cobro, p.aporte_salud, p.aporte_pension,
             p.rete_ica, p.rete_renta, p.valor_girar, p.costo_transferencia,
@@ -162,7 +163,11 @@ export async function renglonesDelMes(mes: string): Promise<RenglonReg[]> {
     const tienePago = r.pago_id != null;
     const valorNomina = num(r.valor_nomina);
     const valorMesAnterior = num(r.valor_mes_anterior);
-    const pagoFijo = tienePago ? num(r.pago_fijo) : (valorNomina || valorMesAnterior || 0);
+    // Primer mes parcial: si entró a mitad de ESTE mes y tiene valor_primer_mes
+    // (prorrateado), ese es su pago base del mes de inicio (igual que en Egresos).
+    const esMesInicio = r.inicio_ym != null && String(r.inicio_ym) === primer.slice(0, 7);
+    const baseNomina = esMesInicio && r.valor_primer_mes != null ? num(r.valor_primer_mes) : valorNomina;
+    const pagoFijo = tienePago ? num(r.pago_fijo) : (baseNomina || valorMesAnterior || 0);
     // Comisión: si ya está PAGADA, la guardada (histórica); si no, la del corte
     // cerrado en vivo (aunque haya un pago guardado, para no mostrar acumulados viejos).
     const comision = (tienePago && Boolean(r.ck_pagado)) ? num(r.comision) : (comisionCop.get(Number(r.id)) ?? 0);

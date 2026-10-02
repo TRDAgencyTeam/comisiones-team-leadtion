@@ -4,6 +4,7 @@ import { renglonesDelMes, totalizar, uvtDeMes, primerDiaMes, tasaCorte, historic
 import { historialFx, snapshotTasaHoy, backfillFx } from "@/lib/fx-historial";
 import { RegFila } from "@/components/RegFila";
 import { RegTasaWidget } from "@/components/RegTasaWidget";
+import { RegMesWidget } from "@/components/RegMesWidget";
 import { FreelanceForm } from "@/components/RegFreelance";
 
 export const metadata = { title: "Registro contable" };
@@ -49,17 +50,18 @@ export default async function RegPage({
           </p>
         </div>
         <div className="reg-head-right">
+          <RegMesWidget mes={mes} esActual={mes === mesActualISO()} />
           <RegTasaWidget mes={mes} tasa={tasa} historial={historial} />
-          <form method="get" className="reg-mes">
-            <label htmlFor="mes">Mes</label>
-            <input type="month" id="mes" name="mes" defaultValue={mes} />
-            <button type="submit" className="btn-secondary">Ver</button>
-          </form>
         </div>
       </div>
 
       {sp.error && <p className="alerta">{decodeURIComponent(sp.error)}</p>}
       {sp.ok && <p className="ok-msg">{decodeURIComponent(sp.ok)}</p>}
+
+      <div className="reg-aviso-pago" role="alert">
+        <span className="reg-aviso-ico" aria-hidden="true">⚠️</span>
+        <span>Antes de confirmar pagos, verifica que estás en el <b>mes correcto de pago</b>: <b>{nombreMes(mes)}</b>.</span>
+      </div>
 
       <div className="reg-totales">
         <div className="kpi"><span className="kpi-lbl">Cuentas de cobro</span><span className="kpi-num">{cop(totales.cuentaCobro)}</span></div>
