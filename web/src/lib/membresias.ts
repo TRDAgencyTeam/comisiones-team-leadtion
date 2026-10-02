@@ -110,6 +110,7 @@ export interface FichaMembresia {
   id: number; nombre: string; planTipo: string | null; soporteValor: number | null;
   esAgencia: boolean; agenciaDesde: string | null; servicioActivo: boolean;
   tipoCliente: string | null; estado: EstadoMembresia; fechaActivacion: string | null;
+  fechaCancelacion: string | null;
   fechaInicioReal: string | null; tiempoMeses: number; ltv: number;
   valorLicencia: number | null; apiEstado: string | null; apiValor: number | null;
   bono: number | null; reserva: boolean; pagos: PagoMes[];
@@ -134,7 +135,7 @@ export async function opcionesFormulario(): Promise<{
 export async function obtenerMembresia(id: number): Promise<FichaMembresia | null> {
   const rows = await consulta(
     `select id, nombre, plan_tipo, soporte_valor, incluye_crm_en_marketing, es_agencia, agencia_desde,
-            tipo_cliente, estado_actual, fecha_activacion, fecha_inicio_real, valor_licencia_general,
+            tipo_cliente, estado_actual, fecha_activacion, fecha_cancelacion, fecha_inicio_real, valor_licencia_general,
             api_estado, api_valor, bono_reactivacion, reserva
        from public.clientes where id = $1`,
     [id],
@@ -157,7 +158,8 @@ export async function obtenerMembresia(id: number): Promise<FichaMembresia | nul
     esAgencia: Boolean(r.es_agencia), agenciaDesde: toISO(r.agencia_desde), servicioActivo: servActivo.length > 0,
     tipoCliente: (r.tipo_cliente as string) ?? null,
     estado: r.estado_actual as EstadoMembresia,
-    fechaActivacion: f, fechaInicioReal: toISO(r.fecha_inicio_real), tiempoMeses: mesesDesde(f),
+    fechaActivacion: f, fechaCancelacion: toISO(r.fecha_cancelacion),
+    fechaInicioReal: toISO(r.fecha_inicio_real), tiempoMeses: mesesDesde(f),
     ltv, valorLicencia: r.valor_licencia_general == null ? null : Number(r.valor_licencia_general),
     apiEstado: (r.api_estado as string) ?? null, apiValor: r.api_valor == null ? null : Number(r.api_valor),
     bono: r.bono_reactivacion == null ? null : Number(r.bono_reactivacion), reserva: Boolean(r.reserva),

@@ -4,6 +4,12 @@ import { useEffect, useState } from "react";
 import { analizarCierre, confirmarCierre, type AnalisisCierre } from "@/app/trd/clientes/acciones";
 import { formatoMonto } from "@/lib/numero";
 
+/** Fecha de hoy (YYYY-MM-DD) en hora local del navegador (Colombia para Mauro). */
+function hoyLocal(): string {
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
 const LT_OPCIONES = [
   { v: "igual", label: "Sigue igual" },
   { v: "licencia", label: "Solo licencia ($69)" },
@@ -23,6 +29,7 @@ export function CierreClienteModal({ facturaId, onCancel, onConfirm }: { factura
   const [agOff, setAgOff] = useState<Record<string, boolean>>({});
   const [ltRes, setLtRes] = useState("igual");
   const [ltValor, setLtValor] = useState("");
+  const [fechaCancel, setFechaCancel] = useState(hoyLocal());
 
   useEffect(() => { document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = ""; }; }, []);
   useEffect(() => {
@@ -71,7 +78,7 @@ export function CierreClienteModal({ facturaId, onCancel, onConfirm }: { factura
             <input type="hidden" name="facturaId" value={facturaId} />
             <input type="hidden" name="anularFactura" value={anularFactura ? "1" : "0"} />
             {offItemIds.map((id) => <input key={id} type="hidden" name="offItem" value={id} />)}
-            {data.leadtion && <><input type="hidden" name="clienteId" value={data.leadtion.clienteId} /><input type="hidden" name="leadtionResultado" value={ltRes} /><input type="hidden" name="leadtionValor" value={ltValor} /></>}
+            {data.leadtion && <><input type="hidden" name="clienteId" value={data.leadtion.clienteId} /><input type="hidden" name="leadtionResultado" value={ltRes} /><input type="hidden" name="leadtionValor" value={ltValor} /><input type="hidden" name="fechaCancelacion" value={ltRes === "cancelar" ? fechaCancel : ""} /></>}
             <div className="cf-modal-body">
               <div className="cf-svc-label">Servicios identificados</div>
               {data.agencia.map((a) => {
@@ -93,6 +100,13 @@ export function CierreClienteModal({ facturaId, onCancel, onConfirm }: { factura
               )}
               {data.leadtion && ltRes === "soporte" && (
                 <div className="cf-f"><input inputMode="decimal" value={ltValor} onChange={(e) => setLtValor(formatoMonto(e.target.value, moneda !== "COP"))} placeholder={`Valor del soporte / mes (${moneda})`} /></div>
+              )}
+              {data.leadtion && ltRes === "cancelar" && (
+                <label className="cf-f" style={{ display: "block", marginTop: 12 }}>
+                  <span className="cf-svc-label" style={{ display: "block", marginBottom: 4 }}>Fecha de cancelación</span>
+                  <input type="date" value={fechaCancel} max={hoyLocal()} onChange={(e) => setFechaCancel(e.target.value)} />
+                  <small className="cf-hint">La comisión solo cuenta los hitos cumplidos antes de esta fecha.</small>
+                </label>
               )}
               <div className="cf-f" style={{ marginTop: 12 }}><input name="motivo" placeholder="Motivo (opcional)" /></div>
             </div>

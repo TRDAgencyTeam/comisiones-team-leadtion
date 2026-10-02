@@ -561,6 +561,9 @@ export async function confirmarCierre(formData: FormData) {
   const ltRes = String(formData.get("leadtionResultado") ?? "igual");
   const ltValor = n(formData.get("leadtionValor"));
   const motivo = txt(formData.get("motivo"));
+  // Fecha exacta de cancelación (opcional); si viene vacía se usa la de hoy.
+  const fechaCancelRaw = String(formData.get("fechaCancelacion") ?? "").trim();
+  const fechaCancel = /^\d{4}-\d{2}-\d{2}$/.test(fechaCancelRaw) ? fechaCancelRaw : null;
 
   if (anularFactura) {
     await consulta(`update public.factura_mensual set estado='anulado', actualizado_en=now() where id=$1`, [facturaId]);
@@ -582,10 +585,10 @@ export async function confirmarCierre(formData: FormData) {
       await consulta(
         `update public.clientes
             set estado_actual=$2, motivo_estado=$3,
-                fecha_cancelacion = case when $2='cancelado' then current_date else fecha_cancelacion end,
+                fecha_cancelacion = case when $2='cancelado' then coalesce($4::date, current_date) else fecha_cancelacion end,
                 estado_actualizado_en=now()
           where id=$1`,
-        [clienteId, estado, motivo],
+        [clienteId, estado, motivo, fechaCancel],
       );
       await consulta(`insert into public.cliente_estado_historial (cliente_id, estado, motivo) values ($1,$2,$3)`,
         [clienteId, estado, motivo ?? "Cierre desde Facturación (madre)"]);

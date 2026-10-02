@@ -22,6 +22,9 @@ export async function actualizarMembresia(formData: FormData) {
   const id = Number(formData.get("id"));
   const nombre = String(formData.get("nombre") ?? "").trim();
   const estado = String(formData.get("estado") ?? "activo");
+  // Fecha de cancelación: solo aplica si el estado es 'cancelado'. Si viene vacía, hoy.
+  const fcRaw = String(formData.get("fechaCancelacion") ?? "").trim();
+  const fechaCancel = /^\d{4}-\d{2}-\d{2}$/.test(fcRaw) ? fcRaw : null;
   const tipoRaw = String(formData.get("tipoCliente") ?? "estandar").trim();
   const tipoCliente = ["estandar", "agencia", "servicio"].includes(tipoRaw) ? tipoRaw : "estandar";
   // "Agencia" ahora es un flag independiente (no borra el servicio Leadtion).
@@ -43,9 +46,10 @@ export async function actualizarMembresia(formData: FormData) {
             soporte_valor=$6, valor_licencia_general=$7, api_estado=$8, api_valor=$9,
             bono_reactivacion=$10, tipo_cliente=$11, es_agencia=$4,
             agencia_desde = case when $4 then coalesce(agencia_desde, current_date) else agencia_desde end,
+            fecha_cancelacion = case when $3='cancelado' then coalesce($12::date, fecha_cancelacion, current_date) else null end,
             estado_actualizado_en=now()
       where id=$1`,
-    [id, nombre, estado, esAgencia, planTipo, soporteValor, valorLicencia, api.estado, api.valor, bono, tipoCliente],
+    [id, nombre, estado, esAgencia, planTipo, soporteValor, valorLicencia, api.estado, api.valor, bono, tipoCliente, fechaCancel],
   );
   await flash("Actualizado");
   revalidatePath(`/membresias/${id}`);

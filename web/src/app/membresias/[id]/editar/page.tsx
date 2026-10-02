@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { obtenerMembresia } from "@/lib/membresias";
 import { actualizarMembresia } from "../../acciones";
+import { EstadoConFecha } from "@/components/EstadoConFecha";
 
 export const dynamic = "force-dynamic";
 
@@ -30,14 +31,7 @@ export default async function EditarMembresiaPage({
           <input type="hidden" name="id" value={c.id} />
           <div className="form-2col">
             <label>Nombre *<input type="text" name="nombre" required defaultValue={c.nombre} /></label>
-            <label>
-              Estado
-              <select name="estado" defaultValue={c.estado}>
-                <option value="activo">Activo</option>
-                <option value="pausado">Pausado</option>
-                <option value="cancelado">Cancelado</option>
-              </select>
-            </label>
+            <EstadoConFecha estado={c.estado} fechaCancelacion={c.fechaCancelacion} />
           </div>
 
           <label>
