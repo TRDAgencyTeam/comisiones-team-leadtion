@@ -5,6 +5,8 @@ import { historialFx, snapshotTasaHoy, backfillFx } from "@/lib/fx-historial";
 import { RegFila } from "@/components/RegFila";
 import { RegTasaWidget } from "@/components/RegTasaWidget";
 import { RegMesWidget } from "@/components/RegMesWidget";
+import { RegCalculadora } from "@/components/RegCalculadora";
+import { RegAvisoMes } from "@/components/RegAvisoMes";
 import { FreelanceForm } from "@/components/RegFreelance";
 
 export const metadata = { title: "Registro contable" };
@@ -40,8 +42,11 @@ export default async function RegPage({
   const totales = totalizar(renglones);
   const primer = primerDiaMes(mes);
 
+  const mesTitulo = nombreMes(mes).replace(/^\w/, (ch) => ch.toUpperCase());
+
   return (
     <main className="wrap">
+      <RegAvisoMes mes={mes} mesNombre={mesTitulo} />
       <div className="reg-head">
         <div>
           <h1>Registro contable</h1>
@@ -52,6 +57,7 @@ export default async function RegPage({
         <div className="reg-head-right">
           <RegMesWidget mes={mes} esActual={mes === mesActualISO()} />
           <RegTasaWidget mes={mes} tasa={tasa} historial={historial} />
+          <RegCalculadora uvt={uvt} />
         </div>
       </div>
 
