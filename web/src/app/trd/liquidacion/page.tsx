@@ -1,5 +1,6 @@
 import { soloAdmin } from "@/lib/sesion";
 import { vistaLiquidacion, historialLiquidaciones, type Partida } from "@/lib/liquidacion";
+import { tasasPorFecha } from "@/lib/fx-historial";
 import { mesHoyISO } from "@/lib/fecha";
 import { ClientesHeader } from "@/components/ClientesHeader";
 import { BarChart } from "@/components/BarChart";
@@ -33,7 +34,7 @@ export default async function LiquidacionPage({ searchParams }: { searchParams: 
   await soloAdmin();
   const sp = await searchParams;
   const mes = sp.mes && /^\d{4}-\d{2}$/.test(sp.mes) ? sp.mes : mesHoyISO();
-  const [v, historial] = await Promise.all([vistaLiquidacion(mes), historialLiquidaciones()]);
+  const [v, historial, tasasFecha] = await Promise.all([vistaLiquidacion(mes), historialLiquidaciones(), tasasPorFecha(90)]);
   const cerrada = v.liq?.estado === "cerrada";
 
   const grupos = porGrupo(v.partidas);
@@ -75,7 +76,7 @@ export default async function LiquidacionPage({ searchParams }: { searchParams: 
         <div className="cf-kpi hero">
           <div className="lbl">{cerrada ? "USD bajados" : "USD a bajar (estimado)"}</div>
           <div className="big">{usd(cerrada ? v.liq!.usdEnviado ?? 0 : v.usdEstimado)}</div>
-          <div className="sub">{cerrada ? `giro del ${fFecha(v.liq!.fechaGiro)} · tasa banco ${cop(v.liq!.tasaBanco ?? 0)}` : `${cop(v.copTotal)} ÷ tasa ${cop(v.tasaCalculo)}`}</div>
+          <div className="sub">{cerrada ? `giro del ${fFecha(v.liq!.fechaGiro)} · tasa de la sacada ${cop(v.liq!.tasaBanco ?? 0)}` : `${cop(v.copTotal)} ÷ tasa ${cop(v.tasaCalculo)}`}</div>
         </div>
         <div className="cf-kpi"><div className="lbl">A cubrir en Colombia</div><div className="big">{cop(v.copNecesario)}</div><div className="sub">nómina, operativos, crédito, comisiones, caja y gastos en COL{v.eliteCop > 0 ? ` · + Elite ${cop(v.eliteCop)}` : ""}</div></div>
         <div className="cf-kpi"><div className="lbl">Adicional</div><div className="big">{cop(v.copAdicional)}</div><div className="sub">plata extra (no es gasto)</div></div>
@@ -158,12 +159,12 @@ export default async function LiquidacionPage({ searchParams }: { searchParams: 
               <div className="liq-res">
                 <div><span>Fecha del giro</span><b>{fFecha(v.liq!.fechaGiro)}</b></div>
                 <div><span>USD enviados</span><b>{usd(v.liq!.usdEnviado ?? 0)}</b></div>
-                <div><span>Tasa del banco</span><b>{cop(v.liq!.tasaBanco ?? 0)}</b></div>
+                <div><span>Tasa real de la sacada</span><b>{cop(v.liq!.tasaBanco ?? 0)}</b></div>
                 <div><span>COP recibidos</span><b>{cop(v.liq!.copRecibido ?? 0)}</b></div>
                 {v.liq!.comisionUsd ? <div><span>Costo del giro</span><b>{usd(v.liq!.comisionUsd)}</b></div> : null}
                 <div className={`liq-cuadre ${(v.liq!.copRecibido ?? 0) - v.copTotal >= 0 ? "ok" : "falta"}`}>
                   <b>{(v.liq!.copRecibido ?? 0) - v.copTotal >= 0 ? `Saldo a favor en Ebenezer ≈ ${cop((v.liq!.copRecibido ?? 0) - v.copTotal)}` : `Faltaron ≈ ${cop(v.copTotal - (v.liq!.copRecibido ?? 0))}`}</b>
-                  <small>Solo informativo: queda en las cuentas de Ebenezer y no se suma ni se resta al mes siguiente. Tasa de cálculo {cop(v.tasaCalculo)} → banco {cop(v.liq!.tasaBanco ?? 0)}.</small>
+                  <small>Solo informativo: queda en las cuentas de Ebenezer y no se suma ni se resta al mes siguiente. Todo el cuadre se calculó con la tasa real de la sacada ({cop(v.liq!.tasaBanco ?? 0)}).</small>
                 </div>
                 {v.liq!.notas && <p className="cf-hint">{v.liq!.notas}</p>}
                 <form action={reabrirLiquidacion}><input type="hidden" name="mes" value={mes} /><button type="submit" className="tasa-link">Reabrir para corregir</button></form>
@@ -181,8 +182,8 @@ export default async function LiquidacionPage({ searchParams }: { searchParams: 
           </div>
           {!cerrada && (
             <div className="cf-card">
-              <h3>2 · Registrar el giro (tasa del banco)</h3>
-              <LiquidacionGiroForm mes={mes} usdEstimado={v.usdEstimado} copTotal={v.copTotal} tasaCalculo={v.tasaCalculo} />
+              <h3>2 · Registrar el giro (tasa real de la sacada)</h3>
+              <LiquidacionGiroForm mes={mes} usdEstimado={v.usdEstimado} copTotal={v.copTotal} tasaCalculo={v.tasaCalculo} tasaHoy={v.tasaHoy} tasasPorFecha={tasasFecha} />
             </div>
           )}
         </div>

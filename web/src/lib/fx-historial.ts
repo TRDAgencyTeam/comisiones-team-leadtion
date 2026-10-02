@@ -74,6 +74,22 @@ export async function backfillFx(dias = 4): Promise<void> {
 }
 
 /** Últimos n días del historial (más reciente primero), con la variación diaria. */
+/**
+ * Mapa fecha(YYYY-MM-DD) → tasa COP de los últimos `dias` días (lo que haya en
+ * fx_diario; sin llamadas externas). Sirve para prellenar la tasa del día en que
+ * se hizo un giro, en la Liquidación.
+ */
+export async function tasasPorFecha(dias = 60): Promise<Record<string, number>> {
+  const rows = await consulta(
+    `select to_char(fecha,'YYYY-MM-DD') f, cop::float cop
+       from public.fx_diario where fecha >= current_date - $1::int`,
+    [dias],
+  );
+  const m: Record<string, number> = {};
+  for (const r of rows as Record<string, unknown>[]) m[String(r.f)] = Number(r.cop);
+  return m;
+}
+
 export async function historialFx(n = 3): Promise<PuntoFx[]> {
   const rows = await consulta(
     `select fecha, cop from public.fx_diario order by fecha desc limit $1`,

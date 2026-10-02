@@ -175,9 +175,10 @@ async function lineas(liqId: number): Promise<LineaLiq[]> {
   }));
 }
 
-export async function vistaLiquidacion(mes: string): Promise<VistaLiquidacion> {
+export async function vistaLiquidacion(mes: string, tasaOverride?: number): Promise<VistaLiquidacion> {
   const [liq, fx] = await Promise.all([obtenerLiquidacion(mes), tasaUsdCop()]);
-  const tasaCalculo = liq?.tasaCalculo ?? fx.cop;
+  // tasaOverride: fuerza TODO el cuadre a una tasa (ej. la real del giro al cerrar).
+  const tasaCalculo = (tasaOverride && tasaOverride > 500 ? tasaOverride : null) ?? liq?.tasaCalculo ?? fx.cop;
   const items = liq ? await lineas(liq.id) : [];
   const manuales = items.filter((i) => i.origen === "manual");
   const adicionales = items.filter((i) => i.origen === "adicional");

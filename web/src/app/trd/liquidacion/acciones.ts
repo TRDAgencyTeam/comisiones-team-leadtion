@@ -97,13 +97,15 @@ export async function cerrarLiquidacion(formData: FormData) {
   const mes = mesDe(formData);
   const id = await borrador(mes);
   if (id == null) return;
-  const v = await vistaLiquidacion(mes);
   const usd = parseMonto(formData.get("usdEnviado"));
   const tasaBanco = parseMonto(formData.get("tasaBanco"));
   const copRecibido = parseMonto(formData.get("copRecibido")) || Math.round(usd * tasaBanco);
   const comision = parseMonto(formData.get("comisionUsd")) || null;
   const fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(formData.get("fechaGiro") ?? "")) ? String(formData.get("fechaGiro")) : null;
   if (usd <= 0 || tasaBanco < 500) return;
+  // El cuadre (diezmo, Elite, USD → COP y total) se congela a la TASA REAL del
+  // giro (la de la sacada de Bank of America), para que la matemática sea exacta.
+  const v = await vistaLiquidacion(mes, tasaBanco);
 
   await consulta(`delete from public.liquidacion_item where liquidacion_id = $1 and origen = 'auto'`, [id]);
   let orden = 0;
