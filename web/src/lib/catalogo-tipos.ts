@@ -2,7 +2,7 @@
 export interface ServicioCatalogo {
   clave: string;
   nombre: string;
-  categoria: "agencia" | "leadtion" | "puntual";
+  categoria: "agencia" | "leadtion" | "puntual" | "ghl";
   recurrente: boolean;
   precioVariable: boolean;
   precioMes1: number | null;
@@ -20,5 +20,6 @@ export interface ServicioCatalogo {
 export const CATEGORIA_LABEL: Record<string, string> = {
   agencia: "Agencia",
   leadtion: "Leadtion",
+  ghl: "Leadtion · GHL",
   puntual: "Puntual (una vez)",
 };

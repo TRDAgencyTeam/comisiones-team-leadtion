@@ -248,7 +248,9 @@ export async function crearClienteCascada(formData: FormData) {
       soporteValor: null, apiEstado: "ninguna", apiValor: null, bono: null,
       precioMes1: precios[0] || null,
       reserva, fechaInicioReal: null,
-      valorLicencia: esAgencia ? 0 : 69,
+      // Solo un miembro Leadtion real (licencia propia, no agencia) lleva los $69.
+      // Servicios GHL / no-Leadtion NO tienen licencia.
+      valorLicencia: !esAgencia && (incluyeLeadtion || !!planLeadtion) ? 69 : 0,
       asignados, afiliadoRef, origen: "Madre / Clientes",
       // Miembro Leadtion si el plan de marketing lo incluye O si compró un servicio Leadtion.
       esLeadtion: incluyeLeadtion || !!planLeadtion,
