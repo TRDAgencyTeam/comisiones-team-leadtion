@@ -29,7 +29,8 @@ export function NuevoClienteModal({
 
   const srv = useMemo(() => catalogo.find((c) => c.clave === clave), [catalogo, clave]);
   const moneda = entidad === "COL" ? "COP" : "USD";
-  const nMeses = srv?.recurrente && !srv?.porPersona ? 4 : 1;
+  // Meses a cobrar = duración del contrato (min_meses) para recurrentes; 1 para el resto.
+  const nMeses = srv && srv.recurrente && !srv.porPersona ? Math.min(Math.max(srv.minMeses || 1, 1), 12) : 1;
 
   // Recalcula los precios por defecto al cambiar servicio / entidad / personas.
   useEffect(() => {
@@ -45,7 +46,8 @@ export function NuevoClienteModal({
       const totalUsd = (srv.precioPersona ?? 0) * Math.max(1, personas);
       setPrecios([conv(totalUsd)]);
     } else if (srv.recurrente) {
-      setPrecios([conv(srv.precioMes1), conv(srv.precioResto ?? srv.precioMes1), conv(srv.precioResto ?? srv.precioMes1), conv(srv.precioResto ?? srv.precioMes1)]);
+      const resto = conv(srv.precioResto ?? srv.precioMes1);
+      setPrecios(Array.from({ length: nMeses }, (_, i) => (i === 0 ? conv(srv.precioMes1) : resto)));
     } else {
       setPrecios([conv(srv.precioMes1)]);
     }
