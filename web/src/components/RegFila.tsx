@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { RenglonReg } from "@/lib/reg";
-import { calcularRetenciones, TARIFA_ICA_DEFAULT } from "@/lib/retenciones";
+import { calcularRetenciones, aportesSeguridadSocial, TARIFA_ICA_DEFAULT } from "@/lib/retenciones";
 import { guardarPago, toggleCheck, eliminarPago, enviarCorreoPago } from "@/app/trd/reg/acciones";
 import { IconoBorrar } from "@/components/Iconos";
 
@@ -88,7 +88,8 @@ export function RegFila({ r, mes, uvt }: { r: RenglonReg; mes: string; uvt: numb
   const [borrador, setBorrador] = useState("");
 
   const total = pagoFijo + adicional + r.comision;
-  const calc = calcularRetenciones({ valor: total, tarifaIcaMil: TARIFA_ICA_DEFAULT, uvt });
+  // Se asume que el colaborador paga su seguridad social: depura la base de renta.
+  const calc = calcularRetenciones({ valor: total, tarifaIcaMil: TARIFA_ICA_DEFAULT, aporteSalud: aportesSeguridadSocial(total), uvt });
   const rowId = `reg-${r.colaboradorId ?? "f"}-${r.pagoId ?? "new"}`;
 
   if (r.esFreelance) {

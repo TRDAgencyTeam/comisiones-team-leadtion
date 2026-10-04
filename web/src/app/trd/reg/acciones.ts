@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { soloAdmin } from "@/lib/sesion";
 import { primerDiaMes, uvtDeMes, recalcular, corteDeMes, comisionPendienteCop, tasaCorte } from "@/lib/reg";
-import { TARIFA_ICA_DEFAULT } from "@/lib/retenciones";
+import { TARIFA_ICA_DEFAULT, aportesSeguridadSocial } from "@/lib/retenciones";
 import { enviarEmail, plantillaCorreoPago, REPLY_TO } from "@/lib/email";
 import { pagarCiclo, deshacerCiclo } from "@/lib/comisiones-pago";
 import { flash } from "@/lib/flash";
@@ -39,18 +39,20 @@ export async function guardarPago(formData: FormData) {
 
   const total = pagoFijo + adicional + comision;
   const uvt = await uvtDeMes(mes);
-  const { reteIca, reteRenta, valorGirar } = recalcular(total, TARIFA_ICA_DEFAULT, 0, 0, uvt);
+  // Se asume que el colaborador paga su seguridad social (salud+pensión): depura la base de renta.
+  const aportes = aportesSeguridadSocial(total);
+  const { reteIca, reteRenta, valorGirar } = recalcular(total, TARIFA_ICA_DEFAULT, aportes, 0, uvt);
 
   await consulta(
     `insert into public.reg_pago
        (colaborador_id, tarifa_ica_mil, mes, pago_fijo, adicional, adicional_desc, comision,
-        valor_cuenta_cobro, rete_ica, rete_renta, valor_girar, actualizado_en)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, now())
+        valor_cuenta_cobro, rete_ica, rete_renta, valor_girar, aporte_salud, actualizado_en)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12, now())
      on conflict (colaborador_id, mes) where colaborador_id is not null
      do update set tarifa_ica_mil=$2, pago_fijo=$4, adicional=$5, adicional_desc=$6, comision=$7,
-        valor_cuenta_cobro=$8, rete_ica=$9, rete_renta=$10, valor_girar=$11, actualizado_en=now()`,
+        valor_cuenta_cobro=$8, rete_ica=$9, rete_renta=$10, valor_girar=$11, aporte_salud=$12, actualizado_en=now()`,
     [colaboradorId, TARIFA_ICA_DEFAULT, mes, pagoFijo, adicional, adicionalDesc, comision,
-     total, reteIca, reteRenta, valorGirar],
+     total, reteIca, reteRenta, valorGirar, aportes],
   );
 
   // El valor base de nómina "aprende" del pago fijo → pre-llena el próximo mes.
@@ -94,10 +96,11 @@ export async function toggleCheck(formData: FormData) {
         const pagoFijo = num(prow[0]?.pago_fijo), adicional = num(prow[0]?.adicional);
         const total = pagoFijo + adicional + comision;
         const uvt = await uvtDeMes(mesISO);
-        const { reteIca, reteRenta, valorGirar } = recalcular(total, TARIFA_ICA_DEFAULT, 0, 0, uvt);
+        const aportes = aportesSeguridadSocial(total);
+        const { reteIca, reteRenta, valorGirar } = recalcular(total, TARIFA_ICA_DEFAULT, aportes, 0, uvt);
         await consulta(
-          `update public.reg_pago set comision=$2, valor_cuenta_cobro=$3, rete_ica=$4, rete_renta=$5, valor_girar=$6, tasa_comision=$7, actualizado_en=now() where id=$1`,
-          [pagoId, comision, total, reteIca, reteRenta, valorGirar, comision > 0 ? t.cop : null],
+          `update public.reg_pago set comision=$2, valor_cuenta_cobro=$3, rete_ica=$4, rete_renta=$5, valor_girar=$6, tasa_comision=$7, aporte_salud=$8, actualizado_en=now() where id=$1`,
+          [pagoId, comision, total, reteIca, reteRenta, valorGirar, comision > 0 ? t.cop : null, aportes],
         );
         await pagarCiclo(colaboradorId, corte);
       } else {
@@ -126,14 +129,15 @@ export async function agregarFreelance(formData: FormData) {
   const identificacion = String(formData.get("identificacion") ?? "").replace(/[^\d]/g, "") || null;
 
   const uvt = await uvtDeMes(mes);
-  const { reteIca, reteRenta, valorGirar } = recalcular(pagoFijo, tarifa, 0, 0, uvt);
+  const aportes = aportesSeguridadSocial(pagoFijo);
+  const { reteIca, reteRenta, valorGirar } = recalcular(pagoFijo, tarifa, aportes, 0, uvt);
 
   await consulta(
     `insert into public.reg_pago
        (nombre_libre, identificacion, actividad_ciiu, tarifa_ica_mil, mes,
-        pago_fijo, valor_cuenta_cobro, rete_ica, rete_renta, valor_girar)
-     values ($1,$2,$3,$4,$5,$6,$6,$7,$8,$9)`,
-    [nombre, identificacion, actividad, tarifa, mes, pagoFijo, reteIca, reteRenta, valorGirar],
+        pago_fijo, valor_cuenta_cobro, rete_ica, rete_renta, valor_girar, aporte_salud)
+     values ($1,$2,$3,$4,$5,$6,$6,$7,$8,$9,$10)`,
+    [nombre, identificacion, actividad, tarifa, mes, pagoFijo, reteIca, reteRenta, valorGirar, aportes],
   );
   revalidatePath("/trd/reg");
   redirect(`/trd/reg?mes=${mes.slice(0, 7)}`);
