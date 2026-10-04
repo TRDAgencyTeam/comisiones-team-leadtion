@@ -28,6 +28,30 @@ export const UVT_POR_ANIO: Record<number, number> = {
   2026: 52374,
 };
 
+/** Salario mínimo mensual (SMMLV) por año, para el piso del IBC de seguridad social. */
+export const SMMLV_POR_ANIO: Record<number, number> = {
+  2025: 1423500,
+  2026: 1750905,
+};
+export function smmlvDeAnio(anio: number): number {
+  if (SMMLV_POR_ANIO[anio]) return SMMLV_POR_ANIO[anio]!;
+  const anios = Object.keys(SMMLV_POR_ANIO).map(Number).sort((a, b) => b - a);
+  return SMMLV_POR_ANIO[anios[0]!]!;
+}
+
+/**
+ * Aportes obligatorios de seguridad social de un INDEPENDIENTE sobre una cuenta
+ * de cobro: salud 12,5% + pensión 16% = 28,5% sobre el IBC. IBC = 40% del valor,
+ * con piso de 1 SMMLV y techo de 25 SMMLV. Se asume que la persona SIEMPRE los
+ * paga (es requisito para pagarle), así que depuran la base de renta.
+ */
+export function aportesSeguridadSocial(valor: number, anio = new Date().getFullYear()): number {
+  if (valor <= 0) return 0;
+  const smmlv = smmlvDeAnio(anio);
+  const ibc = Math.min(Math.max(valor * 0.4, smmlv), smmlv * 25);
+  return Math.round(ibc * 0.285);
+}
+
 /** UVT vigente para un año (cae al más reciente conocido si falta el año). */
 export function uvtDeAnio(anio: number): number {
   if (UVT_POR_ANIO[anio]) return UVT_POR_ANIO[anio]!;
