@@ -119,7 +119,7 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
 
   return (
     <main className="cf">
-      <ClientesHeader mes={mes} activo="egresos" tasa={r.tasa} />
+      <ClientesHeader mes={mes} activo="egresos" tasa={r.tasa} navMes />
       {sp.error && <p className="alerta">{decodeURIComponent(sp.error)}</p>}
 
       <nav className="cf-subtabs">

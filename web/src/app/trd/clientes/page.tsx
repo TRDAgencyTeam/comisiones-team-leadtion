@@ -92,7 +92,7 @@ export default async function ResumenPage({ searchParams }: { searchParams: Prom
 
   return (
     <main className="cf">
-      <ClientesHeader mes={mes} activo="resumen" tasa={r.tasa} />
+      <ClientesHeader mes={mes} activo="resumen" tasa={r.tasa} navMes />
 
       <div className="cf-kpis">
         <div className="cf-kpi hero">

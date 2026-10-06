@@ -90,7 +90,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
 
   return (
     <main className="cf">
-      <ClientesHeader mes={mes} activo="facturacion" tasa={v.tasa} />
+      <ClientesHeader mes={mes} activo="facturacion" tasa={v.tasa} navMes />
       {sp.error && <p className="alerta">{decodeURIComponent(sp.error)}</p>}
 
       <div className="cf-sec-head">

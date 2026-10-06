@@ -1134,6 +1134,15 @@ button.ck:hover { border-color: var(--muted); }
 .cf-eyebrow { font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
 .cf-title { font-size: 1.7rem; font-weight: 700; margin: 4px 0 0; }
 .cf-monthbox { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.cf-monthrow { display: inline-flex; align-items: center; gap: 8px; }
+.cf-mnav {
+  display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--panel); box-shadow: var(--shadow);
+  color: var(--text); font-size: 1.25rem; line-height: 1; text-decoration: none; cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+.cf-mnav:hover { border-color: var(--accent); color: var(--accent); }
+.cf-mnav.disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
 .cf-monthpick { display: inline-flex; align-items: center; gap: 8px; background: var(--panel);
   border: 1px solid var(--border); border-radius: 12px; padding: 7px 12px; box-shadow: var(--shadow); }
 .cf-monthpick input[type="month"] { border: none; background: transparent; color: var(--text);
