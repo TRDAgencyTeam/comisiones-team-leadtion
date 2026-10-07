@@ -109,7 +109,10 @@ export function netoUsdDeFactura(f: FacturaRow, tasa: number): number {
 export async function asegurarRecurrentesDelMes(mes: string): Promise<number> {
   const primer = primerDiaMes(mes);
   const anterior = primerDiaMes(mesAnteriorISO(mes));
-  const yaHay = await consulta(`select 1 from public.factura_mensual where mes = $1 limit 1`, [primer]);
+  // Solo se omite si YA hay recurrentes de este mes. Las facturas NO recurrentes
+  // (ej. cuotas materializadas en meses futuros) no deben impedir generar los
+  // recurrentes del mes. Una vez generados, el guard (recurrente=true) evita repetir.
+  const yaHay = await consulta(`select 1 from public.factura_mensual where mes = $1 and recurrente = true limit 1`, [primer]);
   if (yaHay.length > 0) return 0;
   // Clona los recurrentes del mes anterior. mes_contrato +1; si supera el mínimo
   // del contrato (catálogo) justo en el mes siguiente → estado 'por_confirmar'

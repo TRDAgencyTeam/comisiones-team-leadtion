@@ -18,6 +18,12 @@ const txt = (v: FormDataEntryValue | null): string | null => {
   const s = String(v ?? "").trim();
   return s === "" ? null : s;
 };
+/** Suma `d` meses a un "YYYY-MM" (o "YYYY-MM-..") y devuelve "YYYY-MM". */
+const sumarMesISO = (mes: string, d: number): string => {
+  const [a, m] = mes.slice(0, 7).split("-").map(Number);
+  const x = new Date(a!, (m! - 1) + d, 1);
+  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}`;
+};
 
 function parse(formData: FormData) {
   const entidad = String(formData.get("entidad") ?? "LLC") === "COL" ? "COL" : "LLC";
@@ -180,7 +186,8 @@ export async function crearClienteCascada(formData: FormData) {
   const medio = txt(formData.get("medio")) ?? (entidad === "COL" ? "bancolombia" : "stripe");
   const estado = String(formData.get("estado") ?? "por_facturar");
 
-  const precios = [1, 2, 3, 4].map((i) => n(formData.get(`precioMes${i}`)));
+  const cuotasN = Math.min(Math.max(Number(formData.get("cuotas")) || 1, 1), 12);
+  const precios = Array.from({ length: Math.max(4, cuotasN) }, (_, i) => n(formData.get(`precioMes${i + 1}`)));
 
   // Deriva reglas del catálogo (no confiamos en flags del cliente).
   const cat = await consulta(
@@ -258,31 +265,53 @@ export async function crearClienteCascada(formData: FormData) {
     clienteId = await crearClienteCompleto(datos);
   }
 
-  // Primera factura del mes (facturado = precio mes 1; desglose con los 4 meses).
-  const facturado = precios[0] ?? 0;
   const personas = Number(formData.get("personas") ?? 0);
-  const desglose = personas > 0
-    ? `${personas} personas × $${Math.round((facturado || 0) / personas)}`
-    : (precios.filter((p) => p > 0).map((p, i) => `$${p} (mes ${i + 1})`).join(" · ") || null);
   const ivaPct = entidad === "COL" ? 19 : 0;
   const tasaVal = entidad === "COL" ? (await tasaUsdCop()).cop : null;
-  const facRows = await consulta(
-    `insert into public.factura_mensual
-       (mes, entidad, cliente_id, cliente_nombre, reserva, recurrente, servicios, precio_desglose,
-        facturado, medio, iva_pct, estado, mes_contrato, servicio_clave, tasa)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,1,$13,$14) returning id`,
-    [mes, entidad, clienteId, nombreFactura, reserva, recurrente, nombreServicio, desglose,
-     facturado, medio, ivaPct, estado, servicioClave, tasaVal],
-  );
+  // Cuotas: pago único dividido en N meses (NO recurrente ni servicio con calendario
+  // Leadtion ni por persona). Se materializa una factura por cuota en meses consecutivos.
+  const materializarCuotas = cuotasN > 1 && !recurrente && !planLeadtion && personas <= 0;
+  const facturado = precios[0] ?? 0;
+
+  let facturaId: number | null = null;
+  if (materializarCuotas) {
+    for (let i = 0; i < cuotasN; i++) {
+      const mesCuota = sumarMesISO(mes, i); // "YYYY-MM"
+      const valorCuota = precios[i] ?? 0;
+      const rows = await consulta(
+        `insert into public.factura_mensual
+           (mes, entidad, cliente_id, cliente_nombre, reserva, recurrente, servicios, precio_desglose,
+            facturado, medio, iva_pct, estado, mes_contrato, servicio_clave, tasa)
+         values ($1,$2,$3,$4,$5,false,$6,$7,$8,$9,$10,$11,$12,$13,$14) returning id`,
+        [`${mesCuota}-01`, entidad, clienteId, nombreFactura, reserva, nombreServicio,
+         `Cuota ${i + 1} de ${cuotasN}`, valorCuota, medio, ivaPct,
+         i === 0 ? estado : "por_facturar", i + 1, servicioClave, tasaVal],
+      );
+      if (i === 0) facturaId = rows[0]?.id != null ? Number(rows[0]!.id) : null;
+    }
+  } else {
+    const desglose = personas > 0
+      ? `${personas} personas × $${Math.round((facturado || 0) / personas)}`
+      : (precios.filter((p) => p > 0).map((p, i) => `$${p} (mes ${i + 1})`).join(" · ") || null);
+    const facRows = await consulta(
+      `insert into public.factura_mensual
+         (mes, entidad, cliente_id, cliente_nombre, reserva, recurrente, servicios, precio_desglose,
+          facturado, medio, iva_pct, estado, mes_contrato, servicio_clave, tasa)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,1,$13,$14) returning id`,
+      [mes, entidad, clienteId, nombreFactura, reserva, recurrente, nombreServicio, desglose,
+       facturado, medio, ivaPct, estado, servicioClave, tasaVal],
+    );
+    facturaId = facRows[0]?.id != null ? Number(facRows[0]!.id) : null;
+  }
   await registrarCostoTercerizacion(mes, servicioClave, personas);
 
   // Comisión del equipo comercial: 10% de la venta neta, SOLO si es cliente NUEVO
-  // y el admin marcó al comercial. Una vez (sobre esta primera factura).
-  const facturaId = facRows[0]?.id != null ? Number(facRows[0]!.id) : null;
+  // y el admin marcó al comercial. Una vez, sobre el TOTAL de la venta (todas las cuotas).
+  const ventaNeta = materializarCuotas ? precios.slice(0, cuotasN).reduce((s, p) => s + (p || 0), 0) : facturado;
   if (esClienteNuevo && comisionaComercial && facturaId && comercialIds.length && mes.slice(0, 7) >= COMERCIAL_DESDE) {
     for (const colId of comercialIds) {
       await registrarComisionComercial({
-        clienteId, facturaId, colaboradorId: colId, mes: mes.slice(0, 7), facturado, medio,
+        clienteId, facturaId, colaboradorId: colId, mes: mes.slice(0, 7), facturado: ventaNeta, medio,
       });
     }
     revalidatePath("/comercial");

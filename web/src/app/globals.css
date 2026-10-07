@@ -1375,6 +1375,12 @@ input[type="month"]::-webkit-calendar-picker-indicator { cursor: pointer; }
 .cf-seg input { display: none; }
 .cf-seg input:checked + span { border-color: var(--accent); background: var(--accent-soft); color: var(--text); }
 .cf-autonote { display: flex; gap: 8px; background: var(--paid-soft); color: var(--paid); border-radius: 11px; padding: 10px 13px; font-size: 0.82rem; font-weight: 600; }
+.cf-price-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+.cf-cuotas-ctrl { display: inline-flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--muted); }
+.cf-cuotas-ctrl b { color: var(--text); min-width: 14px; text-align: center; font-variant-numeric: tabular-nums; }
+.cf-cuotas-ctrl button { width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel); color: var(--text); font-size: 1.05rem; line-height: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.cf-cuotas-ctrl button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.cf-cuotas-ctrl button:disabled { opacity: 0.4; cursor: not-allowed; }
 .cf-price-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .cf-price-grid .pc { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 8px; }
 .cf-price-grid .pc label { font-size: 0.62rem; color: var(--muted); font-weight: 700; text-transform: uppercase; }

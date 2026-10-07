@@ -25,12 +25,20 @@ export function NuevoClienteModal({
   const [clave, setClave] = useState(catalogo[0]?.clave ?? "");
   const [personas, setPersonas] = useState(1);
   const [precios, setPrecios] = useState<string[]>([]);
+  const [cuotas, setCuotas] = useState(1);
   const [existenteId, setExistenteId] = useState("");
 
   const srv = useMemo(() => catalogo.find((c) => c.clave === clave), [catalogo, clave]);
   const moneda = entidad === "COL" ? "COP" : "USD";
-  // Meses a cobrar = duración del contrato (min_meses) para recurrentes; 1 para el resto.
-  const nMeses = srv && srv.recurrente && !srv.porPersona ? Math.min(Math.max(srv.minMeses || 1, 1), 12) : 1;
+  // Los servicios Leadtion con calendario propio (Agente IA / Reactivación / Level Up)
+  // NO usan cuotas (se cobran por su calendario de membresía).
+  const esCalendarioLeadtion = ["agente_ai", "reactivacion", "level_up"].includes(clave);
+  // Pago único (no recurrente, no por persona, no calendario) → permite dividir en cuotas.
+  const permiteCuotas = !!srv && !srv.recurrente && !srv.porPersona && !esCalendarioLeadtion;
+  // Meses a cobrar: recurrente = contrato (min_meses); con cuotas = # de cuotas; resto = 1.
+  const nMeses = srv && srv.recurrente && !srv.porPersona
+    ? Math.min(Math.max(srv.minMeses || 1, 1), 12)
+    : permiteCuotas ? cuotas : 1;
 
   // Recalcula los precios por defecto al cambiar servicio / entidad / personas.
   useEffect(() => {
@@ -48,10 +56,14 @@ export function NuevoClienteModal({
     } else if (srv.recurrente) {
       const resto = conv(srv.precioResto ?? srv.precioMes1);
       setPrecios(Array.from({ length: nMeses }, (_, i) => (i === 0 ? conv(srv.precioMes1) : resto)));
+    } else if (permiteCuotas && cuotas > 1) {
+      // Divide el precio del servicio en N cuotas iguales (editables).
+      const per = srv.precioMes1 != null ? srv.precioMes1 / cuotas : null;
+      setPrecios(Array.from({ length: cuotas }, () => conv(per)));
     } else {
       setPrecios([conv(srv.precioMes1)]);
     }
-  }, [clave, entidad, personas, srv, tasa]);
+  }, [clave, entidad, personas, srv, tasa, cuotas, permiteCuotas, nMeses]);
 
   // Bloquea el scroll del fondo mientras el popup está abierto.
   useEffect(() => {
@@ -113,7 +125,7 @@ export function NuevoClienteModal({
 
                 <div className="cf-f">
                   <label>Servicio</label>
-                  <select value={clave} onChange={(e) => { const v = e.target.value; setClave(v); setPersonas(catalogo.find((c) => c.clave === v)?.unidad === "hora" ? 3 : 1); }}>
+                  <select value={clave} onChange={(e) => { const v = e.target.value; setClave(v); setCuotas(1); setPersonas(catalogo.find((c) => c.clave === v)?.unidad === "hora" ? 3 : 1); }}>
                     {Object.entries(grupos).map(([cat, items]) => (
                       <optgroup key={cat} label={CATEGORIA_LABEL[cat] ?? cat}>
                         {items.map((i) => <option key={i.clave} value={i.clave}>{i.nombre}</option>)}
@@ -134,15 +146,27 @@ export function NuevoClienteModal({
                 )}
 
                 <div className="cf-f">
-                  <label>{srv?.precioVariable ? `Precio (${moneda}) — este cliente` : srv?.porPersona ? `Total (${moneda}) — editable` : `Precio por mes (${moneda}${moneda === "COP" ? " antes de IVA" : ""}) — editable`}</label>
-                  <div className="cf-price-grid" style={{ gridTemplateColumns: `repeat(${Math.min(nMeses, precios.length || 1)}, 1fr)` }}>
+                  <input type="hidden" name="cuotas" value={permiteCuotas ? cuotas : nMeses} />
+                  <div className="cf-price-head">
+                    <label style={{ margin: 0 }}>{srv?.precioVariable && cuotas <= 1 ? `Precio (${moneda}) — este cliente` : srv?.porPersona ? `Total (${moneda}) — editable` : `Precio por mes (${moneda}${moneda === "COP" ? " antes de IVA" : ""}) — editable`}</label>
+                    {permiteCuotas && (
+                      <div className="cf-cuotas-ctrl">
+                        <span>Cuotas</span>
+                        <button type="button" onClick={() => setCuotas((n) => Math.max(1, n - 1))} aria-label="Quitar cuota" disabled={cuotas <= 1}>−</button>
+                        <b>{cuotas}</b>
+                        <button type="button" onClick={() => setCuotas((n) => Math.min(12, n + 1))} aria-label="Agregar cuota" disabled={cuotas >= 12}>+</button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="cf-price-grid" style={{ gridTemplateColumns: `repeat(${Math.min(nMeses, Math.max(precios.length, 1), 4)}, 1fr)` }}>
                     {Array.from({ length: nMeses }).map((_, i) => (
                       <div className="pc" key={i}>
-                        <label>{srv?.porPersona ? "Total" : `Mes ${i + 1}`}</label>
+                        <label>{srv?.porPersona ? "Total" : permiteCuotas && cuotas > 1 ? `Cuota ${i + 1}` : nMeses > 1 ? `Mes ${i + 1}` : "Precio"}</label>
                         <input name={`precioMes${i + 1}`} inputMode="decimal" value={precios[i] ?? ""} onChange={(e) => setPrecio(i, formatoMonto(e.target.value, moneda !== "COP"))} placeholder={srv?.precioVariable ? "—" : ""} />
                       </div>
                     ))}
                   </div>
+                  {permiteCuotas && cuotas > 1 && <span className="cf-hint">Se facturará una cuota por mes ({cuotas} meses), empezando este mes. Edita cada cuota si el valor negociado es distinto.</span>}
                   {srv?.precioVariable && <span className="cf-hint">Valor variable: escribe el acordado con el cliente.</span>}
                   {entidad === "COL" && (
                     <span className="cf-hint">
