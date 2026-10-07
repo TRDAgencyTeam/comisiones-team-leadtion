@@ -1112,19 +1112,6 @@ button.ck:hover { border-color: var(--muted); }
 .acc-item { display: flex; flex-direction: column; gap: 5px; max-width: 270px; }
 .acc-help { font-size: 0.75rem; color: var(--muted); line-height: 1.35; }
 
-/* =============================================================================
-   Fix PLATAFORMA-WIDE: ícono del selector de fecha/mes invisible en oscuro.
-   ============================================================================= */
-@media (prefers-color-scheme: dark) {
-:root:not([data-theme="light"]) input[type="date"]::-webkit-calendar-picker-indicator, :root:not([data-theme="light"]) input[type="month"]::-webkit-calendar-picker-indicator {
-    filter: invert(1) brightness(1.6);
-    cursor: pointer;
-  }
-}
-:root[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator, :root[data-theme="dark"] input[type="month"]::-webkit-calendar-picker-indicator {
-    filter: invert(1) brightness(1.6);
-    cursor: pointer;
-  }
 
 /* =============================================================================
    Clientes / Facturación (rediseño madre) — prefijo .cf-
@@ -1153,16 +1140,26 @@ button.ck:hover { border-color: var(--muted); }
 .cf-rate { font-size: 0.76rem; color: var(--muted); }
 .cf-rate b { color: var(--text); font-variant-numeric: tabular-nums; }
 
-/* Icono nativo del selector de fecha/mes: en modo oscuro el glifo es oscuro y no
- * se ve. Se invierte a blanco. Aplica en TODA la app (date y month). */
+/* Icono nativo del selector de fecha/mes: en modo oscuro el glifo por defecto no
+ * contrasta, así que se reemplaza por un SVG blanco (no se toca color-scheme, así
+ * el calendario emergente sigue en tema oscuro). En modo claro se deja el icono
+ * por defecto. Aplica a TODA la app (date y month). */
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="month"]::-webkit-calendar-picker-indicator { cursor: pointer; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) input[type="date"]::-webkit-calendar-picker-indicator,
-  :root:not([data-theme="light"]) input[type="month"]::-webkit-calendar-picker-indicator { filter: invert(1) brightness(1.8); }
+  :root:not([data-theme="light"]) input[type="month"]::-webkit-calendar-picker-indicator {
+    filter: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: center; background-size: 16px 16px; opacity: 1;
+  }
 }
 :root[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
-:root[data-theme="dark"] input[type="month"]::-webkit-calendar-picker-indicator { filter: invert(1) brightness(1.8); }
+:root[data-theme="dark"] input[type="month"]::-webkit-calendar-picker-indicator {
+  filter: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: center; background-size: 16px 16px; opacity: 1;
+}
 
 .cf-tabs { display: flex; gap: 4px; margin: 18px 0 4px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
 .cf-tab { padding: 10px 16px; font-size: 0.9rem; font-weight: 600; color: var(--muted);
