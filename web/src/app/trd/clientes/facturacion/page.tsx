@@ -81,7 +81,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
   const recLLC = v.recurrentes.filter((f) => f.entidad === "LLC");
   const recCOL = v.recurrentes.filter((f) => f.entidad === "COL");
   const otrosTotal = otros.reduce((s, o) => s + o.valorUsd, 0);
-  const lineas = await lineasDeFacturas([...v.recurrentes, ...v.delMomento]);
+  const lineas = await lineasDeFacturas([...v.recurrentes, ...v.enCuotas, ...v.delMomento]);
   // Colombia: lo que se cobra al cliente vs. lo que es ingreso (antes de IVA → USD).
   const totCOL = recCOL.filter((f) => f.estado !== "anulado").reduce((t, f) => {
     const c = calcCOL(f.facturado, f.ivaPct, f.tasa ?? v.tasa);
@@ -115,6 +115,13 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
 
       <div className="cf-sec-head"><h2>Servicios del momento <span className="count">{v.delMomento.length}</span></h2></div>
       <Tabla filas={v.delMomento} tasa={v.tasa} entidad="LLC" lineas={lineas} />
+
+      {v.enCuotas.length > 0 && (
+        <>
+          <div className="cf-sec-head"><h2>En cuotas (planes en pagos) <span className="count">{v.enCuotas.length}</span></h2></div>
+          <Tabla filas={v.enCuotas} tasa={v.tasa} entidad="LLC" lineas={lineas} />
+        </>
+      )}
 
       <div className="cf-sec-head">
         <h2>Otros ingresos del mes <span className="count">{usd(otrosTotal)}</span></h2>

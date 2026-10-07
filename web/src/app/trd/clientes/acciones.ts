@@ -281,8 +281,8 @@ export async function crearClienteCascada(formData: FormData) {
       const rows = await consulta(
         `insert into public.factura_mensual
            (mes, entidad, cliente_id, cliente_nombre, reserva, recurrente, servicios, precio_desglose,
-            facturado, medio, iva_pct, estado, mes_contrato, servicio_clave, tasa)
-         values ($1,$2,$3,$4,$5,false,$6,$7,$8,$9,$10,$11,$12,$13,$14) returning id`,
+            facturado, medio, iva_pct, estado, mes_contrato, servicio_clave, tasa, en_cuotas)
+         values ($1,$2,$3,$4,$5,false,$6,$7,$8,$9,$10,$11,$12,$13,$14,true) returning id`,
         [`${mesCuota}-01`, entidad, clienteId, nombreFactura, reserva, nombreServicio,
          `Cuota ${i + 1} de ${cuotasN}`, valorCuota, medio, ivaPct,
          i === 0 ? estado : "por_facturar", i + 1, servicioClave, tasaVal],

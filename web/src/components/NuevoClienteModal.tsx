@@ -125,7 +125,16 @@ export function NuevoClienteModal({
 
                 <div className="cf-f">
                   <label>Servicio</label>
-                  <select value={clave} onChange={(e) => { const v = e.target.value; setClave(v); setCuotas(1); setPersonas(catalogo.find((c) => c.clave === v)?.unidad === "hora" ? 3 : 1); }}>
+                  <select value={clave} onChange={(e) => {
+                    const v = e.target.value; setClave(v);
+                    const s = catalogo.find((c) => c.clave === v);
+                    // Planes en cuotas (no recurrente, no por persona, no calendario) con contrato
+                    // mínimo > 1 arrancan con ese # de cuotas (Reactivación GHL = 3, "(2 cuotas)" = 2).
+                    const esCal = ["agente_ai", "reactivacion", "level_up"].includes(v);
+                    const def = s && !s.recurrente && !s.porPersona && !esCal && s.minMeses > 1 ? s.minMeses : 1;
+                    setCuotas(def);
+                    setPersonas(s?.unidad === "hora" ? 3 : 1);
+                  }}>
                     {Object.entries(grupos).map(([cat, items]) => (
                       <optgroup key={cat} label={CATEGORIA_LABEL[cat] ?? cat}>
                         {items.map((i) => <option key={i.clave} value={i.clave}>{i.nombre}</option>)}

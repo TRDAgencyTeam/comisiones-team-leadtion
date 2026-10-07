@@ -25,6 +25,7 @@ export interface FacturaRow {
   mesContrato: number | null;
   servicioClave: string | null;
   tasa: number | null;
+  enCuotas: boolean;
 }
 
 /** Catálogo de servicios (para el modal Nuevo cliente y la vista). */
@@ -91,6 +92,7 @@ function mapRow(r: Record<string, unknown>): FacturaRow {
     mesContrato: r.mes_contrato != null ? Number(r.mes_contrato) : null,
     servicioClave: (r.servicio_clave as string) ?? null,
     tasa: r.tasa != null ? Number(r.tasa) : null,
+    enCuotas: Boolean(r.en_cuotas),
   };
 }
 
@@ -182,6 +184,7 @@ export async function membresiasLeadtionDelMes(mes: string): Promise<MembresiasR
 export interface VistaFacturacion {
   tasa: number;
   recurrentes: FacturaRow[];
+  enCuotas: FacturaRow[];
   delMomento: FacturaRow[];
   leadtion: ServicioLeadtion[];
   membresias: MembresiasResumen;
@@ -203,8 +206,9 @@ export async function vistaFacturacion(mes: string): Promise<VistaFacturacion> {
   ]);
   const filas = rows.map(mapRow);
   const tasa = fx.cop;
-  const recurrentes = filas.filter((f) => f.recurrente);
-  const delMomento = filas.filter((f) => !f.recurrente);
+  const enCuotas = filas.filter((f) => f.enCuotas);
+  const recurrentes = filas.filter((f) => f.recurrente && !f.enCuotas);
+  const delMomento = filas.filter((f) => !f.recurrente && !f.enCuotas);
 
   let agenciaNetoUsd = 0, pasarelaUsd = 0, pendientes = 0;
   for (const f of filas) {
@@ -216,7 +220,7 @@ export async function vistaFacturacion(mes: string): Promise<VistaFacturacion> {
   const leadtionServiciosUsd = leadtion.reduce((s, x) => s + x.valorUsd, 0);
   const r2 = (n: number) => Math.round(n * 100) / 100;
   return {
-    tasa, recurrentes, delMomento, leadtion, membresias,
+    tasa, recurrentes, enCuotas, delMomento, leadtion, membresias,
     totales: {
       agenciaNetoUsd: r2(agenciaNetoUsd), pasarelaUsd: r2(pasarelaUsd), leadtionServiciosUsd: r2(leadtionServiciosUsd),
       ingresosUsd: r2(agenciaNetoUsd + leadtionServiciosUsd + membresias.totalUsd), pendientes,
