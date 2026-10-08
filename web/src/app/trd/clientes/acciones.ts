@@ -208,6 +208,15 @@ export async function crearClienteCascada(formData: FormData) {
   const reserva = Boolean(c?.aplica_reserva) && String(formData.get("reserva")) === "1";
   const planLeadtion = ["agente_ai", "reactivacion", "level_up"].includes(servicioClave) ? servicioClave : null;
 
+  // Cuotas: pago único dividido en N meses. Aplica a cualquier pago único EXCEPTO
+  // Reactivación (que ya tiene su esquema de 3 pagos) y por-persona. Agente IA /
+  // Level Up SÍ admiten cuotas y conservan su membresía (el precio del servicio
+  // para el calendario de membresía = el TOTAL de la venta, no la 1ª cuota).
+  const personas = Number(formData.get("personas") ?? 0);
+  const materializarCuotas = cuotasN > 1 && !recurrente && personas <= 0 && servicioClave !== "reactivacion";
+  const totalVenta = precios.slice(0, cuotasN).reduce((s, p) => s + (p || 0), 0);
+  const precioServicio = materializarCuotas ? totalVenta : (precios[0] || 0);
+
   // ¿Reutilizar un cliente que ya existe? (evita duplicados como el caso Liliana).
   // 1) si el usuario eligió uno del buscador; 2) si el nombre normalizado coincide.
   let existenteId = Number(formData.get("clienteExistenteId")) || null;
@@ -241,7 +250,7 @@ export async function crearClienteCascada(formData: FormData) {
     if (incluyeLeadtion) await consulta(`update public.clientes set es_leadtion = true where id = $1`, [clienteId]);
     // Si el servicio elegido es un servicio Leadtion (Agente IA / Reactivación / Level Up),
     // regístralo en Membresías para que corra su flujo de cobros y refleje el plan.
-    if (planLeadtion) await registrarServicioLeadtion(clienteId, planLeadtion, mes, precios[0] || 0);
+    if (planLeadtion) await registrarServicioLeadtion(clienteId, planLeadtion, mes, precioServicio);
     for (const colId of asignados) {
       await consulta(`insert into public.cliente_colaboradores (cliente_id, colaborador_id) values ($1,$2) on conflict do nothing`, [clienteId, colId]);
     }
@@ -253,7 +262,7 @@ export async function crearClienteCascada(formData: FormData) {
       tipoCliente: planLeadtion ? "servicio" : esAgencia ? "agencia" : "estandar",
       esAgencia, planTipo: planLeadtion,
       soporteValor: null, apiEstado: "ninguna", apiValor: null, bono: null,
-      precioMes1: precios[0] || null,
+      precioMes1: precioServicio || null,
       reserva, fechaInicioReal: null,
       // Solo un miembro Leadtion real (licencia propia, no agencia) lleva los $69.
       // Servicios GHL / no-Leadtion NO tienen licencia.
@@ -265,13 +274,11 @@ export async function crearClienteCascada(formData: FormData) {
     clienteId = await crearClienteCompleto(datos);
   }
 
-  const personas = Number(formData.get("personas") ?? 0);
   const ivaPct = entidad === "COL" ? 19 : 0;
   const tasaVal = entidad === "COL" ? (await tasaUsdCop()).cop : null;
-  // Cuotas: pago único dividido en N meses (NO recurrente ni servicio con calendario
-  // Leadtion ni por persona). Se materializa una factura por cuota en meses consecutivos.
-  const materializarCuotas = cuotasN > 1 && !recurrente && !planLeadtion && personas <= 0;
   const facturado = precios[0] ?? 0;
+  const pre = entidad === "COL" ? "$" : "US$";
+  const fmtTot = `${pre}${Math.round(totalVenta).toLocaleString("es-CO")}`;
 
   let facturaId: number | null = null;
   if (materializarCuotas) {
@@ -284,7 +291,7 @@ export async function crearClienteCascada(formData: FormData) {
             facturado, medio, iva_pct, estado, mes_contrato, servicio_clave, tasa, en_cuotas)
          values ($1,$2,$3,$4,$5,false,$6,$7,$8,$9,$10,$11,$12,$13,$14,true) returning id`,
         [`${mesCuota}-01`, entidad, clienteId, nombreFactura, reserva, nombreServicio,
-         `Cuota ${i + 1} de ${cuotasN}`, valorCuota, medio, ivaPct,
+         `Cuota ${i + 1} de ${cuotasN} · total ${fmtTot}`, valorCuota, medio, ivaPct,
          i === 0 ? estado : "por_facturar", i + 1, servicioClave, tasaVal],
       );
       if (i === 0) facturaId = rows[0]?.id != null ? Number(rows[0]!.id) : null;
@@ -307,7 +314,7 @@ export async function crearClienteCascada(formData: FormData) {
 
   // Comisión del equipo comercial: 10% de la venta neta, SOLO si es cliente NUEVO
   // y el admin marcó al comercial. Una vez, sobre el TOTAL de la venta (todas las cuotas).
-  const ventaNeta = materializarCuotas ? precios.slice(0, cuotasN).reduce((s, p) => s + (p || 0), 0) : facturado;
+  const ventaNeta = materializarCuotas ? totalVenta : facturado;
   if (esClienteNuevo && comisionaComercial && facturaId && comercialIds.length && mes.slice(0, 7) >= COMERCIAL_DESDE) {
     for (const colId of comercialIds) {
       await registrarComisionComercial({

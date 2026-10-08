@@ -46,8 +46,11 @@ function Tabla({ filas, tasa, entidad, lineas }: { filas: FacturaRow[]; tasa: nu
             return (
               <tr key={f.id} className={`fila-${f.estado}`}>
                 <td className="nom">{f.clienteNombre}<small>{f.reserva ? "reserva · " : ""}{f.medio ?? ""}</small></td>
-                <td className="srv"><ServiciosHover texto={f.servicios ?? "—"} lineas={lineas.get(f.id) ?? []} moneda={filaCOL ? "COP" : "USD"} total={f.facturado} ivaPct={filaCOL ? f.ivaPct : undefined} /></td>
-                {esLLC && <td>{f.mesContrato ? `mes ${f.mesContrato}` : "—"}</td>}
+                <td className="srv">
+                  <ServiciosHover texto={f.servicios ?? "—"} lineas={lineas.get(f.id) ?? []} moneda={filaCOL ? "COP" : "USD"} total={f.facturado} ivaPct={filaCOL ? f.ivaPct : undefined} />
+                  {f.enCuotas && f.precioDesglose && <small className="cf-cuota-sub">{f.precioDesglose}</small>}
+                </td>
+                {esLLC && <td>{f.enCuotas && f.mesContrato ? `Cuota ${f.mesContrato}` : f.mesContrato ? `mes ${f.mesContrato}` : "—"}</td>}
                 {esCOL
                   ? <><td className="r">{cop(f.facturado)}</td><td className="r cf-muted-num">{cop(col!.iva)}</td><td className="r">{cop(col!.copConIva)}</td></>
                   : <td className="r">{filaCOL ? cop(f.facturado) : usd(f.facturado)}</td>}

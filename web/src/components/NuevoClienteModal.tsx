@@ -30,11 +30,10 @@ export function NuevoClienteModal({
 
   const srv = useMemo(() => catalogo.find((c) => c.clave === clave), [catalogo, clave]);
   const moneda = entidad === "COL" ? "COP" : "USD";
-  // Los servicios Leadtion con calendario propio (Agente IA / Reactivación / Level Up)
-  // NO usan cuotas (se cobran por su calendario de membresía).
-  const esCalendarioLeadtion = ["agente_ai", "reactivacion", "level_up"].includes(clave);
-  // Pago único (no recurrente, no por persona, no calendario) → permite dividir en cuotas.
-  const permiteCuotas = !!srv && !srv.recurrente && !srv.porPersona && !esCalendarioLeadtion;
+  // Se puede dividir en cuotas si es pago único (no recurrente, no por persona) y
+  // no es Reactivación (que ya tiene su propio esquema de 3 pagos). Agente IA y
+  // Level Up SÍ admiten cuotas y conservan su membresía (licencia + soporte).
+  const permiteCuotas = !!srv && !srv.recurrente && !srv.porPersona && clave !== "reactivacion";
   // Meses a cobrar: recurrente = contrato (min_meses); con cuotas = # de cuotas; resto = 1.
   const nMeses = srv && srv.recurrente && !srv.porPersona
     ? Math.min(Math.max(srv.minMeses || 1, 1), 12)
