@@ -75,14 +75,32 @@ function Tabla({ filas, tasa, entidad, lineas }: { filas: FacturaRow[]; tasa: nu
   );
 }
 
-export default async function FacturacionPage({ searchParams }: { searchParams: Promise<{ mes?: string; error?: string }> }) {
+const ORDENES = ["reciente", "vieja", "monto_alto", "monto_bajo", "nombre"] as const;
+type Orden = typeof ORDENES[number];
+
+export default async function FacturacionPage({ searchParams }: { searchParams: Promise<{ mes?: string; error?: string; orden?: string }> }) {
   await soloAdmin();
   const sp = await searchParams;
   const mes = sp.mes && /^\d{4}-\d{2}$/.test(sp.mes) ? sp.mes : mesISO();
+  const orden: Orden = (ORDENES as readonly string[]).includes(sp.orden ?? "") ? (sp.orden as Orden) : "reciente";
   const [v, catalogo, opciones, otros, clientes, comerciales] = await Promise.all([vistaFacturacion(mes), catalogoServicios(), opcionesFormulario(), otrosIngresosDelMes(mes), clientesParaFactura(), comercialesActivos()]);
 
-  const recLLC = v.recurrentes.filter((f) => f.entidad === "LLC");
-  const recCOL = v.recurrentes.filter((f) => f.entidad === "COL");
+  // Ordena las facturas según la opción elegida (por fecha de factura, monto neto o nombre).
+  const ordenar = (arr: FacturaRow[]): FacturaRow[] => {
+    const a = [...arr];
+    const net = (f: FacturaRow) => netoUsdDeFactura(f, v.tasa);
+    if (orden === "reciente") a.sort((x, y) => (y.fechaFactura ?? "").localeCompare(x.fechaFactura ?? ""));
+    else if (orden === "vieja") a.sort((x, y) => (x.fechaFactura ?? "9999-99-99").localeCompare(y.fechaFactura ?? "9999-99-99"));
+    else if (orden === "monto_alto") a.sort((x, y) => net(y) - net(x));
+    else if (orden === "monto_bajo") a.sort((x, y) => net(x) - net(y));
+    else a.sort((x, y) => x.clienteNombre.localeCompare(y.clienteNombre));
+    return a;
+  };
+
+  const recLLC = ordenar(v.recurrentes.filter((f) => f.entidad === "LLC"));
+  const recCOL = ordenar(v.recurrentes.filter((f) => f.entidad === "COL"));
+  const enCuotasOrd = ordenar(v.enCuotas);
+  const delMomentoOrd = ordenar(v.delMomento);
   const otrosTotal = otros.reduce((s, o) => s + o.valorUsd, 0);
   const lineas = await lineasDeFacturas([...v.recurrentes, ...v.enCuotas, ...v.delMomento]);
   // Colombia: lo que se cobra al cliente vs. lo que es ingreso (antes de IVA → USD).
@@ -98,7 +116,19 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
 
       <div className="cf-sec-head">
         <h2>Clientes recurrentes · USA (LLC) <span className="count">{recLLC.length}</span></h2>
-        <div style={{ display: "inline-flex", gap: 10 }}>
+        <div style={{ display: "inline-flex", gap: 10, alignItems: "center" }}>
+          <form method="get" className="cf-orden">
+            <input type="hidden" name="mes" value={mes} />
+            <label>Ordenar</label>
+            <select name="orden" defaultValue={orden}>
+              <option value="reciente">Fecha factura · más reciente</option>
+              <option value="vieja">Fecha factura · más vieja</option>
+              <option value="monto_alto">Monto · mayor a menor</option>
+              <option value="monto_bajo">Monto · menor a mayor</option>
+              <option value="nombre">Nombre (A–Z)</option>
+            </select>
+            <button type="submit" className="cf-btn cf-btn-ghost">Ver</button>
+          </form>
           <NuevoClienteModal mes={mes} tasa={v.tasa} catalogo={catalogo} afiliados={opciones.afiliados} colaboradores={opciones.colaboradores} comerciales={comerciales} clientes={clientes} />
         </div>
       </div>
@@ -115,13 +145,13 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
       )}
       <Tabla filas={recCOL} tasa={v.tasa} entidad="COL" lineas={lineas} />
 
-      <div className="cf-sec-head"><h2>Servicios del momento <span className="count">{v.delMomento.length}</span></h2></div>
-      <Tabla filas={v.delMomento} tasa={v.tasa} entidad="LLC" lineas={lineas} />
+      <div className="cf-sec-head"><h2>Servicios del momento <span className="count">{delMomentoOrd.length}</span></h2></div>
+      <Tabla filas={delMomentoOrd} tasa={v.tasa} entidad="LLC" lineas={lineas} />
 
-      {v.enCuotas.length > 0 && (
+      {enCuotasOrd.length > 0 && (
         <>
-          <div className="cf-sec-head"><h2>En cuotas (planes en pagos) <span className="count">{v.enCuotas.length}</span></h2></div>
-          <Tabla filas={v.enCuotas} tasa={v.tasa} entidad="LLC" lineas={lineas} />
+          <div className="cf-sec-head"><h2>En cuotas (planes en pagos) <span className="count">{enCuotasOrd.length}</span></h2></div>
+          <Tabla filas={enCuotasOrd} tasa={v.tasa} entidad="LLC" lineas={lineas} />
         </>
       )}
 

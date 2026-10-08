@@ -25,16 +25,12 @@ export default async function FichaClientePage({ params }: { params: Promise<{ i
   const [fx, historial, catalogo, items] = await Promise.all([tasaUsdCop(), historialCliente(factura.clienteNombre), catalogoServicios(), itemsDeFactura(factura)]);
   const tasa = fx.cop;
   const mes = factura.mes;
-  const esLLC = factura.entidad === "LLC";
 
   const activos = historial.filter((f) => f.estado !== "anulado");
   const ltvNeto = activos.reduce((s, f) => s + netoUsdDeFactura(f, tasa), 0);
   const meses = new Set(historial.map((f) => f.mes)).size;
   const servicios = Array.from(new Set(historial.map((f) => f.servicios).filter(Boolean))) as string[];
   const ultimoPago = historial.map((f) => f.fechaPago).filter(Boolean).sort().at(-1) ?? null;
-
-  const cat = catalogo.find((c) => c.clave === factura.servicioClave);
-  const mostrarReserva = Boolean(cat?.aplicaReserva) || factura.reserva;
 
   return (
     <main className="cf">
@@ -92,18 +88,17 @@ export default async function FichaClientePage({ params }: { params: Promise<{ i
           <input type="hidden" name="servicios" value={factura.servicios ?? ""} />
           <input type="hidden" name="precioDesglose" value={factura.precioDesglose ?? ""} />
           <input type="hidden" name="facturado" value={factura.facturado} />
+          {/* El total, el estado y la fecha de pago NO se editan aquí (el estado se cambia en la
+              lista; el total lo maneja el editor de servicios de arriba). Se preservan ocultos. */}
+          <input type="hidden" name="ivaPct" value={factura.ivaPct} />
+          <input type="hidden" name="fechaPago" value={factura.fechaPago ?? ""} />
+          <input type="hidden" name="estado" value={factura.estado} />
+          <input type="hidden" name="reserva" value={factura.reserva ? "1" : "0"} />
           <div className="cf-f"><label>Nombre del cliente</label><input name="clienteNombre" defaultValue={factura.clienteNombre} /></div>
           <div className="cf-price-grid" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
             <div className="cf-f"><label>Medio de pago</label><select name="medio" defaultValue={factura.medio ?? "stripe"}>{MEDIOS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}</select></div>
-            <div className="cf-f"><label>{esLLC ? "Total actual (USD)" : "Total actual (COP antes de IVA)"}</label><input value={esLLC ? usd(factura.facturado) : cop(factura.facturado)} disabled /></div>
+            <div className="cf-f"><label>Fecha de facturación</label><input type="date" name="fechaFactura" defaultValue={factura.fechaFactura ?? ""} /></div>
           </div>
-          {!esLLC && <div className="cf-f"><label>IVA %</label><input name="ivaPct" inputMode="decimal" defaultValue={factura.ivaPct} /></div>}
-          <div className="cf-price-grid" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
-            <div className="cf-f"><label>Fecha de factura</label><input type="date" name="fechaFactura" defaultValue={factura.fechaFactura ?? ""} /></div>
-            <div className="cf-f"><label>Fecha de pago</label><input type="date" name="fechaPago" defaultValue={factura.fechaPago ?? ""} /></div>
-          </div>
-          <div className="cf-f"><label>Estado</label><select name="estado" defaultValue={factura.estado}>{ESTADOS.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}</select></div>
-          {mostrarReserva && <div className="cf-f"><label style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="checkbox" name="reserva" value="1" defaultChecked={factura.reserva} style={{ width: "auto" }} /> Vino con reserva (servicio Leadtion)</label></div>}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
             <Link href={`/trd/clientes/facturacion?mes=${mes}`} className="cf-btn cf-btn-ghost">Cancelar</Link>
             <button type="submit" className="cf-btn cf-btn-primary">Guardar cambios</button>

@@ -1382,6 +1382,9 @@ input[type="month"]::-webkit-calendar-picker-indicator { cursor: pointer; }
 .cf-cuotas-ctrl button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 .cf-cuotas-ctrl button:disabled { opacity: 0.4; cursor: not-allowed; }
 .cf-cuota-sub { display: block; margin-top: 2px; font-size: 0.7rem; color: var(--accent); font-weight: 600; }
+.cf-orden { display: inline-flex; align-items: center; gap: 6px; }
+.cf-orden label { font-size: 0.76rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.cf-orden select { padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text); font-size: 0.85rem; font-family: inherit; }
 .cf-price-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .cf-price-grid .pc { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 8px; }
 .cf-price-grid .pc label { font-size: 0.62rem; color: var(--muted); font-weight: 700; text-transform: uppercase; }
