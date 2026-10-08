@@ -300,13 +300,17 @@ export async function crearClienteCascada(formData: FormData) {
     const desglose = personas > 0
       ? `${personas} personas × $${Math.round((facturado || 0) / personas)}`
       : (precios.filter((p) => p > 0).map((p, i) => `$${p} (mes ${i + 1})`).join(" · ") || null);
+    // Fee recurrente (mes 2 en adelante): lo que se cobrará al autogenerar los meses
+    // siguientes. Es la 2ª cuota del plan (ej. $897 del Plan Marketing), no el mes 1.
+    // Si no hay 2º valor, se mantiene el del mes 1 (planes de monto fijo).
+    const mrrVal = recurrente ? (precios[1] && precios[1] > 0 ? precios[1] : facturado) : null;
     const facRows = await consulta(
       `insert into public.factura_mensual
          (mes, entidad, cliente_id, cliente_nombre, reserva, recurrente, servicios, precio_desglose,
-          facturado, medio, iva_pct, estado, mes_contrato, servicio_clave, tasa)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,1,$13,$14) returning id`,
+          facturado, medio, iva_pct, estado, mes_contrato, servicio_clave, tasa, mrr)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,1,$13,$14,$15) returning id`,
       [mes, entidad, clienteId, nombreFactura, reserva, recurrente, nombreServicio, desglose,
-       facturado, medio, ivaPct, estado, servicioClave, tasaVal],
+       facturado, medio, ivaPct, estado, servicioClave, tasaVal, mrrVal],
     );
     facturaId = facRows[0]?.id != null ? Number(facRows[0]!.id) : null;
   }

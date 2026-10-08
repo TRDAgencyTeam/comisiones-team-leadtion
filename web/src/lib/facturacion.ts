@@ -124,7 +124,7 @@ export async function asegurarRecurrentesDelMes(mes: string): Promise<number> {
        (mes, entidad, cliente_id, cliente_nombre, mrr, reserva, recurrente, servicios, precio_desglose,
         facturado, medio, iva_pct, estado, mes_contrato, servicio_clave, fecha_factura)
      select $1, f.entidad, f.cliente_id, f.cliente_nombre, f.mrr, f.reserva, true, f.servicios, f.precio_desglose,
-        f.facturado, f.medio, f.iva_pct,
+        coalesce(nullif(f.mrr, 0), f.facturado), f.medio, f.iva_pct,
         case when coalesce(f.mes_contrato,1) + 1 = coalesce(sc.min_meses, 4) + 1
              then 'por_confirmar' else 'por_facturar' end,
         coalesce(f.mes_contrato,1) + 1, f.servicio_clave,
