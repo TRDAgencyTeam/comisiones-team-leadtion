@@ -202,8 +202,10 @@ export default async function LiquidacionPage({ searchParams }: { searchParams: 
           <thead><tr><th>Mes</th><th>Fecha giro</th><th className="r">USD enviados</th><th className="r">Tasa cálculo</th><th className="r">Tasa banco</th><th className="r">COP recibidos</th><th className="r">Total a bajar (COP)</th><th className="r">Saldo en Ebenezer (aprox.)</th><th>Estado</th></tr></thead>
           <tbody>
             {historial.map((h) => {
+              // Sin "a cubrir" (ej. meses históricos cargados a mano): no se muestra total ni saldo.
+              const tieneCubrir = h.copNecesario != null;
               const total = (h.copNecesario ?? 0) + (h.eliteCop ?? 0) + (h.copAdicional ?? 0);
-              const dif = h.copRecibido != null ? h.copRecibido - total : null;
+              const dif = tieneCubrir && h.copRecibido != null ? h.copRecibido - total : null;
               return (
                 <tr key={h.mes}>
                   <td className="nom"><a href={`/trd/liquidacion?mes=${h.mes}`} className="link-ver">{nombreMes(h.mes)}</a></td>
@@ -212,7 +214,7 @@ export default async function LiquidacionPage({ searchParams }: { searchParams: 
                   <td className="r cf-muted-num">{h.tasaCalculo ? cop(h.tasaCalculo) : "—"}</td>
                   <td className="r">{h.tasaBanco ? cop(h.tasaBanco) : "—"}</td>
                   <td className="r neto">{h.copRecibido != null ? cop(h.copRecibido) : "—"}</td>
-                  <td className="r">{h.estado === "cerrada" ? cop(total) : "—"}</td>
+                  <td className="r">{h.estado === "cerrada" && tieneCubrir ? cop(total) : "—"}</td>
                   <td className={`r ${dif != null && dif < 0 ? "liq-neg" : ""}`}>{dif != null ? cop(dif) : "—"}</td>
                   <td><span className={`cf-tag ${h.estado === "cerrada" ? "caja" : "util"}`}>{h.estado === "cerrada" ? "Cerrada" : "Borrador"}</span></td>
                 </tr>
