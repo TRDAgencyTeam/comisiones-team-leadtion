@@ -32,7 +32,7 @@ export function ServiciosHover({
 
   return (
     <span ref={ref} className="srv-hover" tabIndex={0} onMouseEnter={abrir} onMouseLeave={cerrar} onFocus={abrir} onBlur={cerrar}>
-      {texto}
+      <span className="srv-texto">{texto}</span>
       {pos && (
         <span className={`srv-pop${pos.arriba ? " arriba" : ""}`} role="tooltip" style={{ top: pos.top, left: pos.left }}>
           <span className="srv-pop-h">Servicios · {moneda}{esCOL ? " (antes de IVA)" : ""}</span>

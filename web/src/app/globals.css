@@ -1552,8 +1552,12 @@ input[type="month"]::-webkit-calendar-picker-indicator { cursor: pointer; }
 .trd-side .tema-toggle button.on { background: #6d5ac0; color: #fff; }
 
 /* Facturación: detalle de servicios al pasar el cursor */
-.srv-hover { cursor: help; border-bottom: 1px dashed color-mix(in srgb, var(--muted) 55%, transparent); outline: none; }
-.srv-hover:hover, .srv-hover:focus-visible { color: var(--accent); border-bottom-color: var(--accent); }
+.srv-hover { cursor: help; outline: none; }
+/* Texto del servicio: máx 4 líneas con "…" (el detalle va en el hover). */
+.srv-texto { display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+  border-bottom: 1px dashed color-mix(in srgb, var(--muted) 55%, transparent); }
+.srv-hover:hover, .srv-hover:focus-visible { color: var(--accent); }
+.srv-hover:hover .srv-texto, .srv-hover:focus-visible .srv-texto { border-bottom-color: var(--accent); }
 .srv-pop { position: fixed; z-index: 110; width: 300px; display: flex; flex-direction: column; gap: 2px; padding: 12px 14px;
   background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 14px;
   box-shadow: 0 16px 40px rgba(10, 10, 25, 0.28); font-size: 0.82rem; cursor: default; pointer-events: none;
