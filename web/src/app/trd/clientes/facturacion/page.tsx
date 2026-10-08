@@ -100,7 +100,6 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
         <h2>Clientes recurrentes · USA (LLC) <span className="count">{recLLC.length}</span></h2>
         <div style={{ display: "inline-flex", gap: 10 }}>
           <NuevoClienteModal mes={mes} tasa={v.tasa} catalogo={catalogo} afiliados={opciones.afiliados} colaboradores={opciones.colaboradores} comerciales={comerciales} clientes={clientes} />
-          <Link href={`/trd/clientes/nuevo?mes=${mes}`} className="cf-btn cf-btn-ghost">+ Nueva factura</Link>
         </div>
       </div>
       <Tabla filas={recLLC} tasa={v.tasa} entidad="LLC" lineas={lineas} />

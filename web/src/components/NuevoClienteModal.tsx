@@ -82,12 +82,12 @@ export function NuevoClienteModal({
 
   return (
     <>
-      <button type="button" className="cf-btn cf-btn-primary" onClick={() => setOpen(true)}>+ Nuevo cliente</button>
+      <button type="button" className="cf-btn cf-btn-primary" onClick={() => setOpen(true)}>+ Nueva factura</button>
       {open && (
         <div className="cf-scrim" onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>
           <div className="cf-modal">
             <div className="cf-modal-head">
-              <h3>Nuevo cliente</h3>
+              <h3>Nueva factura</h3>
               <button type="button" className="x" onClick={() => setOpen(false)}>✕</button>
             </div>
             <form action={async (fd) => { try { await crearClienteCascada(fd); } finally { setOpen(false); } }}>

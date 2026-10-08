@@ -56,10 +56,15 @@ function montoSuelto(s: string): number | null {
  * servicio va sin monto y el total es el de la factura.
  */
 export function lineasDesdeTexto(servicios: string | null, precioDesglose: string | null, facturado: number): LineaServicio[] {
-  const nombres = (servicios ?? "").split(" + ").map((x) => x.trim()).filter(Boolean);
+  const texto = (servicios ?? "").trim();
+  const nombres = texto.split(" + ").map((x) => x.trim()).filter(Boolean);
   if (nombres.length <= 1) return [{ concepto: nombres[0] ?? "Servicio", monto: facturado }];
   const montos = (precioDesglose ?? "").split(" + ").map(montoSuelto);
   const cuadra = montos.length === nombres.length && montos.every((m) => m != null)
     && Math.abs(montos.reduce((s, m) => s + (m ?? 0), 0) - facturado) < 1;
-  return nombres.map((concepto, i) => ({ concepto, monto: cuadra ? montos[i]! : null }));
+  // Solo se separa en ítems si CADA parte tiene su monto y la suma cuadra (composición
+  // real tipo "Meta Ads $345.000 + Google Ads $590.000"). Si no cuadra, el "+" es
+  // parte del NOMBRE del servicio (ej. "Plan Marketing Ads + IA + CRM"): una sola línea.
+  if (cuadra) return nombres.map((concepto, i) => ({ concepto, monto: montos[i]! }));
+  return [{ concepto: texto || "Servicio", monto: facturado }];
 }
