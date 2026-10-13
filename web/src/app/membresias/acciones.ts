@@ -342,6 +342,25 @@ export async function editarSoporte(formData: FormData) {
   redirect(`/membresias/${clienteId}`);
 }
 
+/** Cancela el soporte ACTIVO (indefinido): le pone fin al corte del mes en curso,
+ *  así queda en el historial (no se borra) y deja de cobrarse desde el mes siguiente. */
+export async function cancelarSoporte(formData: FormData) {
+  if (!(await getUsuario())) redirect("/login");
+  const soporteId = Number(formData.get("soporteId"));
+  const clienteId = Number(formData.get("clienteId"));
+  if (!soporteId || !clienteId) redirect(`/membresias/${clienteId}`);
+  await consulta(
+    `update public.cliente_soportes
+        set hasta = (date_trunc('month', now() at time zone 'America/Bogota') + interval '1 month' - interval '1 day')::date
+      where id=$1 and cliente_id=$2 and hasta is null`,
+    [soporteId, clienteId],
+  );
+  await recomputarPagosDeCliente(clienteId);
+  revalidarServicio(clienteId);
+  await flash("Soporte cancelado");
+  redirect(`/membresias/${clienteId}`);
+}
+
 /** Elimina un período de soporte y recalcula el historial (revierte esos meses). */
 export async function eliminarSoporte(formData: FormData) {
   if (!(await getUsuario())) redirect("/login");

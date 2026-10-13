@@ -79,26 +79,45 @@ export interface LineaLeadtion {
  *    valor ≤ 69 (34/67/69) = "estandar"; sin valor = base $69 estándar.
  *  - `es_agencia` → un cargo "agencia" de $0 (la licencia va incluida en el marketing).
  */
+interface PeriodoSoporte { desde: string; hasta: string | null; valor: number } // desde/hasta en 'YYYY-MM'
 interface DatosLeadtion {
   clientes: Record<string, unknown>[];
   servicios: Record<string, unknown>[];
-  sopIndDe: Map<number, number>;
+  soportesDe: Map<number, PeriodoSoporte[]>;
+}
+
+/** Valor de soporte activo en un mes 'YYYY-MM' según los períodos (hasta null = indefinido). */
+function soporteDelMes(periodos: PeriodoSoporte[] | undefined, mes: string): number {
+  if (!periodos) return 0;
+  for (const p of periodos) {
+    if (mes >= p.desde && mes <= (p.hasta ?? "9999-12")) return p.valor;
+  }
+  return 0;
+}
+
+function agruparSoportes(rows: Record<string, unknown>[]): Map<number, PeriodoSoporte[]> {
+  const m = new Map<number, PeriodoSoporte[]>();
+  for (const s of rows) {
+    const id = Number(s.cliente_id);
+    const arr = m.get(id) ?? [];
+    arr.push({ desde: String(s.desde), hasta: s.hasta ? String(s.hasta) : null, valor: Number(s.valor) });
+    m.set(id, arr);
+  }
+  return m;
 }
 
 /** Trae UNA sola vez el maestro Leadtion (para clasificar uno o varios meses). */
 async function fetchDatosLeadtion(): Promise<DatosLeadtion> {
-  const [clientes, servicios, soportesInd] = await Promise.all([
+  const [clientes, servicios, soportes] = await Promise.all([
     consulta(`select id, nombre, coalesce(es_agencia,false) es_agencia,
                 coalesce(soporte_valor,0) sop, coalesce(valor_licencia_general,0) licgen,
                 to_char(fecha_activacion,'YYYY-MM') act
                 from public.clientes where estado_actual='activo' and es_leadtion`),
     consulta(`select cliente_id, tipo_servicio, to_char(mes_inicio,'YYYY-MM') mes_inicio, soporte_valor, precio_mes1
                 from public.cliente_servicios`),
-    consulta(`select cliente_id, valor from public.cliente_soportes where hasta is null`),
+    consulta(`select cliente_id, valor, to_char(desde,'YYYY-MM') desde, to_char(hasta,'YYYY-MM') hasta from public.cliente_soportes`),
   ]);
-  const sopIndDe = new Map<number, number>();
-  for (const s of soportesInd) sopIndDe.set(Number(s.cliente_id), Number(s.valor));
-  return { clientes, servicios, sopIndDe };
+  return { clientes, servicios, soportesDe: agruparSoportes(soportes) };
 }
 
 /** Clasifica los cargos Leadtion de un mes a partir de datos ya cargados (sin DB). */
@@ -151,10 +170,10 @@ function clasificarCargosMes(d: DatosLeadtion, mes: string): LineaLeadtion[] {
     // Fuera de ventana → mensualidad base por valor.
     const licgen = Number(c.licgen);
     const sopVal = Number(c.sop);
-    const sopInd = d.sopIndDe.get(id) ?? 0;
-    const sopExplicito = sopInd > 0 ? sopInd : (sopVal > 0 ? sopVal : 0);
+    const sopPeriodo = soporteDelMes(d.soportesDe.get(id), mes); // soporte del período que cubre ESTE mes
+    const sopExplicito = sopPeriodo > 0 ? sopPeriodo : (sopVal > 0 ? sopVal : 0);
     if (sopExplicito > 0) {
-      lineas.push({ clienteId: id, nombre, esAgencia: false, categoria: "soporte", valor: round2(sopExplicito), fuenteValor: sopInd > 0 ? "cliente_soportes" : "soporte_valor" });
+      lineas.push({ clienteId: id, nombre, esAgencia: false, categoria: "soporte", valor: round2(sopExplicito), fuenteValor: sopPeriodo > 0 ? "cliente_soportes" : "soporte_valor" });
     } else if (licgen > 0) {
       lineas.push({ clienteId: id, nombre, esAgencia: false, categoria: licgen <= 69 ? "estandar" : "soporte", valor: round2(licgen), fuenteValor: "valor_licencia_general" });
     } else {
@@ -191,13 +210,11 @@ export async function historialMensualCliente(clienteId: number): Promise<MesHis
                 to_char(fecha_cancelacion,'YYYY-MM') cancel from public.clientes where id=$1`, [clienteId]),
     consulta(`select cliente_id, tipo_servicio, to_char(mes_inicio,'YYYY-MM') mes_inicio, soporte_valor, precio_mes1
                 from public.cliente_servicios where cliente_id=$1`, [clienteId]),
-    consulta(`select cliente_id, valor from public.cliente_soportes where cliente_id=$1 and hasta is null`, [clienteId]),
+    consulta(`select cliente_id, valor, to_char(desde,'YYYY-MM') desde, to_char(hasta,'YYYY-MM') hasta from public.cliente_soportes where cliente_id=$1`, [clienteId]),
   ]);
   const cli = cRows[0] as Record<string, unknown> | undefined;
   if (!cli || !cli.act) return [];
-  const sopIndDe = new Map<number, number>();
-  for (const s of sopRows as Record<string, unknown>[]) sopIndDe.set(Number(s.cliente_id), Number(s.valor));
-  const d: DatosLeadtion = { clientes: cRows as Record<string, unknown>[], servicios: sRows as Record<string, unknown>[], sopIndDe };
+  const d: DatosLeadtion = { clientes: cRows as Record<string, unknown>[], servicios: sRows as Record<string, unknown>[], soportesDe: agruparSoportes(sopRows as Record<string, unknown>[]) };
   const act = String(cli.act).slice(0, 7);
   const hoy = mesHoyISO();
   const fin = cli.cancel && String(cli.cancel) < hoy ? String(cli.cancel) : hoy;

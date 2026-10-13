@@ -6,7 +6,7 @@ import { soportesDeCliente, soporteEnMes } from "@/lib/soportes";
 import { BotonEliminar } from "../BotonEliminar";
 import { BotonEliminarServicio } from "../BotonEliminarServicio";
 import { BotonEliminarSoporte } from "../BotonEliminarSoporte";
-import { marcarAgencia } from "../acciones";
+import { marcarAgencia, cancelarSoporte } from "../acciones";
 import { historialMensualCliente } from "@/lib/pnl";
 import { mesHoyISO } from "@/lib/fecha";
 
@@ -138,7 +138,14 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
                     <td>{s.hasta ? s.hasta.slice(0, 10) : <span className="tag-partner">Indefinido</span>}</td>
                     <td>{s.nota ?? "—"}</td>
                     <td className="col-accion">
-                      <div style={{ display: "flex", gap: 6, alignItems: "center", justifyContent: "flex-end" }}>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "flex-end" }}>
+                        {s.hasta == null && (
+                          <form action={cancelarSoporte}>
+                            <input type="hidden" name="soporteId" value={s.id} />
+                            <input type="hidden" name="clienteId" value={c.id} />
+                            <button type="submit" className="tasa-link" title="Termina el soporte al corte de este mes (queda en el historial)">Cancelar</button>
+                          </form>
+                        )}
                         <Link href={`/membresias/${c.id}/soporte/${s.id}/editar`} className="link-ver">Editar</Link>
                         <BotonEliminarSoporte soporteId={s.id} clienteId={c.id} />
                       </div>
