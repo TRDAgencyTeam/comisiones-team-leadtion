@@ -3,7 +3,8 @@ import { consulta } from "@/lib/db";
 import { tasaUsdCop } from "@/lib/fx";
 import { dashboardAfiliados } from "@/lib/afiliados";
 import { cargarResultados } from "@/lib/comisiones";
-import { calendarioServicio, type TipoServicio } from "@/lib/servicios";
+import { calendarioServicio, SERVICIO_LABEL, type TipoServicio } from "@/lib/servicios";
+import { mesHoyISO } from "@/lib/fecha";
 
 /** P&L mensual del negocio Leadtion (ingresos vs costos, en USD). */
 
@@ -165,6 +166,51 @@ function clasificarCargosMes(d: DatosLeadtion, mes: string): LineaLeadtion[] {
 
 export async function proyeccionLeadtionMes(mes: string): Promise<LineaLeadtion[]> {
   return clasificarCargosMes(await fetchDatosLeadtion(), mes);
+}
+
+export interface MesHistorialCliente { mes: string; concepto: string; valor: number; categoria: CategoriaLeadtion | null }
+
+/** Etiqueta legible del cargo de un mes (para el historial de un cliente). */
+function conceptoLinea(l: LineaLeadtion): string {
+  if (l.categoria === "servicio") return l.tipoServicio ? (SERVICIO_LABEL[l.tipoServicio] ?? "Servicio") : "Servicio";
+  if (l.categoria === "soporte") return "Soporte";
+  if (l.categoria === "agencia") return "Agencia (licencia incluida)";
+  return "Licencia";
+}
+
+/**
+ * Historial mensual de UN cliente según el MODELO DE CARGOS (fuente única): mes a
+ * mes desde su activación hasta hoy (o hasta su cancelación), con lo que se le
+ * cobra ese mes (servicio, soporte o licencia). Incluye la licencia mensual que
+ * `pagos_mensuales` no persiste. Funciona aunque el cliente esté cancelado.
+ */
+export async function historialMensualCliente(clienteId: number): Promise<MesHistorialCliente[]> {
+  const [cRows, sRows, sopRows] = await Promise.all([
+    consulta(`select id, nombre, coalesce(es_agencia,false) es_agencia, coalesce(soporte_valor,0) sop,
+                coalesce(valor_licencia_general,0) licgen, to_char(fecha_activacion,'YYYY-MM') act,
+                to_char(fecha_cancelacion,'YYYY-MM') cancel from public.clientes where id=$1`, [clienteId]),
+    consulta(`select cliente_id, tipo_servicio, to_char(mes_inicio,'YYYY-MM') mes_inicio, soporte_valor, precio_mes1
+                from public.cliente_servicios where cliente_id=$1`, [clienteId]),
+    consulta(`select cliente_id, valor from public.cliente_soportes where cliente_id=$1 and hasta is null`, [clienteId]),
+  ]);
+  const cli = cRows[0] as Record<string, unknown> | undefined;
+  if (!cli || !cli.act) return [];
+  const sopIndDe = new Map<number, number>();
+  for (const s of sopRows as Record<string, unknown>[]) sopIndDe.set(Number(s.cliente_id), Number(s.valor));
+  const d: DatosLeadtion = { clientes: cRows as Record<string, unknown>[], servicios: sRows as Record<string, unknown>[], sopIndDe };
+  const act = String(cli.act).slice(0, 7);
+  const hoy = mesHoyISO();
+  const fin = cli.cancel && String(cli.cancel) < hoy ? String(cli.cancel) : hoy;
+  const out: MesHistorialCliente[] = [];
+  let mes = act, guard = 0;
+  while (mes <= fin && guard++ < 72) {
+    const lineas = clasificarCargosMes(d, mes);
+    const valor = round2(lineas.reduce((s, l) => s + l.valor, 0));
+    const concepto = lineas.length ? [...new Set(lineas.map(conceptoLinea))].join(" + ") : "Garantía";
+    out.push({ mes, concepto, valor, categoria: lineas[0]?.categoria ?? null });
+    mes = mesConDesfaseMes(mes, 1);
+  }
+  return out;
 }
 
 export interface IngresoLeadtionMes { mes: string; licencia: number; servicio: number; total: number }

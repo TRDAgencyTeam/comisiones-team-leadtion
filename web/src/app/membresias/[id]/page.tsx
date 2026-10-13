@@ -7,6 +7,7 @@ import { BotonEliminar } from "../BotonEliminar";
 import { BotonEliminarServicio } from "../BotonEliminarServicio";
 import { BotonEliminarSoporte } from "../BotonEliminarSoporte";
 import { marcarAgencia } from "../acciones";
+import { historialMensualCliente } from "@/lib/pnl";
 import { mesHoyISO } from "@/lib/fecha";
 
 export const dynamic = "force-dynamic";
@@ -21,11 +22,6 @@ function apiTexto(estado: string | null, valor: number | null): string {
 const ESTADO: Record<string, { txt: string; cls: string }> = {
   activo: { txt: "Activo", cls: "estado-pagado" }, pausado: { txt: "Pausado", cls: "estado-pausado" }, cancelado: { txt: "Cancelado", cls: "estado-cancelado" },
 };
-const ESTADO_MES: Record<string, string> = {
-  activo: "Activo", cancelado: "Cancelado", incluido_en_marketing: "Incluido en marketing",
-  en_riesgo_o_mora: "En riesgo / mora", previo_a_activacion: "Previo a activación",
-  sin_datos: "Sin datos", garantia: "Garantía (mes 2)",
-};
 
 export default async function FichaMembresiaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -33,6 +29,9 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
   if (!c) notFound();
   const servicios = await serviciosDeCliente(c.id);
   const soportes = await soportesDeCliente(c.id);
+  // Historial mensual desde el modelo de cargos (incluye la licencia mensual que
+  // pagos_mensuales no persiste). Más reciente primero.
+  const histCargos = (await historialMensualCliente(c.id)).reverse();
   const badge = ESTADO[c.estado] ?? { txt: c.estado, cls: "" };
 
   const hoyMes = mesHoyISO();
@@ -154,19 +153,19 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
 
       <section className="card">
         <div className="card-head"><span className="who">Historial mensual</span></div>
-        {c.pagos.length === 0 ? (
+        {histCargos.length === 0 ? (
           <p className="empty">Sin historial mensual todavía.</p>
         ) : (
           <div className="table-scroll">
             <table>
-              <thead><tr><th>Mes</th><th>Tipo de cliente</th><th>Estado</th><th className="num">Valor</th></tr></thead>
+              <thead><tr><th>Mes</th><th>Cobro del mes</th><th>Tipo de cliente</th><th className="num">Valor</th></tr></thead>
               <tbody>
-                {c.pagos.map((p) => (
+                {histCargos.map((p) => (
                   <tr key={p.mes}>
-                    <td>{p.mes.slice(0, 7)}</td>
-                    <td className="td-concepto">{TIPO_LABEL[tipoEnMes(p.mes)] ?? "Estándar"}</td>
-                    <td className="td-concepto">{ESTADO_MES[p.estadoMes] ?? p.estadoMes}</td>
-                    <td className="num">{p.valor != null ? usd(p.valor) : "—"}</td>
+                    <td>{p.mes}</td>
+                    <td className="td-concepto">{p.concepto}</td>
+                    <td className="td-concepto">{TIPO_LABEL[tipoEnMes(`${p.mes}-01`)] ?? "Estándar"}</td>
+                    <td className="num">{usd(p.valor)}</td>
                   </tr>
                 ))}
               </tbody>
