@@ -111,7 +111,11 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
                       {s.precioMes1 != null ? usd(s.precioMes1) : `Estándar ${usd(PRECIO_MES1_ESTANDAR[s.tipoServicio])}`}
                       {s.cuotasN > 1 && (
                         <small className="td-concepto" style={{ display: "block" }}>
-                          {s.cuotasN} cuotas · total {usd((s.precioMes1 ?? PRECIO_MES1_ESTANDAR[s.tipoServicio]) * s.cuotasN)}
+                          {s.cuotasN} cuotas · total {usd(
+                            s.cuotasValores && s.cuotasValores.length
+                              ? s.cuotasValores.reduce((a, b) => a + b, 0)
+                              : (s.precioMes1 ?? PRECIO_MES1_ESTANDAR[s.tipoServicio]) * s.cuotasN
+                          )}
                         </small>
                       )}
                     </td>

@@ -30,10 +30,10 @@ export function NuevoClienteModal({
 
   const srv = useMemo(() => catalogo.find((c) => c.clave === clave), [catalogo, clave]);
   const moneda = entidad === "COL" ? "COP" : "USD";
-  // Se puede dividir en cuotas si es pago único (no recurrente, no por persona) y
-  // no es Reactivación (que ya tiene su propio esquema de 3 pagos). Agente IA y
-  // Level Up SÍ admiten cuotas y conservan su membresía (licencia + soporte).
-  const permiteCuotas = !!srv && !srv.recurrente && !srv.porPersona && clave !== "reactivacion";
+  // Se puede dividir en cuotas si es pago único (no recurrente, no por persona).
+  // Agente IA, Level Up y Reactivación admiten cuotas y conservan su membresía.
+  // Reactivación puede venderse en cuotas distintas (ej. $1300 = 500+400+400).
+  const permiteCuotas = !!srv && !srv.recurrente && !srv.porPersona;
   // Meses a cobrar: recurrente = contrato (min_meses); con cuotas = # de cuotas; resto = 1.
   const nMeses = srv && srv.recurrente && !srv.porPersona
     ? Math.min(Math.max(srv.minMeses || 1, 1), 12)
@@ -56,9 +56,15 @@ export function NuevoClienteModal({
       const resto = conv(srv.precioResto ?? srv.precioMes1);
       setPrecios(Array.from({ length: nMeses }, (_, i) => (i === 0 ? conv(srv.precioMes1) : resto)));
     } else if (permiteCuotas && cuotas > 1) {
-      // Divide el precio del servicio en N cuotas iguales (editables).
-      const per = srv.precioMes1 != null ? srv.precioMes1 / cuotas : null;
-      setPrecios(Array.from({ length: cuotas }, () => conv(per)));
+      if (clave === "reactivacion") {
+        // Reactivación: pre-llena su esquema (mes 1 + resto); editable para cuotas distintas.
+        const resto = conv(srv.precioResto ?? srv.precioMes1);
+        setPrecios(Array.from({ length: cuotas }, (_, i) => (i === 0 ? conv(srv.precioMes1) : resto)));
+      } else {
+        // Divide el precio del servicio en N cuotas iguales (editables).
+        const per = srv.precioMes1 != null ? srv.precioMes1 / cuotas : null;
+        setPrecios(Array.from({ length: cuotas }, () => conv(per)));
+      }
     } else {
       setPrecios([conv(srv.precioMes1)]);
     }
@@ -129,8 +135,10 @@ export function NuevoClienteModal({
                     const s = catalogo.find((c) => c.clave === v);
                     // Planes en cuotas (no recurrente, no por persona, no calendario) con contrato
                     // mínimo > 1 arrancan con ese # de cuotas (Reactivación GHL = 3, "(2 cuotas)" = 2).
-                    const esCal = ["agente_ai", "reactivacion", "level_up"].includes(v);
-                    const def = s && !s.recurrente && !s.porPersona && !esCal && s.minMeses > 1 ? s.minMeses : 1;
+                    // Reactivación arranca con sus 3 cuotas (min_meses); los demás planes
+                    // "en cuotas" del catálogo también; Agente IA / Level Up arrancan en 1.
+                    const esCalSinCuotaDefault = ["agente_ai", "level_up"].includes(v);
+                    const def = s && !s.recurrente && !s.porPersona && !esCalSinCuotaDefault && s.minMeses > 1 ? s.minMeses : 1;
                     setCuotas(def);
                     setPersonas(s?.unidad === "hora" ? 3 : 1);
                   }}>

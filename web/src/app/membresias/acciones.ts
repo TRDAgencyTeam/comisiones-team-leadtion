@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { getUsuario } from "@/lib/supabase/server";
-import { calendarioServicio, type TipoServicio } from "@/lib/servicios";
+import { calendarioServicio, parseCuotasValores, type TipoServicio } from "@/lib/servicios";
 import { mesHoyISO } from "@/lib/fecha";
 import { flash } from "@/lib/flash";
 
@@ -135,7 +135,7 @@ export async function recomputarPagosDeCliente(clienteId: number) {
 
   // 2) Servicios: separamos VENTA (mes 1/cuota/reactivación) del SOPORTE por defecto.
   const servicios = await consulta(
-    `select tipo_servicio, mes_inicio, soporte_valor, precio_mes1, coalesce(cuotas_n,1) cuotas_n from public.cliente_servicios where cliente_id=$1`,
+    `select tipo_servicio, mes_inicio, soporte_valor, precio_mes1, coalesce(cuotas_n,1) cuotas_n, cuotas_valores from public.cliente_servicios where cliente_id=$1`,
     [clienteId],
   );
   const ventaMes = new Map<string, number>();
@@ -148,6 +148,7 @@ export async function recomputarPagosDeCliente(clienteId: number) {
       s.soporte_valor == null ? null : Number(s.soporte_valor),
       s.precio_mes1 == null ? null : Number(s.precio_mes1),
       Number(s.cuotas_n) || 1,
+      parseCuotasValores(s.cuotas_valores as string | null),
     );
     for (const m of cal) {
       const mes = mesConDesfase(mesInicio, m.offset);
@@ -434,6 +435,8 @@ export interface NuevoClienteInput {
   esLeadtion?: boolean;
   /** Nº de cuotas del servicio (1 = pago único). precioMes1 es el valor de cada cuota. */
   cuotasN?: number;
+  /** Valores exactos de cada cuota ("500,400,400"), cuando son distintas. */
+  cuotasValoresCsv?: string | null;
   /** Valor TOTAL del servicio (todas las cuotas), para la comisión de afiliados. */
   precioTotalServicio?: number | null;
 }
@@ -487,9 +490,9 @@ export async function crearClienteCompleto(d: NuevoClienteInput): Promise<number
     const mes = d.fechaActivacion.slice(0, 7);
     await consulta(
       `insert into public.cliente_servicios
-         (cliente_id, tipo_servicio, mes_inicio, fecha_compra, soporte_valor, precio_mes1, bono_reactivacion, cuotas_n)
-       values ($1,$2,$3,$4,$5,$6,$7,$8)`,
-      [id, d.planTipo, `${mes}-01`, d.fechaActivacion, d.soporteValor, d.precioMes1, d.bono, Math.max(1, Math.floor(d.cuotasN ?? 1))],
+         (cliente_id, tipo_servicio, mes_inicio, fecha_compra, soporte_valor, precio_mes1, bono_reactivacion, cuotas_n, cuotas_valores)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [id, d.planTipo, `${mes}-01`, d.fechaActivacion, d.soporteValor, d.precioMes1, d.bono, Math.max(1, Math.floor(d.cuotasN ?? 1)), d.cuotasValoresCsv ?? null],
     );
     await recomputarPagosDeCliente(id);
     // Si viene por un afiliado, registra el servicio en servicios_afiliados para que

@@ -3,7 +3,7 @@ import { consulta } from "@/lib/db";
 import { tasaUsdCop } from "@/lib/fx";
 import { dashboardAfiliados } from "@/lib/afiliados";
 import { cargarResultados } from "@/lib/comisiones";
-import { calendarioServicio, SERVICIO_LABEL, type TipoServicio } from "@/lib/servicios";
+import { calendarioServicio, parseCuotasValores, SERVICIO_LABEL, type TipoServicio } from "@/lib/servicios";
 import { mesHoyISO } from "@/lib/fecha";
 
 /** P&L mensual del negocio Leadtion (ingresos vs costos, en USD). */
@@ -113,7 +113,7 @@ async function fetchDatosLeadtion(): Promise<DatosLeadtion> {
                 coalesce(soporte_valor,0) sop, coalesce(valor_licencia_general,0) licgen,
                 to_char(fecha_activacion,'YYYY-MM') act
                 from public.clientes where estado_actual='activo' and es_leadtion`),
-    consulta(`select cliente_id, tipo_servicio, to_char(mes_inicio,'YYYY-MM') mes_inicio, soporte_valor, precio_mes1, coalesce(cuotas_n,1) cuotas_n
+    consulta(`select cliente_id, tipo_servicio, to_char(mes_inicio,'YYYY-MM') mes_inicio, soporte_valor, precio_mes1, coalesce(cuotas_n,1) cuotas_n, cuotas_valores
                 from public.cliente_servicios`),
     consulta(`select cliente_id, valor, to_char(desde,'YYYY-MM') desde, to_char(hasta,'YYYY-MM') hasta from public.cliente_soportes`),
   ]);
@@ -135,6 +135,7 @@ function clasificarCargosMes(d: DatosLeadtion, mes: string): LineaLeadtion[] {
       sv.soporte_valor == null ? null : Number(sv.soporte_valor),
       sv.precio_mes1 == null ? null : Number(sv.precio_mes1),
       sv.cuotas_n == null ? 1 : Number(sv.cuotas_n),
+      parseCuotasValores(sv.cuotas_valores as string | null),
     );
     const inicio = (sv.mes_inicio instanceof Date ? sv.mes_inicio.toISOString() : String(sv.mes_inicio)).slice(0, 7);
     for (const e of cal) {
@@ -230,7 +231,7 @@ export async function historialMensualCliente(clienteId: number): Promise<MesHis
     consulta(`select id, nombre, coalesce(es_agencia,false) es_agencia, coalesce(soporte_valor,0) sop,
                 coalesce(valor_licencia_general,0) licgen, to_char(fecha_activacion,'YYYY-MM') act,
                 to_char(fecha_cancelacion,'YYYY-MM') cancel from public.clientes where id=$1`, [clienteId]),
-    consulta(`select cliente_id, tipo_servicio, to_char(mes_inicio,'YYYY-MM') mes_inicio, soporte_valor, precio_mes1, coalesce(cuotas_n,1) cuotas_n
+    consulta(`select cliente_id, tipo_servicio, to_char(mes_inicio,'YYYY-MM') mes_inicio, soporte_valor, precio_mes1, coalesce(cuotas_n,1) cuotas_n, cuotas_valores
                 from public.cliente_servicios where cliente_id=$1`, [clienteId]),
     consulta(`select cliente_id, valor, to_char(desde,'YYYY-MM') desde, to_char(hasta,'YYYY-MM') hasta from public.cliente_soportes where cliente_id=$1`, [clienteId]),
   ]);

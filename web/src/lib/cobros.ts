@@ -1,6 +1,6 @@
 import "server-only";
 import { consulta } from "@/lib/db";
-import { calendarioServicio, type TipoServicio } from "@/lib/servicios";
+import { calendarioServicio, parseCuotasValores, type TipoServicio } from "@/lib/servicios";
 import { mesHoyISO } from "@/lib/fecha";
 
 /**
@@ -37,7 +37,7 @@ export async function cobrosPorCliente(ids: number[], nFuturo = 3): Promise<Cobr
   const [clientes, servicios, soportesInd, pagos] = await Promise.all([
     consulta(`select id, estado_actual, es_agencia, coalesce(soporte_valor,0) sop, to_char(fecha_activacion,'YYYY-MM') act
                 from public.clientes where id = any($1::int[])`, [ids]),
-    consulta(`select cliente_id, tipo_servicio, to_char(mes_inicio,'YYYY-MM') mes_inicio, soporte_valor, precio_mes1, coalesce(cuotas_n,1) cuotas_n
+    consulta(`select cliente_id, tipo_servicio, to_char(mes_inicio,'YYYY-MM') mes_inicio, soporte_valor, precio_mes1, coalesce(cuotas_n,1) cuotas_n, cuotas_valores
                 from public.cliente_servicios where cliente_id = any($1::int[])`, [ids]),
     consulta(`select cliente_id, valor from public.cliente_soportes where cliente_id = any($1::int[]) and hasta is null`, [ids]),
     consulta(`select cliente_id, to_char(mes,'YYYY-MM') mes, valor from public.pagos_mensuales
@@ -51,7 +51,7 @@ export async function cobrosPorCliente(ids: number[], nFuturo = 3): Promise<Cobr
   // svcDe: meses cubiertos por un servicio (con su valor de calendario, 0 = garantía).
   const svcDe = new Map<string, number>();
   for (const sv of servicios) {
-    const cal = calendarioServicio(sv.tipo_servicio as TipoServicio, sv.soporte_valor == null ? null : Number(sv.soporte_valor), sv.precio_mes1 == null ? null : Number(sv.precio_mes1), sv.cuotas_n == null ? 1 : Number(sv.cuotas_n));
+    const cal = calendarioServicio(sv.tipo_servicio as TipoServicio, sv.soporte_valor == null ? null : Number(sv.soporte_valor), sv.precio_mes1 == null ? null : Number(sv.precio_mes1), sv.cuotas_n == null ? 1 : Number(sv.cuotas_n), parseCuotasValores(sv.cuotas_valores as string | null));
     for (const c of cal) {
       const mes = mesMas(String(sv.mes_inicio), c.offset);
       if (mes >= meses[0]! && mes <= finVentana) {
