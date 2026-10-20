@@ -27,6 +27,7 @@ export interface MembresiaRow {
   tiempoMeses: number;
   ltv: number;
   apiEstado: string | null;
+  apiValor: number | null;
 }
 
 export interface StatsMembresias {
@@ -37,6 +38,7 @@ export interface StatsMembresias {
   agencia: number;
   servicio: number;
   estandar: number;
+  apiVendida12: number;
 }
 
 function toISO(v: unknown): string | null {
@@ -64,12 +66,12 @@ async function ltvPorCliente(): Promise<Map<number, number>> {
 }
 
 export async function listarMembresias(
-  opts: { q?: string; estado?: string; orden?: string; tipo?: string } = {},
+  opts: { q?: string; estado?: string; orden?: string; tipo?: string; api?: string } = {},
 ): Promise<MembresiaRow[]> {
   const [rows, ltv] = await Promise.all([
     consulta(
       `select id, nombre, plan, plan_tipo, soporte_valor, incluye_crm_en_marketing, es_agencia,
-              tipo_cliente, estado_actual, fecha_activacion, api_estado
+              tipo_cliente, estado_actual, fecha_activacion, api_estado, api_valor
          from public.clientes where es_leadtion`,
     ),
     ltvPorCliente(),
@@ -87,11 +89,13 @@ export async function listarMembresias(
       fechaActivacion: f, tiempoMeses: mesesDesde(f),
       ltv: ltv.get(Number(r.id)) ?? 0,
       apiEstado: (r.api_estado as string) ?? null,
+      apiValor: r.api_valor == null ? null : Number(r.api_valor),
     };
   });
 
   const q = (opts.q ?? "").trim().toLowerCase();
   if (q) lista = lista.filter((c) => c.nombre.toLowerCase().includes(q));
+  if (opts.api === "vendida12") lista = lista.filter((c) => c.apiEstado === "vendida" && c.apiValor === 12);
   if (opts.estado && opts.estado !== "todos") lista = lista.filter((c) => c.estado === opts.estado);
   // "Agencia" = flag es_agencia (independiente del tipo); servicio/estándar solo si NO es agencia.
   if (opts.tipo === "agencia") lista = lista.filter((c) => c.esAgencia);
@@ -177,7 +181,8 @@ export async function statsMembresias(): Promise<StatsMembresias> {
             count(*) filter (where estado_actual='cancelado')::int canceladas,
             count(*) filter (where es_agencia and estado_actual='activo')::int agencia,
             count(*) filter (where not es_agencia and tipo_cliente='servicio' and estado_actual='activo')::int servicio,
-            count(*) filter (where not es_agencia and coalesce(tipo_cliente,'estandar')<>'servicio' and estado_actual='activo')::int estandar
+            count(*) filter (where not es_agencia and coalesce(tipo_cliente,'estandar')<>'servicio' and estado_actual='activo')::int estandar,
+            count(*) filter (where api_estado='vendida' and api_valor=12)::int api_vendida12
        from public.clientes where es_leadtion`,
   );
   const c = r[0]!;
@@ -185,5 +190,6 @@ export async function statsMembresias(): Promise<StatsMembresias> {
     total: Number(c.total), activas: Number(c.activas), pausadas: Number(c.pausadas),
     canceladas: Number(c.canceladas), agencia: Number(c.agencia),
     servicio: Number(c.servicio), estandar: Number(c.estandar),
+    apiVendida12: Number(c.api_vendida12),
   };
 }

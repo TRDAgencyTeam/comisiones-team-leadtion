@@ -23,16 +23,18 @@ const ESTADO_BADGE: Record<string, { txt: string; cls: string }> = {
 export default async function ClientesMembresiasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; estado?: string; orden?: string; tipo?: string; vista?: string }>;
+  searchParams: Promise<{ q?: string; estado?: string; orden?: string; tipo?: string; vista?: string; api?: string }>;
 }) {
-  const { q, estado = "activo", orden = "nuevo", tipo = "todos", vista = "lista" } = await searchParams;
+  const { q, estado = "activo", orden = "nuevo", tipo = "todos", vista = "lista", api } = await searchParams;
   const esCobros = vista === "cobros";
+  // Cuando se filtra por "API $12" mostramos todos los estados (no solo activos).
+  const estadoEf = api === "vendida12" ? "todos" : estado;
 
   let lista: MembresiaRow[] = [];
   let stats = null;
   let error: string | null = null;
   try {
-    [lista, stats] = await Promise.all([listarMembresias({ q, estado, orden, tipo }), statsMembresias()]);
+    [lista, stats] = await Promise.all([listarMembresias({ q, estado: estadoEf, orden, tipo, api }), statsMembresias()]);
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
@@ -55,7 +57,17 @@ export default async function ClientesMembresiasPage({
     return `/membresias/clientes?${p.toString()}`;
   };
   const clase = (est: string, tp: string) =>
-    estado === est && tipo === tp ? "mini-stat activo" : "mini-stat";
+    !api && estado === est && tipo === tp ? "mini-stat activo" : "mini-stat";
+
+  // Filtro "API revendida a $12": muestra todos los que tienen esa API, sin importar estado.
+  const hrefApi = () => {
+    const p = new URLSearchParams();
+    p.set("api", "vendida12");
+    if (orden) p.set("orden", orden);
+    if (q) p.set("q", q);
+    return `/membresias/clientes?${p.toString()}`;
+  };
+  const claseApi = () => (api === "vendida12" ? "mini-stat activo" : "mini-stat");
 
   return (
     <main className="wrap">
@@ -76,6 +88,7 @@ export default async function ClientesMembresiasPage({
           <Link href={href("activo", "estandar")} className={clase("activo", "estandar")}><span className="ms-num">{stats.estandar}</span><span className="ms-lbl">Estándar</span></Link>
           <Link href={href("activo", "agencia")} className={clase("activo", "agencia")}><span className="ms-num">{stats.agencia}</span><span className="ms-lbl">Agencia</span></Link>
           <Link href={href("activo", "servicio")} className={clase("activo", "servicio")}><span className="ms-num">{stats.servicio}</span><span className="ms-lbl">Servicio Leadtion</span></Link>
+          <Link href={hrefApi()} className={claseApi()}><span className="ms-num">{stats.apiVendida12}</span><span className="ms-lbl">API $12 (gana $2)</span></Link>
         </div>
       )}
 
@@ -168,11 +181,12 @@ export default async function ClientesMembresiasPage({
                   const b = ESTADO_BADGE[c.estado] ?? { txt: c.estado, cls: "" };
                   const plan = c.planTipo ? PLAN_LABEL[c.planTipo] : "Estándar";
                   const soporte = c.soporteValor ? ` · Soporte ${usd(c.soporteValor)}` : "";
+                  const apiVendida12 = c.apiEstado === "vendida" && c.apiValor === 12;
                   return (
                     <tr key={c.id}>
                       <td><Link href={`/membresias/${c.id}`} className="link-cliente">{c.nombre}</Link></td>
                       <td>{fechaCorta(c.fechaActivacion)}{corteDia(c.fechaActivacion) != null && <small className="td-concepto" style={{ display: "block" }}>corte día {corteDia(c.fechaActivacion)}</small>}</td>
-                      <td>{plan}{soporte}</td>
+                      <td>{plan}{soporte}{apiVendida12 && <span className="tag-partner" style={{ marginLeft: 6 }}>API $12</span>}</td>
                       <td>{c.esAgencia
                         ? <><span className="tag-agencia">Agencia</span>{c.tipoCliente === "servicio" && <span className="td-concepto" style={{ marginLeft: 6 }}>+ Leadtion</span>}</>
                         : <span className="td-concepto">{TIPO_LABEL[c.tipoCliente ?? "estandar"] ?? "Estándar"}</span>}</td>
