@@ -135,7 +135,7 @@ export async function recomputarPagosDeCliente(clienteId: number) {
 
   // 2) Servicios (suman en su ventana; sobrescriben el soporte si coinciden).
   const servicios = await consulta(
-    `select tipo_servicio, mes_inicio, soporte_valor, precio_mes1 from public.cliente_servicios where cliente_id=$1`,
+    `select tipo_servicio, mes_inicio, soporte_valor, precio_mes1, coalesce(cuotas_n,1) cuotas_n from public.cliente_servicios where cliente_id=$1`,
     [clienteId],
   );
   const servMes = new Map<string, number>();
@@ -145,6 +145,7 @@ export async function recomputarPagosDeCliente(clienteId: number) {
       s.tipo_servicio as TipoServicio,
       s.soporte_valor == null ? null : Number(s.soporte_valor),
       s.precio_mes1 == null ? null : Number(s.precio_mes1),
+      Number(s.cuotas_n) || 1,
     );
     for (const m of cal) {
       const mes = mesConDesfase(mesInicio, m.offset);
@@ -421,6 +422,10 @@ export interface NuevoClienteInput {
   valorLicencia: number; asignados: number[]; afiliadoRef: string | null; origen?: string;
   /** ¿El cliente tiene cuenta Leadtion? (si no, no aparece en Membresías). Default true. */
   esLeadtion?: boolean;
+  /** Nº de cuotas del servicio (1 = pago único). precioMes1 es el valor de cada cuota. */
+  cuotasN?: number;
+  /** Valor TOTAL del servicio (todas las cuotas), para la comisión de afiliados. */
+  precioTotalServicio?: number | null;
 }
 
 /**
@@ -472,16 +477,19 @@ export async function crearClienteCompleto(d: NuevoClienteInput): Promise<number
     const mes = d.fechaActivacion.slice(0, 7);
     await consulta(
       `insert into public.cliente_servicios
-         (cliente_id, tipo_servicio, mes_inicio, fecha_compra, soporte_valor, precio_mes1, bono_reactivacion)
-       values ($1,$2,$3,$4,$5,$6,$7)`,
-      [id, d.planTipo, `${mes}-01`, d.fechaActivacion, d.soporteValor, d.precioMes1, d.bono],
+         (cliente_id, tipo_servicio, mes_inicio, fecha_compra, soporte_valor, precio_mes1, bono_reactivacion, cuotas_n)
+       values ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [id, d.planTipo, `${mes}-01`, d.fechaActivacion, d.soporteValor, d.precioMes1, d.bono, Math.max(1, Math.floor(d.cuotasN ?? 1))],
     );
     await recomputarPagosDeCliente(id);
     // Si viene por un afiliado, registra el servicio en servicios_afiliados para que
     // el motor de comisiones calcule bien el mes 1 de AGENCIA (% × total de servicios,
-    // no % × licencia). Sin esto la comisión sale como 30% × $69.
+    // no % × licencia). Sin esto la comisión sale como 30% × $69. Con cuotas usa el
+    // TOTAL de la venta (no una cuota).
     if (d.afiliadoRef) {
-      const precioSrv = d.precioMes1 && d.precioMes1 > 0 ? d.precioMes1 : (PRECIO_MES1[d.planTipo] ?? 0);
+      const precioSrv = d.precioTotalServicio && d.precioTotalServicio > 0
+        ? d.precioTotalServicio
+        : (d.precioMes1 && d.precioMes1 > 0 ? d.precioMes1 : (PRECIO_MES1[d.planTipo] ?? 0));
       const srvRef = `srv-mem-${id}-${d.planTipo}`;
       const dup = await consulta(`select 1 from public.servicios_afiliados where ref=$1 limit 1`, [srvRef]);
       if (!dup.length) {

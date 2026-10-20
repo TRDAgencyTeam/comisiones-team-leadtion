@@ -113,7 +113,7 @@ async function fetchDatosLeadtion(): Promise<DatosLeadtion> {
                 coalesce(soporte_valor,0) sop, coalesce(valor_licencia_general,0) licgen,
                 to_char(fecha_activacion,'YYYY-MM') act
                 from public.clientes where estado_actual='activo' and es_leadtion`),
-    consulta(`select cliente_id, tipo_servicio, to_char(mes_inicio,'YYYY-MM') mes_inicio, soporte_valor, precio_mes1
+    consulta(`select cliente_id, tipo_servicio, to_char(mes_inicio,'YYYY-MM') mes_inicio, soporte_valor, precio_mes1, coalesce(cuotas_n,1) cuotas_n
                 from public.cliente_servicios`),
     consulta(`select cliente_id, valor, to_char(desde,'YYYY-MM') desde, to_char(hasta,'YYYY-MM') hasta from public.cliente_soportes`),
   ]);
@@ -131,6 +131,7 @@ function clasificarCargosMes(d: DatosLeadtion, mes: string): LineaLeadtion[] {
       tipo,
       sv.soporte_valor == null ? null : Number(sv.soporte_valor),
       sv.precio_mes1 == null ? null : Number(sv.precio_mes1),
+      sv.cuotas_n == null ? 1 : Number(sv.cuotas_n),
     );
     const inicio = (sv.mes_inicio instanceof Date ? sv.mes_inicio.toISOString() : String(sv.mes_inicio)).slice(0, 7);
     for (const e of cal) {
@@ -208,7 +209,7 @@ export async function historialMensualCliente(clienteId: number): Promise<MesHis
     consulta(`select id, nombre, coalesce(es_agencia,false) es_agencia, coalesce(soporte_valor,0) sop,
                 coalesce(valor_licencia_general,0) licgen, to_char(fecha_activacion,'YYYY-MM') act,
                 to_char(fecha_cancelacion,'YYYY-MM') cancel from public.clientes where id=$1`, [clienteId]),
-    consulta(`select cliente_id, tipo_servicio, to_char(mes_inicio,'YYYY-MM') mes_inicio, soporte_valor, precio_mes1
+    consulta(`select cliente_id, tipo_servicio, to_char(mes_inicio,'YYYY-MM') mes_inicio, soporte_valor, precio_mes1, coalesce(cuotas_n,1) cuotas_n
                 from public.cliente_servicios where cliente_id=$1`, [clienteId]),
     consulta(`select cliente_id, valor, to_char(desde,'YYYY-MM') desde, to_char(hasta,'YYYY-MM') hasta from public.cliente_soportes where cliente_id=$1`, [clienteId]),
   ]);

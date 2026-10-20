@@ -107,7 +107,14 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
                   <tr key={s.id}>
                     <td className="td-concepto">{SERVICIO_LABEL[s.tipoServicio]}</td>
                     <td>{(s.fechaCompra ?? s.mesInicio).slice(0, 10)}</td>
-                    <td className="num">{s.precioMes1 != null ? usd(s.precioMes1) : `Estándar ${usd(PRECIO_MES1_ESTANDAR[s.tipoServicio])}`}</td>
+                    <td className="num">
+                      {s.precioMes1 != null ? usd(s.precioMes1) : `Estándar ${usd(PRECIO_MES1_ESTANDAR[s.tipoServicio])}`}
+                      {s.cuotasN > 1 && (
+                        <small className="td-concepto" style={{ display: "block" }}>
+                          {s.cuotasN} cuotas · total {usd((s.precioMes1 ?? PRECIO_MES1_ESTANDAR[s.tipoServicio]) * s.cuotasN)}
+                        </small>
+                      )}
+                    </td>
                     <td>{s.soporteValor != null ? usd(s.soporteValor) : "—"}</td>
                     <td>{s.nota ?? "—"}</td>
                     <td className="col-accion">

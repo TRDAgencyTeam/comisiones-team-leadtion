@@ -41,16 +41,31 @@ export const PRECIO_MES1_ESTANDAR: Record<TipoServicio, number> = {
 /**
  * Devuelve el calendario de cobros del servicio.
  * @param soporteValor  valor del soporte del mes 3 (Agente IA: 119 o 157).
- * @param precioMes1    precio del mes 1 negociado (override); NULL = estándar.
+ * @param precioMes1    precio del mes 1 negociado (override); NULL = estándar. Si hay
+ *                      cuotas, es el valor de CADA cuota (no el total).
+ * @param cuotasN       nº de cuotas del pago único (1 = pago en un solo mes). Solo
+ *                      aplica a Agente IA y Level Up; Reactivación tiene su esquema.
  */
 export function calendarioServicio(
   tipo: TipoServicio,
   soporteValor: number | null,
   precioMes1?: number | null,
+  cuotasN: number = 1,
 ): MesServicio[] {
   const m1 = precioMes1 != null ? precioMes1 : PRECIO_MES1_ESTANDAR[tipo];
+  const nCuotas = Math.max(1, Math.floor(cuotasN || 1));
   switch (tipo) {
     case "agente_ai":
+      // Pago en cuotas: cada mes de cuota se cobra el valor de la cuota (es servicio,
+      // no garantía). El soporte arranca el mes siguiente a la última cuota.
+      if (nCuotas > 1) {
+        const meses: MesServicio[] = [];
+        for (let i = 0; i < nCuotas; i++) {
+          meses.push({ offset: i, valor: m1, estado: "activo", concepto: `Agente IA — cuota ${i + 1} de ${nCuotas}`, categoria: "servicio" });
+        }
+        meses.push({ offset: nCuotas, valor: soporteValor ?? 157, estado: "activo", concepto: "Soporte (tras las cuotas)", categoria: "soporte" });
+        return meses;
+      }
       // Mes 1 = servicio (full). Mes 2 = garantía ($0). Mes 3 EN ADELANTE ya es la
       // mensualidad de SOPORTE (nativo $157, o el soporte negociado: 119, etc.).
       return [
@@ -66,6 +81,12 @@ export function calendarioServicio(
         { offset: 2, valor: 197, estado: "activo", concepto: "Reactivación — mes 3", categoria: "servicio" },
       ];
     case "level_up":
+      // Pago en cuotas: una línea de servicio por cada cuota. Sin soporte automático.
+      if (nCuotas > 1) {
+        return Array.from({ length: nCuotas }, (_, i) => ({
+          offset: i, valor: m1, estado: "activo" as EstadoMes, concepto: `Level Up — cuota ${i + 1} de ${nCuotas}`, categoria: "servicio" as const,
+        }));
+      }
       // Mes 1 $497 (o el precio negociado). Del mes 2 en adelante el cliente elige
       // soporte (cualquiera) o se queda sin soporte; se registra manualmente.
       return [
@@ -83,6 +104,7 @@ export interface ServicioRow {
   fechaCompra: string | null;
   soporteValor: number | null;
   precioMes1: number | null;
+  cuotasN: number;
   bono: number | null;
   nota: string | null;
 }
@@ -93,7 +115,7 @@ const isoDia = (v: unknown): string | null =>
 /** Un servicio por id (para editarlo). */
 export async function obtenerServicio(id: number): Promise<(ServicioRow & { clienteId: number }) | null> {
   const rows = await consulta(
-    `select id, cliente_id, tipo_servicio, mes_inicio, fecha_compra, soporte_valor, precio_mes1, bono_reactivacion, nota
+    `select id, cliente_id, tipo_servicio, mes_inicio, fecha_compra, soporte_valor, precio_mes1, coalesce(cuotas_n,1) cuotas_n, bono_reactivacion, nota
        from public.cliente_servicios where id=$1`,
     [id],
   );
@@ -107,6 +129,7 @@ export async function obtenerServicio(id: number): Promise<(ServicioRow & { clie
     fechaCompra: isoDia(r.fecha_compra),
     soporteValor: r.soporte_valor == null ? null : Number(r.soporte_valor),
     precioMes1: r.precio_mes1 == null ? null : Number(r.precio_mes1),
+    cuotasN: r.cuotas_n == null ? 1 : Number(r.cuotas_n),
     bono: r.bono_reactivacion == null ? null : Number(r.bono_reactivacion),
     nota: (r.nota as string) ?? null,
   };
@@ -115,7 +138,7 @@ export async function obtenerServicio(id: number): Promise<(ServicioRow & { clie
 /** Servicios registrados de un cliente (línea de tiempo). */
 export async function serviciosDeCliente(clienteId: number): Promise<ServicioRow[]> {
   const rows = await consulta(
-    `select id, tipo_servicio, mes_inicio, fecha_compra, soporte_valor, precio_mes1, bono_reactivacion, nota
+    `select id, tipo_servicio, mes_inicio, fecha_compra, soporte_valor, precio_mes1, coalesce(cuotas_n,1) cuotas_n, bono_reactivacion, nota
        from public.cliente_servicios where cliente_id=$1 order by coalesce(fecha_compra, mes_inicio)`,
     [clienteId],
   );
@@ -126,6 +149,7 @@ export async function serviciosDeCliente(clienteId: number): Promise<ServicioRow
     fechaCompra: isoDia(r.fecha_compra),
     soporteValor: r.soporte_valor == null ? null : Number(r.soporte_valor),
     precioMes1: r.precio_mes1 == null ? null : Number(r.precio_mes1),
+    cuotasN: r.cuotas_n == null ? 1 : Number(r.cuotas_n),
     bono: r.bono_reactivacion == null ? null : Number(r.bono_reactivacion),
     nota: (r.nota as string) ?? null,
   }));

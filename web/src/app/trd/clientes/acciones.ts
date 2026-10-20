@@ -67,7 +67,7 @@ const SERVICIOS_LEADTION = ["agente_ai", "reactivacion", "level_up"];
  *  para que corra su flujo de cobros y aparezca en el módulo, y MARCA al cliente como
  *  miembro Leadtion reflejando el plan en su hoja de vida (es_leadtion, plan_tipo,
  *  tipo_cliente). Idempotente por (cliente, tipo, mes). */
-async function registrarServicioLeadtion(clienteId: number | null, servicioClave: string | null, mes: string, monto: number) {
+async function registrarServicioLeadtion(clienteId: number | null, servicioClave: string | null, mes: string, monto: number, cuotasN: number = 1) {
   if (!clienteId || !servicioClave || !SERVICIOS_LEADTION.includes(servicioClave)) return;
   const mesIni = `${mes.slice(0, 7)}-01`;
   const dup = await consulta(
@@ -86,9 +86,9 @@ async function registrarServicioLeadtion(clienteId: number | null, servicioClave
   );
   if (!dup.length) {
     await consulta(
-      `insert into public.cliente_servicios (cliente_id, tipo_servicio, mes_inicio, fecha_compra, precio_mes1)
-       values ($1,$2,$3,$3,$4)`,
-      [clienteId, servicioClave, mesIni, monto > 0 ? monto : null],
+      `insert into public.cliente_servicios (cliente_id, tipo_servicio, mes_inicio, fecha_compra, precio_mes1, cuotas_n)
+       values ($1,$2,$3,$3,$4,$5)`,
+      [clienteId, servicioClave, mesIni, monto > 0 ? monto : null, Math.max(1, Math.floor(cuotasN || 1))],
     );
   }
   await recomputarPagosDeCliente(clienteId);
@@ -210,12 +210,17 @@ export async function crearClienteCascada(formData: FormData) {
 
   // Cuotas: pago único dividido en N meses. Aplica a cualquier pago único EXCEPTO
   // Reactivación (que ya tiene su esquema de 3 pagos) y por-persona. Agente IA /
-  // Level Up SÍ admiten cuotas y conservan su membresía (el precio del servicio
-  // para el calendario de membresía = el TOTAL de la venta, no la 1ª cuota).
+  // Level Up SÍ admiten cuotas y conservan su membresía.
   const personas = Number(formData.get("personas") ?? 0);
   const materializarCuotas = cuotasN > 1 && !recurrente && personas <= 0 && servicioClave !== "reactivacion";
   const totalVenta = precios.slice(0, cuotasN).reduce((s, p) => s + (p || 0), 0);
-  const precioServicio = materializarCuotas ? totalVenta : (precios[0] || 0);
+  // El "precio mes 1" del servicio en Membresías = el pago REAL del primer mes (la 1ª
+  // cuota si hay cuotas), NO el total. El calendario de Membresías reparte cada cuota
+  // en su mes (igual que Facturación) usando cuotas_n. El TOTAL se usa aparte para la
+  // comisión (afiliados/comercial), no como cobro del mes 1.
+  const cuotasNServicio = materializarCuotas ? cuotasN : 1;
+  const precioMes1Servicio = precios[0] || 0;
+  const precioTotalServicio = materializarCuotas ? totalVenta : (precios[0] || 0);
 
   // ¿Reutilizar un cliente que ya existe? (evita duplicados como el caso Liliana).
   // 1) si el usuario eligió uno del buscador; 2) si el nombre normalizado coincide.
@@ -250,7 +255,7 @@ export async function crearClienteCascada(formData: FormData) {
     if (incluyeLeadtion) await consulta(`update public.clientes set es_leadtion = true where id = $1`, [clienteId]);
     // Si el servicio elegido es un servicio Leadtion (Agente IA / Reactivación / Level Up),
     // regístralo en Membresías para que corra su flujo de cobros y refleje el plan.
-    if (planLeadtion) await registrarServicioLeadtion(clienteId, planLeadtion, mes, precioServicio);
+    if (planLeadtion) await registrarServicioLeadtion(clienteId, planLeadtion, mes, precioMes1Servicio, cuotasNServicio);
     for (const colId of asignados) {
       await consulta(`insert into public.cliente_colaboradores (cliente_id, colaborador_id) values ($1,$2) on conflict do nothing`, [clienteId, colId]);
     }
@@ -262,7 +267,8 @@ export async function crearClienteCascada(formData: FormData) {
       tipoCliente: planLeadtion ? "servicio" : esAgencia ? "agencia" : "estandar",
       esAgencia, planTipo: planLeadtion,
       soporteValor: null, apiEstado: "ninguna", apiValor: null, bono: null,
-      precioMes1: precioServicio || null,
+      precioMes1: precioMes1Servicio || null,
+      cuotasN: cuotasNServicio, precioTotalServicio,
       reserva, fechaInicioReal: null,
       // Solo un miembro Leadtion real (licencia propia, no agencia) lleva los $69.
       // Servicios GHL / no-Leadtion NO tienen licencia.
