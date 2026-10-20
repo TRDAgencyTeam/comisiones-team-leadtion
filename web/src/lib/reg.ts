@@ -153,7 +153,8 @@ export async function renglonesDelMes(mes: string): Promise<RenglonReg[]> {
        from public.colaboradores c
        left join public.reg_pago p  on p.colaborador_id = c.id and p.mes = $1
        left join public.reg_pago pa on pa.colaborador_id = c.id and pa.mes = $2
-      where c.activo and coalesce(c.rol,'') <> 'freelance'
+      where c.activo
+        and (coalesce(c.rol,'') <> 'freelance' or p.id is not null)
         and (c.fecha_ingreso is null or c.fecha_ingreso < ($1::date + interval '1 month') or p.id is not null)
       order by (c.categoria is null), c.fecha_ingreso, c.nombre`,
     [primer, anterior],
@@ -241,6 +242,17 @@ export async function renglonesDelMes(mes: string): Promise<RenglonReg[]> {
   }));
 
   return [...renglonesColab, ...renglonesFree];
+}
+
+/** Proveedores freelance (sin nómina fija) a los que se les puede agregar un cobro
+ *  puntual del mes. Son colaboradores activos marcados como freelance o sin salario. */
+export async function proveedoresFreelance(): Promise<{ id: number; nombre: string }[]> {
+  const rows = await consulta(
+    `select id, nombre from public.colaboradores
+      where activo and (coalesce(rol,'') = 'freelance' or coalesce(valor_nomina,0) = 0)
+      order by nombre`,
+  );
+  return rows.map((r: Record<string, unknown>) => ({ id: Number(r.id), nombre: String(r.nombre) }));
 }
 
 export interface TotalesReg {

@@ -1,6 +1,6 @@
 import { soloAdmin } from "@/lib/sesion";
 import Link from "next/link";
-import { renglonesDelMes, totalizar, uvtDeMes, primerDiaMes, tasaCorte, historicoReg } from "@/lib/reg";
+import { renglonesDelMes, totalizar, uvtDeMes, primerDiaMes, tasaCorte, historicoReg, proveedoresFreelance } from "@/lib/reg";
 import { historialFx, snapshotTasaHoy, backfillFx } from "@/lib/fx-historial";
 import { RegFila } from "@/components/RegFila";
 import { RegTasaWidget } from "@/components/RegTasaWidget";
@@ -8,6 +8,7 @@ import { RegMesWidget } from "@/components/RegMesWidget";
 import { RegCalculadora } from "@/components/RegCalculadora";
 import { RegAvisoMes } from "@/components/RegAvisoMes";
 import { FreelanceForm } from "@/components/RegFreelance";
+import { CobroProveedorForm } from "@/components/RegCobroProveedor";
 
 export const metadata = { title: "Registro contable" };
 export const dynamic = "force-dynamic";
@@ -35,8 +36,8 @@ export default async function RegPage({
   const mes = sp.mes && /^\d{4}-\d{2}$/.test(sp.mes) ? sp.mes : mesActualISO();
   // Historial de la tasa (informativo): registra la de hoy y rellena días faltantes.
   await Promise.all([snapshotTasaHoy(), backfillFx(4)]);
-  const [renglones, uvt, tasa, historial, historico] = await Promise.all([
-    renglonesDelMes(mes), uvtDeMes(mes), tasaCorte(mes), historialFx(3), historicoReg(6),
+  const [renglones, uvt, tasa, historial, historico, proveedores] = await Promise.all([
+    renglonesDelMes(mes), uvtDeMes(mes), tasaCorte(mes), historialFx(3), historicoReg(6), proveedoresFreelance(),
   ]);
   const historicoOtros = historico.filter((h) => h.mes !== mes);
   const totales = totalizar(renglones);
@@ -122,6 +123,7 @@ export default async function RegPage({
         </p>
       </div>
 
+      <CobroProveedorForm mes={mes} proveedores={proveedores} />
       <FreelanceForm mes={mes} />
 
       {historicoOtros.length > 0 && (

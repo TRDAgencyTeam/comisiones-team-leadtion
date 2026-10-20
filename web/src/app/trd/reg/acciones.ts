@@ -115,6 +115,46 @@ export async function toggleCheck(formData: FormData) {
   revalidatePath("/trd/reg");
 }
 
+/** Agrega un cobro puntual a un PROVEEDOR EXISTENTE (freelance): valor + concepto,
+ *  para 1 o varios meses. Se sincroniza con REG (y de ahí con Egresos). Upsert por
+ *  (colaborador_id, mes). Solo para freelances (no pisa el salario de un directo). */
+export async function agregarCobroProveedor(formData: FormData) {
+  await soloAdmin();
+  const mesBase = String(formData.get("mes") ?? "").slice(0, 7);
+  const colaboradorId = Number(formData.get("colaboradorId"));
+  const valor = numCO(formData.get("valor"));
+  const concepto = String(formData.get("concepto") ?? "").trim() || null;
+  const meses = Math.min(Math.max(Number(formData.get("meses")) || 1, 1), 12);
+  if (!colaboradorId || valor <= 0 || !/^\d{4}-\d{2}$/.test(mesBase)) {
+    redirect(`/trd/reg?mes=${mesBase}&error=` + encodeURIComponent("Elige el proveedor y un valor válido."));
+  }
+  const col = await consulta(
+    `select coalesce(tarifa_ica_mil,0) ti from public.colaboradores
+      where id=$1 and (coalesce(rol,'')='freelance' or coalesce(valor_nomina,0)=0)`, [colaboradorId]);
+  if (!col.length) redirect(`/trd/reg?mes=${mesBase}&error=` + encodeURIComponent("Ese proveedor tiene nómina fija; ya aparece en la tabla."));
+  const tarifa = Number(col[0]!.ti) || TARIFA_ICA_DEFAULT;
+  for (let i = 0; i < meses; i++) {
+    const [a, m] = mesBase.split("-").map(Number);
+    const d = new Date(a!, (m! - 1) + i, 1);
+    const mesISO = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+    const uvt = await uvtDeMes(mesISO);
+    const aportes = aportesSeguridadSocial(valor);
+    const { reteIca, reteRenta, valorGirar } = recalcular(valor, tarifa, aportes, 0, uvt);
+    await consulta(
+      `insert into public.reg_pago
+         (colaborador_id, tarifa_ica_mil, mes, pago_fijo, adicional_desc, valor_cuenta_cobro, rete_ica, rete_renta, valor_girar, aporte_salud, actualizado_en)
+       values ($1,$2,$3,$4,$5,$4,$6,$7,$8,$9, now())
+       on conflict (colaborador_id, mes) where colaborador_id is not null
+       do update set tarifa_ica_mil=$2, pago_fijo=$4, adicional_desc=$5, valor_cuenta_cobro=$4,
+          rete_ica=$6, rete_renta=$7, valor_girar=$8, aporte_salud=$9, actualizado_en=now()`,
+      [colaboradorId, tarifa, mesISO, valor, concepto, reteIca, reteRenta, valorGirar, aportes],
+    );
+  }
+  await flash("Cobro agregado");
+  revalidatePath("/trd/reg");
+  redirect(`/trd/reg?mes=${mesBase}`);
+}
+
 /** Agrega un pago a un freelance (sin colaborador de nómina). */
 export async function agregarFreelance(formData: FormData) {
   await soloAdmin();
