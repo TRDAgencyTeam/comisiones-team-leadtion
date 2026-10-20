@@ -109,6 +109,31 @@ export async function nominaPorArea(): Promise<{ area: string; count: number; co
   return rows.map((r: Record<string, unknown>) => ({ area: String(r.area), count: Number(r.n), cop: Number(r.cop) }));
 }
 
+export interface CobroMensualGasto { mes: string; usd: number; cop: number | null }
+
+/**
+ * Historial mensual de lo que COSTÓ un gasto fijo (herramienta/hosting/operativo),
+ * leído de los snapshots congelados de Egresos (`egreso_mensual`). Cada mes guarda
+ * el valor que tenía el gasto en ese momento, así que editar el costo hoy NO cambia
+ * lo que ya quedó registrado en meses pasados. Se empareja por nombre + categoría.
+ * Más reciente primero.
+ */
+export async function historialCobrosGasto(id: number, nombre: string, categoria: CategoriaGasto): Promise<CobroMensualGasto[]> {
+  const rows = await consulta(
+    `select to_char(mes,'YYYY-MM') as mes, valor_usd, valor_cop
+       from public.egreso_mensual
+      where categoria = 'fijo'
+        and (gasto_fijo_id = $1 or (gasto_fijo_id is null and subcategoria = $3 and concepto = $2))
+      order by mes desc limit 24`,
+    [id, nombre, categoria],
+  );
+  return rows.map((r: Record<string, unknown>) => ({
+    mes: String(r.mes),
+    usd: num(r.valor_usd),
+    cop: r.valor_cop != null ? Number(r.valor_cop) : null,
+  }));
+}
+
 export interface SnapshotGasto { mes: string; totalCop: number; totalUsd: number }
 
 /** Histórico de snapshots mensuales (más reciente primero). */

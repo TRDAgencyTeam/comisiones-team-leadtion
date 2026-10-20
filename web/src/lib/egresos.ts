@@ -94,7 +94,7 @@ export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<num
     );
     // "share" = valor mensual × % que asume la empresa (seg. social 60%, etc.).
     await q(
-      `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
+      `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria, gasto_fijo_id)
        select $1, nombre, 'TRD',
           round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
                   * (coalesce(porcentaje_reparto,100)/100.0)
@@ -103,7 +103,7 @@ export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<num
                then round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
                             * (coalesce(porcentaje_reparto,100)/100.0) )::numeric, 2)
                else null end,
-          true, 'fijo', categoria
+          true, 'fijo', categoria, id
          from public.gasto_fijo
         where activo and afecta_utilidad and categoria <> 'paso_dinero'
           and (recurrencia='mensual' or (recurrencia='anual' and amortizar) or recurrencia='diario')`,
@@ -166,7 +166,7 @@ export async function sincronizarFijoMesActual(tipo: "nomina" | "gasto", id: num
     );
   } else {
     await consulta(
-      `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
+      `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria, gasto_fijo_id)
        select $1, nombre, 'TRD',
           round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
                   * (coalesce(porcentaje_reparto,100)/100.0) / case when moneda='COP' then $2::numeric else 1 end )::numeric, 2),
@@ -174,7 +174,7 @@ export async function sincronizarFijoMesActual(tipo: "nomina" | "gasto", id: num
                then round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
                             * (coalesce(porcentaje_reparto,100)/100.0) )::numeric, 2)
                else null end,
-          true, 'fijo', categoria
+          true, 'fijo', categoria, id
          from public.gasto_fijo
         where id = $3 and activo and afecta_utilidad and categoria <> 'paso_dinero'
           and (recurrencia='mensual' or (recurrencia='anual' and amortizar) or recurrencia='diario')`,
@@ -204,7 +204,7 @@ export async function resyncFijosMesActual(): Promise<void> {
     [primer, tasa],
   );
   await consulta(
-    `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
+    `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria, gasto_fijo_id)
      select $1, nombre, 'TRD',
         round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
                 * (coalesce(porcentaje_reparto,100)/100.0)
@@ -213,7 +213,7 @@ export async function resyncFijosMesActual(): Promise<void> {
              then round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
                           * (coalesce(porcentaje_reparto,100)/100.0) )::numeric, 2)
              else null end,
-        true, 'fijo', categoria
+        true, 'fijo', categoria, id
        from public.gasto_fijo
       where activo and afecta_utilidad and categoria <> 'paso_dinero'
         and (recurrencia='mensual' or (recurrencia='anual' and amortizar) or recurrencia='diario')`,
