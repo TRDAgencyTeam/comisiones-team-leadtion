@@ -43,6 +43,44 @@ async function insertarCreditoDelMes(primer: string, tasa: number, q: typeof con
   );
 }
 
+/**
+ * Nómina FREELANCE del mes: pagos puntuales a colaboradores sin salario fijo
+ * (valor_nomina = 0) que tienen un registro en REG (reg_pago) ese mes — p. ej.
+ * Úrsula. Se reflejan como línea de nómina en Egresos (igual que un salario). Es la
+ * contraparte en Egresos del pago que se agrega desde la ficha de Nómina. Solo
+ * INSERTA (el que llama ya borró las filas 'fijo' del mes, o usa el sync dedicado).
+ */
+async function insertarNominaFreelance(primer: string, tasa: number, q: typeof consulta = consulta) {
+  await q(
+    `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria)
+     select $1, c.nombre, coalesce(c.area,'Freelance'),
+            round((p.pago_fijo/$2::numeric)::numeric,2), p.pago_fijo, true, 'fijo', 'nomina'
+       from public.reg_pago p
+       join public.colaboradores c on c.id = p.colaborador_id
+      where p.mes = $1 and coalesce(c.valor_nomina,0) = 0 and coalesce(p.pago_fijo,0) > 0`,
+    [primer, tasa],
+  );
+}
+
+/**
+ * Sincroniza la nómina freelance de un mes (cualquiera, pasado o en curso) en
+ * Egresos: borra las líneas de nómina freelance de ese mes y las reinserta desde
+ * REG. No toca la nómina de salario fijo. La usa la ficha de Nómina al agregar un
+ * pago puntual para que aparezca en Egresos y en el cuadro de nómina de ese mes.
+ */
+export async function sincronizarNominaFreelanceMes(mes: string): Promise<void> {
+  const primer = primerDiaMes(mes);
+  const { cop: tasa } = await tasaUsdCop();
+  await consulta(
+    `delete from public.egreso_mensual em
+       using public.colaboradores c
+      where em.mes = $1 and em.categoria = 'fijo' and em.subcategoria = 'nomina'
+        and em.concepto = c.nombre and coalesce(c.valor_nomina,0) = 0`,
+    [primer],
+  );
+  await insertarNominaFreelance(primer, tasa);
+}
+
 export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<number> => {
   const primer = primerDiaMes(mes);
   // Lo lento (tasa en vivo, P&L de Leadtion) se calcula ANTES de tomar el candado.
@@ -110,6 +148,7 @@ export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<num
       [primer, tasa],
     );
     await insertarCreditoDelMes(primer, tasa, q);
+    await insertarNominaFreelance(primer, tasa, q);
   }
 
   // 2) AUTO LEADTION (solo mes en curso): comisiones CS, comisiones afiliados y API
@@ -220,6 +259,7 @@ export async function resyncFijosMesActual(): Promise<void> {
     [primer, tasa],
   );
   await insertarCreditoDelMes(primer, tasa);
+  await insertarNominaFreelance(primer, tasa);
 }
 
 export interface IngresoRow {

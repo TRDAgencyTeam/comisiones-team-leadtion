@@ -122,6 +122,34 @@ export async function historicoNominaPasado(nMeses: number, tasa: number): Promi
   return out;
 }
 
+export interface PagoNominaHist {
+  mes: string;
+  valor: number;
+  concepto: string | null;
+  valorGirar: number;
+  pagado: boolean;
+}
+
+/** Historial de pagos de una persona desde REG (reg_pago). Más reciente primero.
+ *  Sirve para ver en qué meses se le ha pagado (útil para freelances puntuales). */
+export async function historialPagosPersona(colaboradorId: number): Promise<PagoNominaHist[]> {
+  const rows = await consulta(
+    `select to_char(mes,'YYYY-MM') as mes, coalesce(pago_fijo, valor_cuenta_cobro, 0)::float valor,
+            adicional_desc, coalesce(valor_girar,0)::float girar, ck_pagado
+       from public.reg_pago
+      where colaborador_id = $1
+      order by mes desc`,
+    [colaboradorId],
+  );
+  return rows.map((r: Record<string, unknown>) => ({
+    mes: String(r.mes),
+    valor: Number(r.valor),
+    concepto: (r.adicional_desc as string) ?? null,
+    valorGirar: Number(r.girar),
+    pagado: Boolean(r.ck_pagado),
+  }));
+}
+
 /** Días para que venza el contrato (negativo = ya venció); null si no hay fecha. */
 export function diasParaVencer(fechaFin: string | null): number | null {
   if (!fechaFin) return null;

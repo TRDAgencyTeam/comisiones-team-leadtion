@@ -5,7 +5,9 @@ import { redirect } from "next/navigation";
 import { addMonths } from "comisiones-cs-engine/dates";
 import { consulta } from "@/lib/db";
 import { soloAdmin } from "@/lib/sesion";
-import { resyncFijosMesActual } from "@/lib/egresos";
+import { resyncFijosMesActual, sincronizarNominaFreelanceMes } from "@/lib/egresos";
+import { primerDiaMes, uvtDeMes, recalcular } from "@/lib/reg";
+import { TARIFA_ICA_DEFAULT, aportesSeguridadSocial } from "@/lib/retenciones";
 import { flash } from "@/lib/flash";
 import { parseMonto } from "@/lib/numero";
 
@@ -112,6 +114,72 @@ export async function cambiarEstadoPersona(formData: FormData) {
   revalidatePath("/trd/clientes/egresos");
   revalidatePath("/trd/clientes");
   revalidatePath("/trd/reg");
+}
+
+/**
+ * Agrega un pago puntual a una persona SIN salario fijo (freelance, valor_nomina=0),
+ * p. ej. Úrsula por "3 videos". Se guarda en REG (reg_pago) con sus retenciones y se
+ * SINCRONIZA con Egresos y el cuadro de nómina de ese mes. Upsert por (persona, mes):
+ * volver a agregar el mismo mes reemplaza el valor (no duplica).
+ */
+export async function agregarPagoNomina(formData: FormData) {
+  await soloAdmin();
+  const id = Number(formData.get("id"));
+  const mesYM = String(formData.get("mes") ?? "").slice(0, 7);
+  const valor = numCO(formData.get("valor"));
+  const concepto = txt(formData.get("concepto"));
+  const back = `/trd/gastos-fijos/nomina/${id}`;
+  if (!id || valor <= 0 || !/^\d{4}-\d{2}$/.test(mesYM)) {
+    redirect(`${back}?error=` + encodeURIComponent("Elige un mes y un valor válido."));
+  }
+  const col = await consulta(
+    `select coalesce(tarifa_ica_mil,0) ti, coalesce(valor_nomina,0) vn from public.colaboradores where id = $1`, [id]);
+  if (!col.length) redirect(`${back}?error=` + encodeURIComponent("Persona no encontrada."));
+  if (Number(col[0]!.vn) > 0) {
+    redirect(`${back}?error=` + encodeURIComponent("Esta persona tiene salario fijo; su pago ya entra automáticamente cada mes."));
+  }
+  const mes = primerDiaMes(mesYM);
+  const tarifa = Number(col[0]!.ti) || TARIFA_ICA_DEFAULT;
+  const uvt = await uvtDeMes(mes);
+  // Se asume que paga su seguridad social (depura la base de renta, no el giro).
+  const aportes = aportesSeguridadSocial(valor);
+  const { reteIca, reteRenta, valorGirar } = recalcular(valor, tarifa, aportes, 0, uvt);
+  await consulta(
+    `insert into public.reg_pago
+       (colaborador_id, tarifa_ica_mil, mes, pago_fijo, adicional_desc, valor_cuenta_cobro, rete_ica, rete_renta, valor_girar, aporte_salud, actualizado_en)
+     values ($1,$2,$3,$4,$5,$4,$6,$7,$8,$9, now())
+     on conflict (colaborador_id, mes) where colaborador_id is not null
+     do update set tarifa_ica_mil=$2, pago_fijo=$4, adicional_desc=$5, valor_cuenta_cobro=$4,
+        rete_ica=$6, rete_renta=$7, valor_girar=$8, aporte_salud=$9, actualizado_en=now()`,
+    [id, tarifa, mes, valor, concepto, reteIca, reteRenta, valorGirar, aportes],
+  );
+  await sincronizarNominaFreelanceMes(mes);
+  await flash("Pago agregado");
+  revalidatePath(back);
+  revalidatePath("/trd/reg");
+  revalidatePath("/trd/clientes/egresos");
+  revalidatePath("/trd/clientes");
+  revalidatePath("/trd/gastos-fijos/nomina");
+  redirect(back);
+}
+
+/** Elimina un pago puntual de nómina (freelance) de un mes y re-sincroniza Egresos. */
+export async function eliminarPagoNomina(formData: FormData) {
+  await soloAdmin();
+  const id = Number(formData.get("id"));
+  const mesYM = String(formData.get("mes") ?? "").slice(0, 7);
+  const back = `/trd/gastos-fijos/nomina/${id}`;
+  if (!id || !/^\d{4}-\d{2}$/.test(mesYM)) redirect(back);
+  const mes = primerDiaMes(mesYM);
+  await consulta(`delete from public.reg_pago where colaborador_id = $1 and mes = $2`, [id, mes]);
+  await sincronizarNominaFreelanceMes(mes);
+  await flash("Pago eliminado");
+  revalidatePath(back);
+  revalidatePath("/trd/reg");
+  revalidatePath("/trd/clientes/egresos");
+  revalidatePath("/trd/clientes");
+  revalidatePath("/trd/gastos-fijos/nomina");
+  redirect(back);
 }
 
 const MIMES_OK = ["application/pdf", "image/png", "image/jpeg", "image/jpg", "image/webp"];

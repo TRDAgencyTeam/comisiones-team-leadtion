@@ -244,17 +244,6 @@ export async function renglonesDelMes(mes: string): Promise<RenglonReg[]> {
   return [...renglonesColab, ...renglonesFree];
 }
 
-/** Proveedores freelance (sin nómina fija) a los que se les puede agregar un cobro
- *  puntual del mes. Son colaboradores activos marcados como freelance o sin salario. */
-export async function proveedoresFreelance(): Promise<{ id: number; nombre: string }[]> {
-  const rows = await consulta(
-    `select id, nombre from public.colaboradores
-      where activo and (coalesce(rol,'') = 'freelance' or coalesce(valor_nomina,0) = 0)
-      order by nombre`,
-  );
-  return rows.map((r: Record<string, unknown>) => ({ id: Number(r.id), nombre: String(r.nombre) }));
-}
-
 export interface TotalesReg {
   cuentaCobro: number;
   reteIca: number;
