@@ -122,8 +122,11 @@ async function fetchDatosLeadtion(): Promise<DatosLeadtion> {
 
 /** Clasifica los cargos Leadtion de un mes a partir de datos ya cargados (sin DB). */
 function clasificarCargosMes(d: DatosLeadtion, mes: string): LineaLeadtion[] {
-  interface Cargo { categoria: "servicio" | "soporte"; valor: number; tipoServicio: TipoServicio }
-  const cargosDe = new Map<number, Cargo[]>();
+  // Del calendario de cada servicio separamos la VENTA (mes 1, cuotas, reactivación)
+  // del SOPORTE por defecto (ej. Agente IA mes 3 = $157). La venta manda siempre; el
+  // soporte por defecto cede ante un período de soporte explícito (cliente_soportes).
+  const ventaDe = new Map<number, { valor: number; tipoServicio: TipoServicio }[]>();
+  const servSoporteDe = new Map<number, number>(); // soporte por defecto del servicio
   const enVentana = new Set<number>(); // tiene alguna entrada de calendario este mes (incl. garantía)
   for (const sv of d.servicios) {
     const tipo = String(sv.tipo_servicio) as TipoServicio;
@@ -139,9 +142,13 @@ function clasificarCargosMes(d: DatosLeadtion, mes: string): LineaLeadtion[] {
       const id = Number(sv.cliente_id);
       enVentana.add(id);
       if (e.categoria === "garantia" || e.valor <= 0) continue; // garantía: no genera cargo
-      const arr = cargosDe.get(id) ?? [];
-      arr.push({ categoria: e.categoria === "soporte" ? "soporte" : "servicio", valor: round2(e.valor), tipoServicio: tipo });
-      cargosDe.set(id, arr);
+      if (e.categoria === "soporte") {
+        servSoporteDe.set(id, (servSoporteDe.get(id) ?? 0) + round2(e.valor));
+      } else {
+        const arr = ventaDe.get(id) ?? [];
+        arr.push({ valor: round2(e.valor), tipoServicio: tipo });
+        ventaDe.set(id, arr);
+      }
     }
   }
 
@@ -158,23 +165,37 @@ function clasificarCargosMes(d: DatosLeadtion, mes: string): LineaLeadtion[] {
       continue;
     }
 
-    // Dentro de ventana de servicio → sus cargos (servicio/soporte); garantía = $0.
-    const cargos = cargosDe.get(id);
-    if (cargos && cargos.length > 0) {
-      for (const cg of cargos) {
-        lineas.push({ clienteId: id, nombre, esAgencia: false, categoria: cg.categoria, valor: cg.valor, tipoServicio: cg.categoria === "servicio" ? cg.tipoServicio : undefined, fuenteValor: "calendario servicio" });
+    // 1) Venta de servicio este mes (mes 1 / cuota / reactivación) → manda siempre.
+    const ventas = ventaDe.get(id);
+    if (ventas && ventas.length > 0) {
+      for (const v of ventas) {
+        lineas.push({ clienteId: id, nombre, esAgencia: false, categoria: "servicio", valor: v.valor, tipoServicio: v.tipoServicio, fuenteValor: "calendario servicio" });
       }
+      continue;
+    }
+
+    // 2) Período de soporte explícito (plan personalizado por fechas) → GANA sobre el
+    //    soporte por defecto del servicio y sobre la garantía. Así se puede cambiar el
+    //    plan de un cliente (ej. cancelar soporte y dejar licencia personalizada).
+    const sopPeriodo = soporteDelMes(d.soportesDe.get(id), mes);
+    if (sopPeriodo > 0) {
+      lineas.push({ clienteId: id, nombre, esAgencia: false, categoria: "soporte", valor: round2(sopPeriodo), fuenteValor: "cliente_soportes" });
+      continue;
+    }
+
+    // 3) Soporte por defecto del servicio (ej. Agente IA mes 3 $157) si no hay período.
+    const servSop = servSoporteDe.get(id);
+    if (servSop && servSop > 0) {
+      lineas.push({ clienteId: id, nombre, esAgencia: false, categoria: "soporte", valor: round2(servSop), fuenteValor: "calendario servicio" });
       continue;
     }
     if (enVentana.has(id)) continue; // solo garantía este mes ($0)
 
-    // Fuera de ventana → mensualidad base por valor.
+    // 4) Fuera de ventana → mensualidad base: soporte del cliente, licencia o $69.
     const licgen = Number(c.licgen);
     const sopVal = Number(c.sop);
-    const sopPeriodo = soporteDelMes(d.soportesDe.get(id), mes); // soporte del período que cubre ESTE mes
-    const sopExplicito = sopPeriodo > 0 ? sopPeriodo : (sopVal > 0 ? sopVal : 0);
-    if (sopExplicito > 0) {
-      lineas.push({ clienteId: id, nombre, esAgencia: false, categoria: "soporte", valor: round2(sopExplicito), fuenteValor: sopPeriodo > 0 ? "cliente_soportes" : "soporte_valor" });
+    if (sopVal > 0) {
+      lineas.push({ clienteId: id, nombre, esAgencia: false, categoria: "soporte", valor: round2(sopVal), fuenteValor: "soporte_valor" });
     } else if (licgen > 0) {
       lineas.push({ clienteId: id, nombre, esAgencia: false, categoria: licgen <= 69 ? "estandar" : "soporte", valor: round2(licgen), fuenteValor: "valor_licencia_general" });
     } else {

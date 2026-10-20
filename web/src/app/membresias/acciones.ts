@@ -123,22 +123,24 @@ export async function recomputarPagosDeCliente(clienteId: number) {
   await consulta(`delete from public.pagos_mensuales where cliente_id=$1 and origen in ('servicio','soporte')`, [clienteId]);
 
   const hoyMes = mesHoyISO();
-  const porMes = new Map<string, { valor: number; origen: string }>();
 
-  // 1) Períodos de soporte (nivel mensual por rango; indefinido = hasta hoy).
+  // 1) Períodos de soporte explícitos (plan personalizado por rango; indefinido = hasta hoy).
+  const sopPeriodoMes = new Map<string, number>();
   const soportes = await consulta(`select valor, desde, hasta from public.cliente_soportes where cliente_id=$1`, [clienteId]);
   for (const s of soportes) {
     const desde = (s.desde instanceof Date ? s.desde.toISOString() : String(s.desde)).slice(0, 7);
     const hasta = s.hasta ? (s.hasta instanceof Date ? s.hasta.toISOString() : String(s.hasta)).slice(0, 7) : hoyMes;
-    for (const mes of mesesEntre(desde, hasta)) porMes.set(mes, { valor: Number(s.valor), origen: "soporte" });
+    for (const mes of mesesEntre(desde, hasta)) sopPeriodoMes.set(mes, Number(s.valor));
   }
 
-  // 2) Servicios (suman en su ventana; sobrescriben el soporte si coinciden).
+  // 2) Servicios: separamos VENTA (mes 1/cuota/reactivación) del SOPORTE por defecto.
   const servicios = await consulta(
     `select tipo_servicio, mes_inicio, soporte_valor, precio_mes1, coalesce(cuotas_n,1) cuotas_n from public.cliente_servicios where cliente_id=$1`,
     [clienteId],
   );
-  const servMes = new Map<string, number>();
+  const ventaMes = new Map<string, number>();
+  const servSoporteMes = new Map<string, number>();
+  const garantiaMes = new Set<string>();
   for (const s of servicios) {
     const mesInicio = (s.mes_inicio instanceof Date ? s.mes_inicio.toISOString() : String(s.mes_inicio)).slice(0, 7);
     const cal = calendarioServicio(
@@ -149,10 +151,18 @@ export async function recomputarPagosDeCliente(clienteId: number) {
     );
     for (const m of cal) {
       const mes = mesConDesfase(mesInicio, m.offset);
-      servMes.set(mes, (servMes.get(mes) ?? 0) + m.valor);
+      if (m.categoria === "garantia" || m.valor <= 0) { garantiaMes.add(mes); continue; }
+      if (m.categoria === "soporte") servSoporteMes.set(mes, (servSoporteMes.get(mes) ?? 0) + m.valor);
+      else ventaMes.set(mes, (ventaMes.get(mes) ?? 0) + m.valor);
     }
   }
-  for (const [mes, valor] of servMes) porMes.set(mes, { valor, origen: "servicio" });
+
+  // 3) Precedencia: venta de servicio > período de soporte > soporte del servicio > garantía.
+  const porMes = new Map<string, { valor: number; origen: string }>();
+  for (const [mes, v] of sopPeriodoMes) porMes.set(mes, { valor: v, origen: "soporte" });
+  for (const [mes, v] of servSoporteMes) if (!sopPeriodoMes.has(mes)) porMes.set(mes, { valor: v, origen: "servicio" });
+  for (const mes of garantiaMes) if (!porMes.has(mes)) porMes.set(mes, { valor: 0, origen: "servicio" });
+  for (const [mes, v] of ventaMes) porMes.set(mes, { valor: v, origen: "servicio" });
 
   for (const [mes, { valor, origen }] of porMes) {
     const estado = valor > 0 ? "activo" : "garantia";

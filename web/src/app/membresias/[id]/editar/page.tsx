@@ -58,13 +58,18 @@ export default async function EditarMembresiaPage({
               </select>
             </label>
             <label>
-              Soporte
-              <select name="soporteValor" defaultValue={c.soporteValor?.toString() ?? ""}>
-                <option value="">Básico (incluido en $69)</option>
-                <option value="87">Estándar $87 (Level Up)</option>
-                <option value="119">Avanzado $119 (AI / Reactivación)</option>
-                <option value="157">Premium $157 (AI / Reactivación)</option>
-              </select>
+              Soporte mensual ($) — valor libre
+              <input
+                type="number" name="soporteValor" step="0.01" min="0" list="niveles-soporte-edit"
+                defaultValue={c.soporteValor?.toString() ?? ""}
+                placeholder="Vacío = básico (incluido en la licencia)"
+              />
+              <datalist id="niveles-soporte-edit">
+                <option value="87">Estándar</option>
+                <option value="119">Avanzado</option>
+                <option value="157">Premium</option>
+              </datalist>
+              <small>Cobro base del mes si el cliente NO está en un servicio ni en un período de soporte. Vacío = solo licencia.</small>
             </label>
           </div>
 
@@ -89,8 +94,9 @@ export default async function EditarMembresiaPage({
             </label>
           </div>
 
-          <label>Valor de licencia mostrado ($)
+          <label>Licencia / membresía mensual ($)
             <input type="number" name="valorLicencia" step="0.01" defaultValue={c.valorLicencia?.toString() ?? ""} />
+            <small>Cobro base de membresía (estándar $69). Puedes personalizarlo (ej. $77). La API se cobra aparte con el selector de arriba.</small>
           </label>
 
           {error && <p className="login-error">{error}</p>}

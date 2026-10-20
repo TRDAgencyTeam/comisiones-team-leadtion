@@ -27,13 +27,20 @@ export function SoporteForm({
 
       <div className="form-2col">
         <label>
-          Nivel de soporte *
-          <select name="valor" defaultValue={soporte ? String(soporte.valor) : "119"} required>
-            <option value="87">Estándar — $87</option>
-            <option value="119">Avanzado — $119</option>
-            <option value="157">Premium — $157</option>
-          </select>
-          <small>El soporte ya incluye la licencia; ese es el cobro del mes.</small>
+          Cobro mensual ($) *
+          <input
+            type="number" name="valor" step="0.01" min="0" required
+            list="niveles-soporte"
+            defaultValue={soporte ? String(soporte.valor) : ""}
+            placeholder="Ej: 77, 87, 119, 157…"
+          />
+          <datalist id="niveles-soporte">
+            <option value="77">Licencia / plan personalizado</option>
+            <option value="87">Estándar</option>
+            <option value="119">Avanzado</option>
+            <option value="157">Premium</option>
+          </datalist>
+          <small>Valor libre: es el cobro del mes del cliente (incluye la licencia). La API va aparte.</small>
         </label>
         <label>Desde *<input type="date" name="desde" defaultValue={soporte?.desde.slice(0, 10) ?? hoyDia()} required /></label>
       </div>
