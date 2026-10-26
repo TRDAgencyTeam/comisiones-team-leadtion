@@ -1,5 +1,6 @@
 {
   "crons": [
-    { "path": "/api/cron/facturacion", "schedule": "0 6 1 * *" }
+    { "path": "/api/cron/facturacion", "schedule": "0 6 1 * *" },
+    { "path": "/api/cron/recordatorios-facturas", "schedule": "0 13 * * *" }
   ]
 }
