@@ -21,6 +21,19 @@ export interface CorreoParams {
 /** Correo al que responden los colaboradores (configurable por env). */
 export const REPLY_TO = process.env.REPLY_TO_EMAIL || "contable@turincondigital.com";
 
+/** Logo de la agencia para los correos. En email el src DEBE ser una URL http
+ *  absoluta (las rutas relativas salen rotas). Usa EMAIL_LOGO_URL solo si es http;
+ *  si no, cae al logo de producción (TRD negro, ideal sobre el fondo blanco). */
+const LOGO_EMAIL =
+  process.env.EMAIL_LOGO_URL && /^https?:\/\//.test(process.env.EMAIL_LOGO_URL)
+    ? process.env.EMAIL_LOGO_URL
+    : "https://leadtionteam.vercel.app/brand/trd/trd-logo-black.png";
+
+/** Encabezado con el logo de la agencia para los correos. */
+function encabezadoEmail(): string {
+  return `<img src="${LOGO_EMAIL}" alt="TRD Investment" height="38" style="height:38px;margin-bottom:10px" />`;
+}
+
 export function emailConfigurado(): boolean {
   return !!process.env.RESEND_API_KEY && !!process.env.RESEND_FROM;
 }
@@ -78,14 +91,9 @@ export function plantillaCorreoPago(datos: {
        <td style="padding:8px 0;text-align:right;font-size:14px;${fuerte ? "font-weight:700" : ""}">${val}</td>
      </tr>`;
 
-  const logoUrl = process.env.EMAIL_LOGO_URL;
-  const encabezado = logoUrl
-    ? `<img src="${logoUrl}" alt="TRD Investment" height="40" style="height:40px;margin-bottom:8px" />`
-    : `<div style="font-weight:700;font-size:20px;color:#2e2a6e;margin-bottom:8px">TRD Investment</div>`;
-
   const html = `
   <div style="font-family:Arial,Helvetica,sans-serif;max-width:540px;margin:0 auto;color:#141922">
-    ${encabezado}
+    ${encabezadoEmail()}
     <p style="font-size:15px">Hola ${primerNombre}, adjuntamos el comprobante y el desglose del pago de tu nómina. Gracias por el trabajo que haces.</p>
     <table style="width:100%;border-collapse:collapse;border-top:1px solid #e2e7ee;border-bottom:1px solid #e2e7ee;margin:14px 0">
       ${fila("Pago fijo", cop(pagoFijo))}
@@ -133,11 +141,6 @@ export function plantillaRecordatorioFacturas(secciones: {
       ? `Facturación de HOY: ${hoy.length} factura(s) por hacer`
       : `Recordatorio: ${total} factura(s) de facturación`;
 
-  const logoUrl = process.env.EMAIL_LOGO_URL;
-  const encabezado = logoUrl
-    ? `<img src="${logoUrl}" alt="TRD Investment" height="40" style="height:40px;margin-bottom:8px" />`
-    : `<div style="font-weight:700;font-size:20px;color:#2e2a6e;margin-bottom:8px">TRD Investment</div>`;
-
   const tabla = (items: FacturaRecordatorio[], color: string) => `
     <table style="width:100%;border-collapse:collapse;margin:6px 0 16px">
       <thead><tr>
@@ -167,7 +170,7 @@ export function plantillaRecordatorioFacturas(secciones: {
 
   const html = `
   <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;color:#141922">
-    ${encabezado}
+    ${encabezadoEmail()}
     <p style="font-size:15px">Hola, este es el recordatorio de <strong>facturación</strong> del día (${fechaCorta(fechaHoy)}). Estas son las facturas pendientes por hacer:</p>
     ${seccion("🔴 Vencidas — no se facturaron", "Ya pasó su fecha y siguen sin marcarse como facturadas. Por favor, realízalas cuanto antes.", vencidas, "#dc2626")}
     ${seccion("🟡 Para HOY", "Hay que facturarlas hoy.", hoy, "#b45309")}
