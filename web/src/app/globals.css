@@ -40,7 +40,13 @@
   --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.1);
   --faint: #9aa1ad;
   --info: #2f6fd6;
+  --info-soft: #dbeafe;
   --danger: #dc2626;
+  --danger-soft: #fde2e2;
+  --sched: #7c3aed;         /* programado: violeta */
+  --sched-soft: #ece7fe;
+  --confirm: #0e7490;       /* ¿continúa?: cian */
+  --confirm-soft: #cdf4f7;
   color-scheme: light;
 }
 
@@ -62,7 +68,13 @@
     --shadow: none;
     --faint: #6b7385;
     --info: #6f9cf0;
+    --info-soft: #16294d;
     --danger: #f87171;
+    --danger-soft: #3f1518;
+    --sched: #a78bfa;
+    --sched-soft: #291a4d;
+    --confirm: #22d3ee;
+    --confirm-soft: #0b3942;
     color-scheme: dark;
   }
 }
@@ -83,7 +95,13 @@
     --shadow: none;
     --faint: #6b7385;
     --info: #6f9cf0;
+    --info-soft: #16294d;
     --danger: #f87171;
+    --danger-soft: #3f1518;
+    --sched: #a78bfa;
+    --sched-soft: #291a4d;
+    --confirm: #22d3ee;
+    --confirm-soft: #0b3942;
     color-scheme: dark;
   }
 
@@ -1270,17 +1288,31 @@ input[type="month"]::-webkit-calendar-picker-indicator { cursor: pointer; }
 .cf-table thead th.r, .cf-table tbody td.r { text-align: right; font-variant-numeric: tabular-nums; }
 .cf-table tbody td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .cf-table tbody tr:last-child td { border-bottom: none; }
-/* Color de fila por estado — identificar de un vistazo */
-.cf-table tbody tr.fila-pagado { background: color-mix(in srgb, var(--paid) 9%, transparent); }
-.cf-table tbody tr.fila-pagado:hover { background: color-mix(in srgb, var(--paid) 15%, transparent); }
-.cf-table tbody tr.fila-facturado { background: color-mix(in srgb, var(--info) 9%, transparent); }
-.cf-table tbody tr.fila-facturado:hover { background: color-mix(in srgb, var(--info) 15%, transparent); }
-.cf-table tbody tr.fila-por_facturar { background: color-mix(in srgb, var(--pending) 10%, transparent); }
-.cf-table tbody tr.fila-por_facturar:hover { background: color-mix(in srgb, var(--pending) 16%, transparent); }
-.cf-table tbody tr.fila-por_confirmar { background: color-mix(in srgb, #6d5ac0 12%, transparent); }
-.cf-table tbody tr.fila-por_confirmar:hover { background: color-mix(in srgb, #6d5ac0 18%, transparent); }
-.cf-table tbody tr.fila-programado { background: color-mix(in srgb, var(--accent) 8%, transparent); }
-.cf-table tbody tr.fila-anulado { background: color-mix(in srgb, var(--bad) 8%, transparent); opacity: 0.6; }
+/* Color de fila por estado — vivo y legible en claro y oscuro. Cada estado define
+   su color (--fila-c); una barra lateral sólida + tinte del mismo color identifican
+   la fila de un vistazo sin tapar el texto. */
+.cf-table tbody tr.fila-pagado { --fila-c: var(--paid); }
+.cf-table tbody tr.fila-facturado { --fila-c: var(--info); }
+.cf-table tbody tr.fila-por_facturar { --fila-c: var(--pending); }
+.cf-table tbody tr.fila-programado { --fila-c: var(--sched); }
+.cf-table tbody tr.fila-por_confirmar { --fila-c: var(--confirm); }
+.cf-table tbody tr.fila-anulado { --fila-c: var(--danger); }
+
+.cf-table tbody tr[class*="fila-"] {
+  background: color-mix(in srgb, var(--fila-c) 17%, var(--panel));
+  transition: background .12s ease;
+}
+.cf-table tbody tr[class*="fila-"]:hover {
+  background: color-mix(in srgb, var(--fila-c) 28%, var(--panel));
+}
+/* Barra lateral sólida en la 1ª celda (border-collapse no pinta box-shadow en <tr>). */
+.cf-table tbody tr[class*="fila-"] > td:first-child {
+  box-shadow: inset 4px 0 0 0 var(--fila-c);
+  padding-left: 16px;
+}
+/* Anulado: se nota en rojo pero el texto sigue legible (tachado, no apagado). */
+.cf-table tbody tr.fila-anulado .nom,
+.cf-table tbody tr.fila-anulado .srv { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--danger) 55%, transparent); }
 .cf-table .nom { font-weight: 600; }
 .cf-table .nom small { display: block; color: var(--muted); font-weight: 500; font-size: 0.72rem; }
 .cf-table .srv { color: var(--muted); max-width: 200px; }
