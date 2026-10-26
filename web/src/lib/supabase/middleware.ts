@@ -50,7 +50,11 @@ export async function updateSession(request: NextRequest) {
 
   const esRutaPublica =
     request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/auth");
+    request.nextUrl.pathname.startsWith("/auth") ||
+    // Los crons (Vercel) no tienen sesión de usuario: se autentican con CRON_SECRET
+    // dentro de la propia ruta, no con el login. Sin esto el middleware los mandaba
+    // a /login y nunca corrían.
+    request.nextUrl.pathname.startsWith("/api/cron");
 
   if (!user && !esRutaPublica) {
     const loginUrl = request.nextUrl.clone();
