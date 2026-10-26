@@ -16,7 +16,7 @@ import { enviarEmail, emailConfigurado, plantillaRecordatorioFacturas, type Fact
 
 /** Destinatarios: host + encargada de facturación. Configurable por env (CSV). */
 const DESTINATARIOS = (process.env.RECORDATORIO_FACTURAS_TO
-  || "cuentas.trd@gmail.com,mvargas@turincondigital.com")
+  || "cuentas.trd@gmail.com,mvargas@turincondigital.com,marialejavargas320@gmail.com")
   .split(",").map((s) => s.trim()).filter(Boolean);
 
 /** Suma n días a un "YYYY-MM-DD" (aritmética de fecha, sin zona horaria). */
