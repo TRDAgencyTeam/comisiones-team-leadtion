@@ -294,6 +294,11 @@ tr:last-child td { border-bottom: none; }
   text-decoration: none; white-space: nowrap;
 }
 .btn-primary:hover { filter: brightness(1.05); }
+.btn-cancelar-cuenta {
+  display: inline-block; padding: 9px 16px; border: 1px solid var(--danger); border-radius: 8px;
+  background: none; color: var(--danger); font-weight: 600; cursor: pointer; font-size: 0.9rem; white-space: nowrap;
+}
+.btn-cancelar-cuenta:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); }
 .btn-secondary {
   display: inline-block; padding: 9px 16px; border: 1px solid var(--border); border-radius: 8px;
   background: none; color: var(--text); font-weight: 600; cursor: pointer; font-size: 0.9rem; text-decoration: none;

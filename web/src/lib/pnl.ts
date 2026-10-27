@@ -17,6 +17,30 @@ function mesConDesfaseMes(mesInicio: string, n: number): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
+/** Día de corte del cliente en un mes 'YYYY-MM' = día de su activación (acotado al
+ *  último día del mes). Devuelve 'YYYY-MM-DD'. */
+export function corteDelMesISO(mesYYYYMM: string, actIso: string | null): string {
+  const [y, m] = mesYYYYMM.split("-").map(Number);
+  const diasMes = new Date(Date.UTC(y!, m!, 0)).getUTCDate();
+  const actDay = actIso ? Number(actIso.slice(8, 10)) : 1;
+  const d = Math.min(actDay || 1, diasMes);
+  return `${mesYYYYMM}-${String(d).padStart(2, "0")}`;
+}
+
+/** Un cliente CANCELADO no se cobra en un mes si canceló ANTES del corte de ese mes
+ *  (la licencia/soporte se cobra el día de corte; si avisó/canceló antes, ese mes = $0). */
+function cobraEsteMes(mes: string, actIso: string | null, cancelIso: string | null): boolean {
+  if (!cancelIso) return true;
+  return cancelIso >= corteDelMesISO(mes, actIso);
+}
+
+/** Último 'YYYY-MM' que se le cobra a un cliente cancelado (corte-consciente). */
+export function ultimoMesCobrado(actIso: string | null, cancelIso: string | null): string | null {
+  if (!cancelIso) return null;
+  const cancelMes = cancelIso.slice(0, 7);
+  return cancelIso >= corteDelMesISO(cancelMes, actIso) ? cancelMes : mesConDesfaseMes(cancelMes, -1);
+}
+
 export interface PnL {
   mes: string;
   tasa: { cop: number; enVivo: boolean };
@@ -111,7 +135,8 @@ async function fetchDatosLeadtion(): Promise<DatosLeadtion> {
   const [clientes, servicios, soportes] = await Promise.all([
     consulta(`select id, nombre, coalesce(es_agencia,false) es_agencia,
                 coalesce(soporte_valor,0) sop, coalesce(valor_licencia_general,0) licgen,
-                to_char(fecha_activacion,'YYYY-MM') act
+                to_char(fecha_activacion,'YYYY-MM') act, to_char(fecha_activacion,'YYYY-MM-DD') act_dia,
+                to_char(fecha_cancelacion,'YYYY-MM-DD') cancel
                 from public.clientes where estado_actual='activo' and es_leadtion`),
     consulta(`select cliente_id, tipo_servicio, to_char(mes_inicio,'YYYY-MM') mes_inicio, soporte_valor, precio_mes1, coalesce(cuotas_n,1) cuotas_n, cuotas_valores
                 from public.cliente_servicios`),
@@ -159,6 +184,8 @@ function clasificarCargosMes(d: DatosLeadtion, mes: string): LineaLeadtion[] {
     const nombre = String(c.nombre);
     const act = c.act ? String(c.act) : null;
     if (act != null && mes < act) continue; // aún no activo ese mes
+    // Cancelado antes del corte de este mes → no se cobra (ese mes queda en $0).
+    if (!cobraEsteMes(mes, (c.act_dia as string) ?? null, (c.cancel as string) ?? null)) continue;
 
     // Agencia: la licencia va incluida en el marketing → cargo $0, sin servicios propios.
     if (Boolean(c.es_agencia)) {
@@ -230,7 +257,8 @@ export async function historialMensualCliente(clienteId: number): Promise<MesHis
   const [cRows, sRows, sopRows] = await Promise.all([
     consulta(`select id, nombre, coalesce(es_agencia,false) es_agencia, coalesce(soporte_valor,0) sop,
                 coalesce(valor_licencia_general,0) licgen, to_char(fecha_activacion,'YYYY-MM') act,
-                to_char(fecha_cancelacion,'YYYY-MM') cancel from public.clientes where id=$1`, [clienteId]),
+                to_char(fecha_activacion,'YYYY-MM-DD') act_dia, to_char(fecha_cancelacion,'YYYY-MM-DD') cancel
+                from public.clientes where id=$1`, [clienteId]),
     consulta(`select cliente_id, tipo_servicio, to_char(mes_inicio,'YYYY-MM') mes_inicio, soporte_valor, precio_mes1, coalesce(cuotas_n,1) cuotas_n, cuotas_valores
                 from public.cliente_servicios where cliente_id=$1`, [clienteId]),
     consulta(`select cliente_id, valor, to_char(desde,'YYYY-MM') desde, to_char(hasta,'YYYY-MM') hasta from public.cliente_soportes where cliente_id=$1`, [clienteId]),
@@ -240,7 +268,10 @@ export async function historialMensualCliente(clienteId: number): Promise<MesHis
   const d: DatosLeadtion = { clientes: cRows as Record<string, unknown>[], servicios: sRows as Record<string, unknown>[], soportesDe: agruparSoportes(sopRows as Record<string, unknown>[]) };
   const act = String(cli.act).slice(0, 7);
   const hoy = mesHoyISO();
-  const fin = cli.cancel && String(cli.cancel) < hoy ? String(cli.cancel) : hoy;
+  // Si está cancelado, el historial llega hasta el último mes COBRADO (corte-consciente):
+  // si canceló antes del corte de su mes de cancelación, ese mes no se cobra.
+  const ultimo = ultimoMesCobrado((cli.act_dia as string) ?? null, (cli.cancel as string) ?? null);
+  const fin = ultimo && ultimo < hoy ? ultimo : hoy;
   const out: MesHistorialCliente[] = [];
   let mes = act, guard = 0;
   while (mes <= fin && guard++ < 72) {

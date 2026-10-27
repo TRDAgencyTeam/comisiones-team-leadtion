@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { getUsuario } from "@/lib/supabase/server";
 import { calendarioServicio, parseCuotasValores, type TipoServicio } from "@/lib/servicios";
+import { ultimoMesCobrado } from "@/lib/pnl";
 import { mesHoyISO } from "@/lib/fecha";
 import { flash } from "@/lib/flash";
 
@@ -52,6 +53,44 @@ export async function actualizarMembresia(formData: FormData) {
     [id, nombre, estado, esAgencia, planTipo, soporteValor, valorLicencia, api.estado, api.valor, bono, tipoCliente, fechaCancel],
   );
   await flash("Actualizado");
+  revalidatePath(`/membresias/${id}`);
+  revalidatePath("/membresias/clientes");
+  revalidatePath("/membresias/dashboard");
+  revalidatePath("/cs");
+  redirect(`/membresias/${id}`);
+}
+
+/**
+ * Cambia el estado de la cuenta desde la ficha (botón rápido): activo / pausado /
+ * cancelado, sin tener que entrar a Editar. Al CANCELAR guarda la fecha exacta (no el
+ * mes): si se canceló ANTES del corte de ese mes, el modelo de cargos deja ese mes en
+ * $0 (recomputarPagos + historial son corte-conscientes). Reactivar limpia la fecha.
+ */
+export async function cambiarEstadoCuenta(formData: FormData) {
+  if (!(await getUsuario())) redirect("/login");
+  const id = Number(formData.get("id"));
+  const estado = String(formData.get("estado"));
+  if (!id || !["activo", "pausado", "cancelado"].includes(estado)) redirect(`/membresias/${id}`);
+  const fcRaw = String(formData.get("fechaCancelacion") ?? "").trim();
+  const fechaCancel = /^\d{4}-\d{2}-\d{2}$/.test(fcRaw) ? fcRaw : null;
+  const motivo = String(formData.get("motivo") ?? "").trim() || null;
+
+  await consulta(
+    `update public.clientes
+        set estado_actual = $2,
+            fecha_cancelacion = case when $2='cancelado' then coalesce($3::date, fecha_cancelacion, current_date) else null end,
+            motivo_estado = coalesce($4, motivo_estado),
+            estado_actualizado_en = now()
+      where id = $1`,
+    [id, estado, fechaCancel, motivo],
+  );
+  await consulta(
+    `insert into public.cliente_estado_historial (cliente_id, estado, motivo) values ($1,$2,$3)`,
+    [id, estado, motivo ?? (estado === "cancelado" ? "Cancelada desde la ficha" : estado === "pausado" ? "Pausada desde la ficha" : "Reactivada desde la ficha")],
+  );
+  // Refleja el corte en los cobros persistidos (pagos_mensuales) de este cliente.
+  await recomputarPagosDeCliente(id);
+  await flash(estado === "cancelado" ? "Cuenta cancelada" : estado === "pausado" ? "Cuenta pausada" : "Cuenta reactivada");
   revalidatePath(`/membresias/${id}`);
   revalidatePath("/membresias/clientes");
   revalidatePath("/membresias/dashboard");
@@ -165,7 +204,19 @@ export async function recomputarPagosDeCliente(clienteId: number) {
   for (const mes of garantiaMes) if (!porMes.has(mes)) porMes.set(mes, { valor: 0, origen: "servicio" });
   for (const [mes, v] of ventaMes) porMes.set(mes, { valor: v, origen: "servicio" });
 
+  // Si está cancelado, no persistir cobros después del último mes cobrado (corte-consciente):
+  // si canceló antes del corte de un mes, ese mes no se cobra.
+  const cliRows = await consulta(
+    `select to_char(fecha_activacion,'YYYY-MM-DD') act, to_char(fecha_cancelacion,'YYYY-MM-DD') cancel from public.clientes where id=$1`,
+    [clienteId],
+  );
+  const ultimoCobrado = ultimoMesCobrado(
+    (cliRows[0]?.act as string) ?? null,
+    (cliRows[0]?.cancel as string) ?? null,
+  );
+
   for (const [mes, { valor, origen }] of porMes) {
+    if (ultimoCobrado && mes.slice(0, 7) > ultimoCobrado) continue; // tras la cancelación: $0
     const estado = valor > 0 ? "activo" : "garantia";
     await consulta(
       `insert into public.pagos_mensuales (cliente_id, mes, valor, estado_mes, origen)

@@ -4,6 +4,7 @@ import { obtenerMembresia, PLAN_LABEL, TIPO_LABEL } from "@/lib/membresias";
 import { serviciosDeCliente, SERVICIO_LABEL, PRECIO_MES1_ESTANDAR } from "@/lib/servicios";
 import { soportesDeCliente, soporteEnMes } from "@/lib/soportes";
 import { BotonEliminar } from "../BotonEliminar";
+import { AccionesCuenta } from "../AccionesCuenta";
 import { BotonEliminarServicio } from "../BotonEliminarServicio";
 import { BotonEliminarSoporte } from "../BotonEliminarSoporte";
 import { marcarAgencia, cancelarSoporte } from "../acciones";
@@ -72,6 +73,7 @@ export default async function FichaMembresiaPage({ params }: { params: Promise<{
           </form>
           <Link href={`/membresias/${c.id}/editar`} className="btn-secondary">Editar</Link>
           <Link href={`/cs/clientes/${c.id}`} className="btn-secondary">Ver en CS →</Link>
+          <AccionesCuenta id={c.id} estado={c.estado} />
           <BotonEliminar id={c.id} nombre={c.nombre} />
         </div>
       </header>
