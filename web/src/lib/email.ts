@@ -21,13 +21,11 @@ export interface CorreoParams {
 /** Correo al que responden los colaboradores (configurable por env). */
 export const REPLY_TO = process.env.REPLY_TO_EMAIL || "contable@turincondigital.com";
 
-/** Logo de la agencia para los correos. En email el src DEBE ser una URL http
- *  absoluta (las rutas relativas salen rotas). Usa EMAIL_LOGO_URL solo si es http;
- *  si no, cae al logo de producción (TRD negro, ideal sobre el fondo blanco). */
-const LOGO_EMAIL =
-  process.env.EMAIL_LOGO_URL && /^https?:\/\//.test(process.env.EMAIL_LOGO_URL)
-    ? process.env.EMAIL_LOGO_URL
-    : "https://leadtionteam.vercel.app/brand/trd/trd-logo-black.png";
+/** Logo de la agencia para los correos. Se fija al asset de producción (verificado:
+ *  200 image/png, PNG válido, sin redirección). NO se usa EMAIL_LOGO_URL porque estaba
+ *  apuntando a una URL rota y hacía salir el logo cortado; para cambiarlo, edita esta
+ *  constante con la URL http(s) de una imagen pública real. */
+const LOGO_EMAIL = "https://leadtionteam.vercel.app/brand/trd/trd-logo-black.png";
 
 /** Encabezado con el logo de la agencia para los correos. */
 function encabezadoEmail(): string {
