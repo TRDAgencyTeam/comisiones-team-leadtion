@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { cargarResultados, corteFinDeMes } from "@/lib/comisiones";
+import { cargarResultados, corteFinDeMes, pendientePorPagar } from "@/lib/comisiones";
 import {
   estadisticasClientes,
   ingresosPorMes,
@@ -40,16 +40,18 @@ export default async function DashboardPage({
   const { corte: corteParam } = await searchParams;
   const corte = corteParam || corteFinDeMes();
 
+  const mesCorte = corte.slice(0, 7);
   let error: string | null = null;
-  let totalMes = 0;
-  let totalPendiente = 0;
+  let totalPorPagar = 0;   // cortes cerrados (meses < mes del corte): se paga ya
+  let totalEnCurso = 0;    // mes en curso / futuros a la fecha de corte: proyección
   let totalPagado = 0;
   let filas: {
     id: number;
     nombre: string;
     categoria: string | null;
     total: number;
-    pendiente: number;
+    porPagar: number;
+    enCurso: number;
     pagado: number;
   }[] = [];
 
@@ -65,18 +67,24 @@ export default async function DashboardPage({
     stats = est;
     ingresos = ing;
     for (const r of resultados) {
-      totalMes += r.total;
-      totalPendiente += r.totalPendiente;
+      const porPagar = pendientePorPagar(r, mesCorte);
+      const enCurso = Math.round((r.totalPendiente - porPagar + Number.EPSILON) * 100) / 100;
+      totalPorPagar += porPagar;
+      totalEnCurso += enCurso;
       totalPagado += r.totalPagado;
     }
-    filas = resultados.map((r) => ({
-      id: r.colaboradorId,
-      nombre: r.colaboradorNombre,
-      categoria: r.categoria,
-      total: r.total,
-      pendiente: r.totalPendiente,
-      pagado: r.totalPagado,
-    }));
+    filas = resultados.map((r) => {
+      const porPagar = pendientePorPagar(r, mesCorte);
+      return {
+        id: r.colaboradorId,
+        nombre: r.colaboradorNombre,
+        categoria: r.categoria,
+        total: r.total,
+        porPagar,
+        enCurso: Math.round((r.totalPendiente - porPagar + Number.EPSILON) * 100) / 100,
+        pagado: r.totalPagado,
+      };
+    });
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
@@ -106,19 +114,24 @@ export default async function DashboardPage({
       ) : (
         <>
           <div className="kpis">
-            <div className="kpi kpi-total">
-              <span className="kpi-label">Total a pagar (mes)</span>
-              <span className="kpi-num">{usd(round2(totalMes))}</span>
-            </div>
             <div className="kpi kpi-pend">
-              <span className="kpi-label">Pendiente</span>
-              <span className="kpi-num">{usd(round2(totalPendiente))}</span>
+              <span className="kpi-label">Por pagar (cortes cerrados)</span>
+              <span className="kpi-num">{usd(round2(totalPorPagar))}</span>
+            </div>
+            <div className="kpi kpi-total">
+              <span className="kpi-label">En curso (proyección)</span>
+              <span className="kpi-num">{usd(round2(totalEnCurso))}</span>
             </div>
             <div className="kpi kpi-pag">
               <span className="kpi-label">Pagado</span>
               <span className="kpi-num">{usd(round2(totalPagado))}</span>
             </div>
           </div>
+          <p className="foot" style={{ marginTop: -4 }}>
+            <b>Por pagar</b> = cortes de meses ya cerrados a la fecha de corte (lo que se paga ya).
+            <b> En curso</b> = lo que se está generando el mes del corte (aún no se paga; se cierra el mes siguiente).
+            El costo de comisiones del P&amp;L = por pagar + en curso = {usd(round2(totalPorPagar + totalEnCurso))}.
+          </p>
 
           {ingresos.length > 0 && (
             <section className="card">
@@ -165,8 +178,8 @@ export default async function DashboardPage({
                   <tr>
                     <th>Colaborador</th>
                     <th>Categoría</th>
-                    <th className="num">Total</th>
-                    <th className="num">Pendiente</th>
+                    <th className="num">Por pagar</th>
+                    <th className="num">En curso</th>
                     <th className="num">Pagado</th>
                   </tr>
                 </thead>
@@ -175,16 +188,16 @@ export default async function DashboardPage({
                     <tr key={f.id}>
                       <td>{f.nombre}</td>
                       <td>{f.categoria}</td>
-                      <td className="num">{usd(f.total)}</td>
-                      <td className="num estado-pendiente">{usd(f.pendiente)}</td>
+                      <td className="num estado-pendiente">{usd(f.porPagar)}</td>
+                      <td className="num">{usd(f.enCurso)}</td>
                       <td className="num estado-pagado">{usd(f.pagado)}</td>
                     </tr>
                   ))}
                   <tr className="fila-total">
                     <td>Total equipo</td>
                     <td></td>
-                    <td className="num">{usd(round2(totalMes))}</td>
-                    <td className="num">{usd(round2(totalPendiente))}</td>
+                    <td className="num">{usd(round2(totalPorPagar))}</td>
+                    <td className="num">{usd(round2(totalEnCurso))}</td>
                     <td className="num">{usd(round2(totalPagado))}</td>
                   </tr>
                 </tbody>

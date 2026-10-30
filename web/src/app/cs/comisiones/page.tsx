@@ -9,7 +9,6 @@ import {
   type ResultadoVista,
 } from "@/lib/comisiones";
 import { ProximosPagos, type FilaFutura } from "@/components/ProximosPagos";
-import { mesHoyISO } from "@/lib/fecha";
 
 export const dynamic = "force-dynamic";
 
@@ -21,8 +20,6 @@ const nombreMes = (ym: string) => {
   const s = new Date(a!, (m! - 1), 1).toLocaleDateString("es-CO", { month: "long", year: "numeric" });
   return s.charAt(0).toUpperCase() + s.slice(1);
 };
-
-const mesHoy = () => mesHoyISO();
 
 export default async function ComisionesPage({
   searchParams,
@@ -97,7 +94,7 @@ export default async function ComisionesPage({
                 className={activa ? "col-tab activa" : "col-tab"}
               >
                 <span className="col-tab-nombre">{r.colaboradorNombre}</span>
-                <span className="col-tab-monto">{(() => { const p = pendientePorPagar(r, mesHoy()); return p > 0 ? `Por pagar ${usd(p)}` : "al día"; })()}</span>
+                <span className="col-tab-monto">{(() => { const p = pendientePorPagar(r, corte.slice(0, 7)); return p > 0 ? `Por pagar ${usd(p)}` : "al día"; })()}</span>
               </Link>
             );
           })}
@@ -111,8 +108,10 @@ export default async function ComisionesPage({
 
 function ColaboradorCard({ r, corte, futuros }: { r: ResultadoVista; corte: string; futuros: FilaFutura[] }) {
   const cortes = cortesDe(r);
-  const hoy = mesHoy();
-  const porPagar = pendientePorPagar(r, mesHoy());
+  // El "cierre" (cerrado vs en curso) lo define la FECHA DE CORTE elegida, no el día
+  // de hoy: al poner un corte en noviembre, octubre ya cuenta como cerrado (por pagar).
+  const hoy = corte.slice(0, 7);
+  const porPagar = pendientePorPagar(r, hoy);
   return (
     <>
     <section className="card">
