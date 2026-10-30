@@ -343,9 +343,10 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
   for (const r of cfgRows) cfg[String(r.clave)] = Number(r.valor);
   const cop = fx.cop;
 
+  // Nómina dedicada a Leadtion. Daniel pasó 100% a agencia (ya no suma a Leadtion):
+  // solo Andrés (60%) y Alejandro (100%).
   const nominaDetalle = [
     { nombre: "Andrés", cop: cfg.nomina_andres_cop ?? 0, pct: cfg.nomina_andres_pct ?? 0 },
-    { nombre: "Daniel", cop: cfg.nomina_daniel_cop ?? 0, pct: cfg.nomina_daniel_pct ?? 0 },
     { nombre: "Alejandro", cop: cfg.nomina_alejandro_cop ?? 0, pct: cfg.nomina_alejandro_pct ?? 0 },
   ].map((n) => ({ ...n, usd: round2((n.cop * (n.pct / 100)) / cop) }));
   const nomina = round2(nominaDetalle.reduce((s, n) => s + n.usd, 0));
