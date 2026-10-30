@@ -318,11 +318,13 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
     tasaUsdCop(),
     // Ingreso Leadtion del mes por cargo (licencias, soporte y servicios).
     proyeccionLeadtionMes(mes),
-    // API: toda cuenta Leadtion activa lleva la API incluida (costo $10) salvo las
-    // "vendidas" (el cliente la paga aparte). Por eso incluida = activas − vendidas.
+    // API: cada cuenta con WhatsApp nos cuesta $10. "incluida" = API dentro del $69;
+    // "vendida" = se revende a $12 (también cuesta $10); "ninguna" = SIN WhatsApp (NO
+    // cuesta). Antes se asumía que toda cuenta tenía API; ahora 'ninguna' la excluye del
+    // costo, para poder sacar las cuentas que no tienen WhatsApp activo.
     consulta(`select coalesce(sum(api_valor) filter (where api_estado='vendida' and estado_actual='activo' and es_leadtion),0)::float vendida_ingreso,
                      count(*) filter (where api_estado='vendida' and estado_actual='activo' and es_leadtion)::int vendida_n,
-                     count(*) filter (where estado_actual='activo' and es_leadtion and coalesce(api_estado,'ninguna')<>'vendida')::int incluida
+                     count(*) filter (where estado_actual='activo' and es_leadtion and api_estado='incluida')::int incluida
                 from public.clientes`),
     consulta(`select clave, valor from public.config_negocio`),
     // Reselling: ahora se reporta en Facturación → otros ingresos (categoría 'reselling').
