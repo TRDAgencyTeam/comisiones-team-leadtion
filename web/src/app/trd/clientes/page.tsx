@@ -137,7 +137,7 @@ export default async function ResumenPage({ searchParams }: { searchParams: Prom
             </div>
           )}
           {r.ingresos.leadtion > 0 && <div className="cf-li"><span>Leadtion (membresías + soporte) <small style={{ color: "var(--faint)" }}>licencias</small></span><b>{usd2(r.ingresos.leadtion)}</b></div>}
-          {r.ingresos.apiVendida > 0 && <div className="cf-li"><span>API WhatsApp vendida <small style={{ color: "var(--faint)" }}>{r.ingresos.apiVendidaCuentas} cuentas · $2 c/u</small></span><b>{usd2(r.ingresos.apiVendida)}</b></div>}
+          {r.ingresos.apiVendida > 0 && <div className="cf-li"><span>API WhatsApp vendida <small style={{ color: "var(--faint)" }}>{r.ingresos.apiVendidaCuentas} cuentas · $12 c/u (bruto; costo en egresos)</small></span><b>{usd2(r.ingresos.apiVendida)}</b></div>}
           <div className="cf-li"><span>Reselling (Leadtion) <small style={{ color: "var(--faint)" }}>lo reportas a fin de mes</small></span><b>{usd2(r.ingresos.reselling)}</b></div>
           {r.ingresos.otros.map((o) => (<div key={o.id} className="cf-li"><span>{o.concepto}</span><b>{usd2(o.valorUsd)}</b></div>))}
           <div className="cf-li tot"><span>Total ingresos</span><b>{usd2(r.ingresos.total)}</b></div>

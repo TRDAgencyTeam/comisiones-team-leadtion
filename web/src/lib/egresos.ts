@@ -175,7 +175,7 @@ export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<num
       await q(
         `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, afecta_utilidad, categoria)
          values ($1, $2, 'Leadtion', $3, true, 'api')`,
-        [primer, `API WhatsApp (${pnl.costos.apisIncluidasCuentas} incluidas × $10)`, pnl.costos.apisIncluidas],
+        [primer, `API WhatsApp (${pnl.costos.apisIncluidasCuentas} cuentas × $10)`, pnl.costos.apisIncluidas],
       );
     }
   }
@@ -429,7 +429,8 @@ interface LeadtionMes { leadtion: number; apiVendida: number; apiVendidaCuentas:
 
 /**
  * Calcula en vivo el ingreso Leadtion automático de un mes desde Membresías.
- * - API WhatsApp vendida: ganancia neta ($2/cuenta) de las cuentas vendida activas.
+ * - API WhatsApp vendida: INGRESO BRUTO ($12/cuenta) de las cuentas vendida activas.
+ *   Su costo ($10 c/u) va en el egreso "API WhatsApp", no neteado aquí.
  * - MEMBRESÍAS + SOPORTE (licencias): estándar + con soporte de todas las cuentas
  *   activas. Es EXACTAMENTE el dato del dashboard de Membresías. NO incluye servicios
  *   (Agente IA / Reactivación): esos se facturan por la LLC y ya están en la
@@ -449,7 +450,7 @@ async function leadtionEnVivo(mes: string): Promise<LeadtionMes> {
   const apiVendidaCuentas = Number((av[0] as Record<string, unknown>)?.n ?? 0);
   return {
     leadtion: r2(lineas.filter((l) => l.categoria === "estandar" || l.categoria === "soporte").reduce((s, l) => s + l.valor, 0)),
-    apiVendida: r2(ing - apiVendidaCuentas * 10), // ganancia = cobrado − $10 de costo
+    apiVendida: r2(ing), // ingreso bruto ($12 c/u); el costo $10 va en el egreso "API WhatsApp"
     apiVendidaCuentas,
   };
 }

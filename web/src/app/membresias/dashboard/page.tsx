@@ -117,7 +117,7 @@ export default async function PnLDashboard() {
                 <tr><td className="td-sub">— Agente IA</td><td className="num td-sub">{usd(pnl.ingresos.servicios.agente_ai)}</td></tr>
                 <tr><td className="td-sub">— Reactivación</td><td className="num td-sub">{usd(pnl.ingresos.servicios.reactivacion)}</td></tr>
                 <tr><td className="td-sub">— Level Up</td><td className="num td-sub">{usd(pnl.ingresos.servicios.level_up)}</td></tr>
-                <tr><td>API vendida · ganancia $2 c/u <span className="td-sub">({pnl.ingresos.apiVendidaCuentas} cuentas)</span></td><td className="num">{usd(pnl.ingresos.apiVendida)}</td></tr>
+                <tr><td>API vendida · $12 c/u (bruto) <span className="td-sub">({pnl.ingresos.apiVendidaCuentas} cuentas · ganancia {usd(pnl.ingresos.apiVendidaGanancia)})</span></td><td className="num">{usd(pnl.ingresos.apiVendida)}</td></tr>
                 <tr><td>Reselling reportado</td><td className="num">{usd(pnl.ingresos.reselling)}</td></tr>
               </tbody></table>
               <p className="foot" style={{ marginTop: 8 }}>Cada cobro cuenta una sola vez en su ítem: los que este mes están <b>en servicio</b> (Agente IA mes 1, Reactivación) salen en <b>Servicios</b>, no en Licencias; el <b>soporte</b> (Agente IA mes 3, 119/157…) sale en Con soporte. Un cliente con dos cobros (p. ej. reactivación + soporte) aparece en ambos ítems con montos distintos. El <b>reselling</b> se reporta en <b>Facturación → otros ingresos</b>; aquí se refleja solo.</p>
@@ -131,7 +131,7 @@ export default async function PnLDashboard() {
                   <tr key={n.nombre}><td className="td-sub">— {n.nombre} ({n.pct}%)</td><td className="num td-sub">{usd(n.usd)}</td></tr>
                 ))}
                 <tr><td>GoHighLevel</td><td className="num">{usd(pnl.costos.ghl)}</td></tr>
-                <tr><td>APIs incluidas · costo $10 c/u <span className="td-sub">({pnl.costos.apisIncluidasCuentas} cuentas)</span></td><td className="num">{usd(pnl.costos.apisIncluidas)}</td></tr>
+                <tr><td>API WhatsApp · costo $10 c/u <span className="td-sub">({pnl.costos.apisIncluidasCuentas} cuentas: incluidas + revendidas + TRD)</span></td><td className="num">{usd(pnl.costos.apisIncluidas)}</td></tr>
                 <tr><td>Comisiones CS (pendiente por pagar)</td><td className="num">{usd(pnl.costos.comisionesCS)}</td></tr>
                 <tr><td>Comisiones afiliados (mes)</td><td className="num">{usd(pnl.costos.comisionesAfiliados)}</td></tr>
                 <tr><td>Bonos de reactivación (mes)</td><td className="num">{usd(pnl.costos.bonos)}</td></tr>

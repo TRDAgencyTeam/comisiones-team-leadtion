@@ -60,7 +60,7 @@ export interface PnL {
       agente_ai: number; reactivacion: number; level_up: number; total: number;
       detalle: { nombre: string; tipo: string; monto: number }[];
     };
-    apiVendida: number; apiVendidaCuentas: number;
+    apiVendida: number; apiVendidaCuentas: number; apiVendidaGanancia: number;
     reselling: number; total: number;
   };
   costos: {
@@ -355,7 +355,13 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
   const apiVendidaCuentas = Number(apiRows[0]?.vendida_n ?? 0);
   const apiIncluidaCount = Number(apiRows[0]?.incluida ?? 0);
   const ghl = cfg.ghl_mensual_usd ?? 497;
-  const apisIncluidas = round2(apiIncluidaCount * 10);
+  // Costo de API = TODAS las cuentas Leadtion con API × $10: incluidas + las revendidas
+  // (también nos cuestan $10) + las cuentas propias de la agencia (TRD, config
+  // `api_cuentas_extra`, default 1). La reventa se muestra como ingreso bruto aparte,
+  // no neteada, para que el costo total quede visible y cuadre con GHL.
+  const apiCuentasExtra = cfg.api_cuentas_extra ?? 1;
+  const apiCuentasTotal = apiIncluidaCount + apiVendidaCuentas + apiCuentasExtra;
+  const apisIncluidas = round2(apiCuentasTotal * 10);
   const comisionesAfiliados = round2((afil.dash.pendienteMes ?? 0) + (afil.dash.pagadoMes ?? 0));
 
   const porNombre = (a: LineaLeadtion, b: LineaLeadtion) => a.nombre.localeCompare(b.nombre, "es");
@@ -386,8 +392,9 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
     agencia: { n: agenciaLead.length, total: 0, clientes: agenciaLead.map((l) => ({ nombre: l.nombre })) },
   };
   const licencias = round2(licenciasDetalle.estandar.total + licenciasDetalle.conSoporte.total);
-  // Ganancia real de las APIs vendidas: precio cobrado − $10 de costo por cada una.
-  const apiVendida = round2(apiVendidaIngreso - apiVendidaCuentas * 10);
+  // API vendida como INGRESO BRUTO ($12 c/u); su costo $10 ya está dentro de "apisIncluidas".
+  const apiVendida = round2(apiVendidaIngreso);
+  const apiVendidaGanancia = round2(apiVendidaIngreso - apiVendidaCuentas * 10); // +$2 c/u
   const reselling = round2(Number(reselRows[0]?.monto ?? 0));
 
   const ingresosTotal = round2(licencias + serviciosTotal + apiVendida + reselling);
@@ -400,9 +407,9 @@ export async function calcularPnL(now = new Date()): Promise<PnL> {
       licencias,
       licenciasDetalle,
       servicios: { ...serv, total: serviciosTotal, detalle: serviciosDetalle },
-      apiVendida, apiVendidaCuentas, reselling, total: ingresosTotal,
+      apiVendida, apiVendidaCuentas, apiVendidaGanancia, reselling, total: ingresosTotal,
     },
-    costos: { nomina, ghl, apisIncluidas, apisIncluidasCuentas: apiIncluidaCount, comisionesAfiliados, comisionesCS, bonos, total: costosTotal, nominaDetalle },
+    costos: { nomina, ghl, apisIncluidas, apisIncluidasCuentas: apiCuentasTotal, comisionesAfiliados, comisionesCS, bonos, total: costosTotal, nominaDetalle },
     neto: round2(ingresosTotal - costosTotal),
     cuentasActivas: Number(activasRows[0]?.n ?? 0),
   };
