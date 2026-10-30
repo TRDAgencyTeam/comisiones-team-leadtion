@@ -90,6 +90,7 @@ export async function partidasPropuestas(mes: string, tasa: number, ajustes: Rec
   const [reg, egresos, mediosCO] = await Promise.all([
     consulta(
       `select r.id, coalesce(co.nombre, r.nombre_libre, 'Freelance') nombre, r.colaborador_id is null freelance,
+              coalesce(co.valor_nomina,0)::float vn,
               coalesce(r.valor_cuenta_cobro,0)::float cop, coalesce(r.comision,0)::float comision, coalesce(r.adicional,0)::float adicional
          from public.reg_pago r left join public.colaboradores co on co.id = r.colaborador_id
         where r.mes = $1 and coalesce(r.valor_cuenta_cobro,0) > 0
@@ -106,7 +107,11 @@ export async function partidasPropuestas(mes: string, tasa: number, ajustes: Rec
     consulta(`select nombre from public.medio_pago where pais = 'CO'`),
   ]);
   const co = new Set((mediosCO as Record<string, unknown>[]).map((r) => String(r.nombre)));
-  const usaReg = reg.length > 0;
+  // Nombres que YA tienen cuenta de cobro en REG (se muestran completos desde REG).
+  const regNombres = new Set((reg as Record<string, unknown>[]).map((r) => String(r.nombre)));
+  // ¿REG ya se generó para el equipo de SALARIO FIJO? (un freelance suelto como Úrsula
+  // NO cuenta como "REG completo"). Define si la comisión CS ya va dentro de REG.
+  const regTieneSalario = (reg as Record<string, unknown>[]).some((r) => num(r.vn) > 0);
   const partidas: Partida[] = [];
   const push = (p: Omit<Partida, "incluida">) =>
     partidas.push({ ...p, incluida: ajustes[p.clave] ?? p.porDefecto });
@@ -128,8 +133,10 @@ export async function partidasPropuestas(mes: string, tasa: number, ajustes: Rec
     const clave = regenerada ? `auto:${cat}:${String(e.concepto).slice(0, 100)}` : `eg:${e.id}`;
     const base = { clave, concepto: String(e.concepto), cop: r2(cop) };
     if (cat === "fijo" && sub === "nomina") {
-      if (usaReg) continue; // la nómina sale de REG (completa)
-      push({ ...base, grupo: "Nómina (Egresos · REG aún no generado)", detalle: (e.marca as string) ?? null, porDefecto: true });
+      // Esta persona ya va por su cuenta de cobro de REG (completa) → no duplicar.
+      if (regNombres.has(String(e.concepto))) continue;
+      // Si no tiene REG aún, se cubre con su salario base del snapshot (REG pendiente).
+      push({ ...base, grupo: "Nómina (cuenta de cobro completa)", detalle: `${(e.marca as string) ?? ""}${(e.marca as string) ? " · " : ""}salario base (REG pendiente)`, porDefecto: true });
     } else if (cat === "fijo" && (sub === "servicio_publico" || sub === "otro")) {
       // Los operativos en USD (ej. costo de transferencia Bank of America) se pagan en
       // USA: no se bajan a Colombia (desmarcados por defecto).
@@ -137,8 +144,8 @@ export async function partidasPropuestas(mes: string, tasa: number, ajustes: Rec
       push({ ...base, grupo: "Operativos fijos", detalle: enUsd ? `pagado en USD${medio ? ` · ${medio}` : ""}` : medio, porDefecto: !enUsd });
     } else if (cat === "fijo" && sub === "credito") {
       push({ ...base, grupo: "Crédito", detalle: "cuota mensual", porDefecto: true });
-    } else if (cat === "comision" && usaReg) {
-      continue; // ya va dentro de la cuenta de cobro de REG
+    } else if (cat === "comision" && regTieneSalario) {
+      continue; // la comisión CS ya va dentro de las cuentas de cobro de REG del equipo
     } else if (["comision", "referido", "comision_comercial"].includes(cat)) {
       // Comisiones (CS, afiliados, equipo comercial): se pagan desde Colombia.
       push({ ...base, grupo: "Comisiones", detalle: (e.marca as string) ?? null, porDefecto: true });
@@ -162,7 +169,7 @@ export async function partidasPropuestas(mes: string, tasa: number, ajustes: Rec
       : "utilidad del mes negativa o en cero: no hay diezmo",
     cop: Math.round(diezmoUsd * tasa), porDefecto: true,
   });
-  return { partidas, fuenteNomina: usaReg ? "reg" : "egresos" };
+  return { partidas, fuenteNomina: regTieneSalario ? "reg" : "egresos" };
 }
 
 async function lineas(liqId: number): Promise<LineaLiq[]> {
