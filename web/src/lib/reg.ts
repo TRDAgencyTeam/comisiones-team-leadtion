@@ -149,7 +149,11 @@ export async function renglonesDelMes(mes: string): Promise<RenglonReg[]> {
             p.rete_ica, p.rete_renta, p.valor_girar, p.costo_transferencia,
             p.ck_correo, p.ck_drive, p.ck_registro, p.ck_pagado,
             p.identificacion as p_ident,
-            pa.valor_cuenta_cobro as valor_mes_anterior
+            pa.valor_cuenta_cobro as valor_mes_anterior,
+            (select em.valor_cop from public.egreso_mensual em
+              where em.mes = $1 and em.categoria = 'fijo' and em.subcategoria = 'nomina'
+                and em.concepto = c.nombre
+              order by em.valor_cop desc limit 1) as snap_nomina
        from public.colaboradores c
        left join public.reg_pago p  on p.colaborador_id = c.id and p.mes = $1
        left join public.reg_pago pa on pa.colaborador_id = c.id and pa.mes = $2
@@ -164,10 +168,17 @@ export async function renglonesDelMes(mes: string): Promise<RenglonReg[]> {
     const tienePago = r.pago_id != null;
     const valorNomina = num(r.valor_nomina);
     const valorMesAnterior = num(r.valor_mes_anterior);
-    // Primer mes parcial: si entró a mitad de ESTE mes y tiene valor_primer_mes
-    // (prorrateado), ese es su pago base del mes de inicio (igual que en Egresos).
+    // Base del mes = el snapshot CONGELADO de la nómina de ESE mes (egreso_mensual),
+    // que es la fuente de verdad por mes (ya trae el prorrateo del primer mes). Un
+    // cambio de salario aplica al mes en curso en adelante (resyncFijosMesActual) y
+    // NUNCA toca los meses ya cerrados, así que la base de un mes pasado no cambia
+    // aunque después se edite el salario. Solo si no hay snapshot (persona nueva aún
+    // sin snapshot del mes) se cae al valor vivo / primer mes parcial.
+    const snapNomina = r.snap_nomina != null ? num(r.snap_nomina) : null;
     const esMesInicio = r.inicio_ym != null && String(r.inicio_ym) === primer.slice(0, 7);
-    const baseNomina = esMesInicio && r.valor_primer_mes != null ? num(r.valor_primer_mes) : valorNomina;
+    const baseNomina = snapNomina != null
+      ? snapNomina
+      : (esMesInicio && r.valor_primer_mes != null ? num(r.valor_primer_mes) : valorNomina);
     const pagoFijo = tienePago ? num(r.pago_fijo) : (baseNomina || valorMesAnterior || 0);
     // Comisión: si ya está PAGADA, la guardada (histórica); si no, la del corte
     // cerrado en vivo (aunque haya un pago guardado, para no mostrar acumulados viejos).
