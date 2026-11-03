@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { soloAdmin } from "@/lib/sesion";
 import { tasaUsdCop } from "@/lib/fx";
-import { listarGastos, periodos, RECURRENCIA_LABEL } from "@/lib/gastos-fijos";
+import { listarGastos, periodos, personasNominaActivas, RECURRENCIA_LABEL } from "@/lib/gastos-fijos";
 import { eliminarGasto } from "../gastos/acciones";
 import { IconoBorrar } from "@/components/Iconos";
 
@@ -13,12 +13,12 @@ const usd = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", c
 
 export default async function HerramientasPage() {
   await soloAdmin();
-  const [gastos, fx] = await Promise.all([listarGastos(), tasaUsdCop()]);
+  const [gastos, fx, personas] = await Promise.all([listarGastos(), tasaUsdCop(), personasNominaActivas()]);
   const items = gastos.filter((g) => g.categoria === "herramienta" || g.categoria === "hosting");
 
   let totMesUsd = 0, totMesCop = 0, totAnualUsd = 0;
   const filas = items.map((g) => {
-    const p = periodos(g, fx.cop);
+    const p = periodos(g, fx.cop, personas);
     totMesUsd += p.mesUsd; totMesCop += p.mesCop; totAnualUsd += p.anualUsd;
     return { g, p };
   });
@@ -54,8 +54,9 @@ export default async function HerramientasPage() {
                 <td>
                   <Link href={`/trd/gastos-fijos/gastos/${g.id}`} className="link-ver">{g.nombre}</Link>
                   {g.categoria === "hosting" && <span className="freelance-tag" style={{ marginLeft: 6 }}>hosting</span>}
+                  {g.porPersona && <span className="freelance-tag" style={{ marginLeft: 6 }}>por persona</span>}
                 </td>
-                <td className="muted">{RECURRENCIA_LABEL[g.recurrencia]}{g.diaCobro ? ` · día ${g.diaCobro}` : ""}</td>
+                <td className="muted">{RECURRENCIA_LABEL[g.recurrencia]}{g.diaCobro ? ` · día ${g.diaCobro}` : ""}{g.porPersona ? ` · ${usd(g.moneda === "USD" ? g.valor : g.valor / fx.cop)}/persona × ${personas}` : ""}</td>
                 <td className="muted">{g.metodoPago ?? "—"}</td>
                 <td className="right">{usd(p.diaUsd)}</td>
                 <td className="right">{usd(p.mesUsd)}</td>

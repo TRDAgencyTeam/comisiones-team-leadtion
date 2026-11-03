@@ -130,15 +130,16 @@ export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<num
          from public.colaboradores where activo and coalesce(valor_nomina,0) > 0`,
       [primer, tasa],
     );
-    // "share" = valor mensual × % que asume la empresa (seg. social 60%, etc.).
+    // "share" = valor mensual × % que asume la empresa. Las herramientas POR PERSONA
+    // (por_persona) multiplican el valor por el nº de personas activas en nómina fija.
     await q(
       `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria, gasto_fijo_id)
        select $1, nombre, 'TRD',
-          round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
+          round(( ((valor * case when por_persona then (select count(*) from public.colaboradores where activo and coalesce(valor_nomina,0)>0) else 1 end) / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
                   * (coalesce(porcentaje_reparto,100)/100.0)
                   / case when moneda='COP' then $2::numeric else 1 end )::numeric, 2),
           case when moneda='COP'
-               then round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
+               then round(( ((valor * case when por_persona then (select count(*) from public.colaboradores where activo and coalesce(valor_nomina,0)>0) else 1 end) / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
                             * (coalesce(porcentaje_reparto,100)/100.0) )::numeric, 2)
                else null end,
           true, 'fijo', categoria, id
@@ -207,10 +208,10 @@ export async function sincronizarFijoMesActual(tipo: "nomina" | "gasto", id: num
     await consulta(
       `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria, gasto_fijo_id)
        select $1, nombre, 'TRD',
-          round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
+          round(( ((valor * case when por_persona then (select count(*) from public.colaboradores where activo and coalesce(valor_nomina,0)>0) else 1 end) / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
                   * (coalesce(porcentaje_reparto,100)/100.0) / case when moneda='COP' then $2::numeric else 1 end )::numeric, 2),
           case when moneda='COP'
-               then round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
+               then round(( ((valor * case when por_persona then (select count(*) from public.colaboradores where activo and coalesce(valor_nomina,0)>0) else 1 end) / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
                             * (coalesce(porcentaje_reparto,100)/100.0) )::numeric, 2)
                else null end,
           true, 'fijo', categoria, id
@@ -245,11 +246,11 @@ export async function resyncFijosMesActual(): Promise<void> {
   await consulta(
     `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, valor_cop, afecta_utilidad, categoria, subcategoria, gasto_fijo_id)
      select $1, nombre, 'TRD',
-        round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
+        round(( ((valor * case when por_persona then (select count(*) from public.colaboradores where activo and coalesce(valor_nomina,0)>0) else 1 end) / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
                 * (coalesce(porcentaje_reparto,100)/100.0)
                 / case when moneda='COP' then $2::numeric else 1 end )::numeric, 2),
         case when moneda='COP'
-             then round(( (valor / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
+             then round(( ((valor * case when por_persona then (select count(*) from public.colaboradores where activo and coalesce(valor_nomina,0)>0) else 1 end) / case when recurrencia='anual' then 12 when recurrencia='diario' then (1.0/30) else 1 end)
                           * (coalesce(porcentaje_reparto,100)/100.0) )::numeric, 2)
              else null end,
         true, 'fijo', categoria, id

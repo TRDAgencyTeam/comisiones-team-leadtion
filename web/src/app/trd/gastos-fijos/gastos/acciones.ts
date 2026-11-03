@@ -29,8 +29,9 @@ function parse(formData: FormData) {
   const amortizar = String(formData.get("amortizar")) === "1";
   const afectaUtilidad = categoria === "paso_dinero" ? false : formData.get("afectaUtilidad") === "1";
   const negocio = String(formData.get("negocio") ?? "agencia") === "leadtion" ? "leadtion" : "agencia";
+  const porPersona = String(formData.get("porPersona")) === "1";
   const notas = txt(formData.get("notas"));
-  return { categoria, nombre, moneda, valor, recurrencia, diaCobro, metodoPago, reparto, amortizar, afectaUtilidad, negocio, notas };
+  return { categoria, nombre, moneda, valor, recurrencia, diaCobro, metodoPago, reparto, amortizar, afectaUtilidad, negocio, porPersona, notas };
 }
 
 export async function crearGasto(formData: FormData) {
@@ -40,10 +41,10 @@ export async function crearGasto(formData: FormData) {
   const ins = await consulta(
     `insert into public.gasto_fijo
        (categoria, nombre, moneda, valor, recurrencia, dia_cobro, metodo_pago,
-        porcentaje_reparto, amortizar, afecta_utilidad, negocio, notas)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) returning id`,
+        porcentaje_reparto, amortizar, afecta_utilidad, negocio, por_persona, notas)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) returning id`,
     [d.categoria, d.nombre, d.moneda, d.valor, d.recurrencia, d.diaCobro, d.metodoPago,
-     d.reparto, d.amortizar, d.afectaUtilidad, d.negocio, d.notas],
+     d.reparto, d.amortizar, d.afectaUtilidad, d.negocio, d.porPersona, d.notas],
   );
   // Reflejar de una en el mes en curso (Egresos), sin tocar meses pasados.
   await resyncFijosMesActual();
@@ -62,10 +63,10 @@ export async function actualizarGasto(formData: FormData) {
   await consulta(
     `update public.gasto_fijo
         set categoria=$2, nombre=$3, moneda=$4, valor=$5, recurrencia=$6, dia_cobro=$7,
-            metodo_pago=$8, porcentaje_reparto=$9, amortizar=$10, afecta_utilidad=$11, negocio=$12, notas=$13
+            metodo_pago=$8, porcentaje_reparto=$9, amortizar=$10, afecta_utilidad=$11, negocio=$12, por_persona=$13, notas=$14
       where id=$1`,
     [id, d.categoria, d.nombre, d.moneda, d.valor, d.recurrencia, d.diaCobro, d.metodoPago,
-     d.reparto, d.amortizar, d.afectaUtilidad, d.negocio, d.notas],
+     d.reparto, d.amortizar, d.afectaUtilidad, d.negocio, d.porPersona, d.notas],
   );
   await resyncFijosMesActual();
   await flash("Actualizado");

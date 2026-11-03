@@ -25,8 +25,18 @@ function mapRow(r: Record<string, unknown>): GastoFijo {
     afectaUtilidad: Boolean(r.afecta_utilidad),
     activo: Boolean(r.activo),
     negocio: (r.negocio as "agencia" | "leadtion") ?? "agencia",
+    porPersona: Boolean(r.por_persona),
     notas: (r.notas as string) ?? null,
   };
+}
+
+/** Nº de personas ACTIVAS en nómina fija (valor_nomina > 0). Base para las
+ *  herramientas por persona (Gather, ClickUp…). Excluye freelances/del-momento. */
+export async function personasNominaActivas(): Promise<number> {
+  const rows = await consulta(
+    `select count(*)::int n from public.colaboradores where activo and coalesce(valor_nomina,0) > 0`,
+  );
+  return Number(rows[0]?.n ?? 0);
 }
 
 export async function listarGastos(): Promise<GastoFijo[]> {
@@ -41,17 +51,21 @@ export async function obtenerGasto(id: number): Promise<GastoFijo | null> {
   return rows.length ? mapRow(rows[0]!) : null;
 }
 
-/** Valor mensual en COP de un gasto (aplica moneda, recurrencia y % de reparto). */
-export function valorMensualCop(g: GastoFijo, tasa: number): number {
-  let base = g.moneda === "USD" ? g.valor * tasa : g.valor;
+/** Valor mensual en COP de un gasto (aplica moneda, recurrencia, % de reparto y, si es
+ *  por persona, ×nº de personas activas en nómina fija). */
+export function valorMensualCop(g: GastoFijo, tasa: number, personas = 1): number {
+  const unidades = g.porPersona ? Math.max(0, personas) : 1;
+  let base = (g.moneda === "USD" ? g.valor * tasa : g.valor) * unidades;
   if (g.recurrencia === "anual") base = base / 12;
   else if (g.recurrencia === "diario") base = base * 30;
   return Math.round(base * (g.porcentajeReparto / 100));
 }
 
-/** Desglose de un gasto en día/mes/año, en COP y USD (aplica recurrencia y reparto). */
-export function periodos(g: GastoFijo, tasa: number) {
-  let mMon = g.recurrencia === "anual" ? g.valor / 12 : g.recurrencia === "diario" ? g.valor * 30 : g.valor;
+/** Desglose de un gasto en día/mes/año, en COP y USD (aplica recurrencia, reparto y
+ *  nº de personas si es por persona). */
+export function periodos(g: GastoFijo, tasa: number, personas = 1) {
+  const unidades = g.porPersona ? Math.max(0, personas) : 1;
+  let mMon = (g.recurrencia === "anual" ? g.valor / 12 : g.recurrencia === "diario" ? g.valor * 30 : g.valor) * unidades;
   mMon = mMon * (g.porcentajeReparto / 100);
   const mesCop = g.moneda === "USD" ? mMon * tasa : mMon;
   const mesUsd = g.moneda === "USD" ? mMon : tasa > 0 ? mMon / tasa : 0;
@@ -72,11 +86,12 @@ export interface ResumenGastosFijos {
 }
 
 export async function resumenGastosFijos(): Promise<ResumenGastosFijos> {
-  const [gastos, fx, nominaRow, creditoRow] = await Promise.all([
+  const [gastos, fx, nominaRow, creditoRow, personas] = await Promise.all([
     listarGastos(),
     tasaUsdCop(),
     consulta(`select coalesce(sum(valor_nomina),0) as t from public.colaboradores where activo and coalesce(valor_nomina,0) > 0`),
     consulta(`select coalesce(sum(cuota),0) as t from public.credito where activo`),
+    personasNominaActivas(),
   ]);
   const tasa = fx.cop;
 
@@ -85,7 +100,7 @@ export async function resumenGastosFijos(): Promise<ResumenGastosFijos> {
   };
   for (const g of gastos) {
     if (!g.activo) continue;
-    porCategoria[g.categoria] += valorMensualCop(g, tasa);
+    porCategoria[g.categoria] += valorMensualCop(g, tasa, personas);
   }
 
   const nomina = Number(nominaRow[0]!.t);

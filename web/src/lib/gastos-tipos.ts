@@ -32,5 +32,8 @@ export interface GastoFijo {
   activo: boolean;
   /** Negocio al que pertenece: 'agencia' | 'leadtion' (para la cobertura por negocio). */
   negocio: "agencia" | "leadtion";
+  /** Cobro POR PERSONA/puesto: el valor es por persona y se multiplica por el nº de
+   *  personas activas en nómina fija (ej. Gather, ClickUp). false = monto fijo. */
+  porPersona: boolean;
   notas: string | null;
 }

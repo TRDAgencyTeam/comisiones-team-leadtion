@@ -13,6 +13,7 @@ export function GastoForm({
   error?: string;
 }) {
   const [categoria, setCategoria] = useState<CategoriaGasto>(gasto?.categoria ?? "otro");
+  const [porPersona, setPorPersona] = useState<boolean>(gasto?.porPersona ?? false);
   const esServicio = categoria === "servicio_publico";
   const esHerramienta = categoria === "herramienta";
   const esHosting = categoria === "hosting";
@@ -41,7 +42,7 @@ export function GastoForm({
             <option value="USD">USD</option>
           </select>
         </label>
-        <label>Valor
+        <label>{porPersona ? "Valor POR PERSONA" : "Valor"}
           <InputMonto name="valor" defaultValue={gasto?.valor || ""} placeholder="0" />
         </label>
         <label>Recurrencia
@@ -70,6 +71,15 @@ export function GastoForm({
             </label>
           </>
         )}
+
+        {(esHerramienta || esHosting) && (
+          <label className="pf-check pf-full">
+            <input type="checkbox" name="porPersona" value="1" checked={porPersona} onChange={(e) => setPorPersona(e.target.checked)} />
+            Cobro por persona/puesto (ej. Gather, ClickUp): el valor es por persona y se
+            multiplica por el nº de personas activas en nómina fija (automático).
+          </label>
+        )}
+        {!(esHerramienta || esHosting) && <input type="hidden" name="porPersona" value={porPersona ? "1" : "0"} />}
 
         {esHosting && (
           <label className="pf-check">
