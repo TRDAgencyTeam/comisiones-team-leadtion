@@ -11,7 +11,8 @@ import { ClientesHeader } from "@/components/ClientesHeader";
 import { NuevoClienteModal } from "@/components/NuevoClienteModal";
 import { MovimientoModal } from "@/components/MovimientoModal";
 import { eliminarFactura, eliminarIngreso } from "../acciones";
-import { mesHoyISO } from "@/lib/fecha";
+import { MultaMoraModal } from "@/components/MultaMoraModal";
+import { mesHoyISO, hoyISO } from "@/lib/fecha";
 import { IconoBorrar } from "@/components/Iconos";
 
 export const metadata = { title: "Facturación" };
@@ -22,7 +23,7 @@ const usd = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", c
 const mesISO = () => mesHoyISO();
 const fFecha = (iso: string | null) => { if (!iso) return "—"; const [, m, d] = iso.split("-"); return `${d}/${m}`; };
 
-function Tabla({ filas, tasa, entidad, lineas }: { filas: FacturaRow[]; tasa: number; entidad: "LLC" | "COL"; lineas: Map<number, LineaServicio[]> }) {
+function Tabla({ filas, tasa, entidad, lineas, hoy }: { filas: FacturaRow[]; tasa: number; entidad: "LLC" | "COL"; lineas: Map<number, LineaServicio[]>; hoy: string }) {
   const esLLC = entidad === "LLC";
   const esCOL = entidad === "COL";
   return (
@@ -62,6 +63,10 @@ function Tabla({ filas, tasa, entidad, lineas }: { filas: FacturaRow[]; tasa: nu
                 <td>
                   <span className="acc">
                     <Link href={`/trd/clientes/${f.id}`} className="link-ver">Ver</Link>
+                    {f.estado !== "pagado" && f.estado !== "anulado" && f.fechaFactura && f.facturado > 0 && (
+                      <MultaMoraModal facturaId={f.id} facturado={f.facturado} ivaPct={f.ivaPct}
+                        entidad={f.entidad as "LLC" | "COL"} fechaFactura={f.fechaFactura} hoy={hoy} clienteNombre={f.clienteNombre} />
+                    )}
                     <form action={eliminarFactura}><input type="hidden" name="id" value={f.id} /><button type="submit" className="btn-borrar icon-btn danger" title="Eliminar"><IconoBorrar /></button></form>
                   </span>
                 </td>
@@ -82,6 +87,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
   await soloAdmin();
   const sp = await searchParams;
   const mes = sp.mes && /^\d{4}-\d{2}$/.test(sp.mes) ? sp.mes : mesISO();
+  const hoy = hoyISO();
   const orden: Orden = (ORDENES as readonly string[]).includes(sp.orden ?? "") ? (sp.orden as Orden) : "reciente";
   const [v, catalogo, opciones, otros, clientes, comerciales] = await Promise.all([vistaFacturacion(mes), catalogoServicios(), opcionesFormulario(), otrosIngresosDelMes(mes), clientesParaFactura(), comercialesActivos()]);
 
@@ -132,7 +138,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
           <NuevoClienteModal mes={mes} tasa={v.tasa} catalogo={catalogo} afiliados={opciones.afiliados} colaboradores={opciones.colaboradores} comerciales={comerciales} clientes={clientes} />
         </div>
       </div>
-      <Tabla filas={recLLC} tasa={v.tasa} entidad="LLC" lineas={lineas} />
+      <Tabla filas={recLLC} tasa={v.tasa} entidad="LLC" lineas={lineas} hoy={hoy} />
 
       <div className="cf-sec-head"><h2>Clientes recurrentes · Colombia (COP) <span className="count">{recCOL.length}</span></h2></div>
       {recCOL.length > 0 && (
@@ -143,15 +149,15 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
           <div className="hl"><span>Ingreso real (antes de IVA ÷ tasa)</span><b>{usd(totCOL.usd)}</b></div>
         </div>
       )}
-      <Tabla filas={recCOL} tasa={v.tasa} entidad="COL" lineas={lineas} />
+      <Tabla filas={recCOL} tasa={v.tasa} entidad="COL" lineas={lineas} hoy={hoy} />
 
       <div className="cf-sec-head"><h2>Servicios del momento <span className="count">{delMomentoOrd.length}</span></h2></div>
-      <Tabla filas={delMomentoOrd} tasa={v.tasa} entidad="LLC" lineas={lineas} />
+      <Tabla filas={delMomentoOrd} tasa={v.tasa} entidad="LLC" lineas={lineas} hoy={hoy} />
 
       {enCuotasOrd.length > 0 && (
         <>
           <div className="cf-sec-head"><h2>En cuotas (planes en pagos) <span className="count">{enCuotasOrd.length}</span></h2></div>
-          <Tabla filas={enCuotasOrd} tasa={v.tasa} entidad="LLC" lineas={lineas} />
+          <Tabla filas={enCuotasOrd} tasa={v.tasa} entidad="LLC" lineas={lineas} hoy={hoy} />
         </>
       )}
 

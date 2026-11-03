@@ -8,6 +8,7 @@ import { primerDiaMes } from "@/lib/facturacion";
 import { tasaUsdCop } from "@/lib/fx";
 import { crearClienteCompleto, recomputarPagosDeCliente, type NuevoClienteInput } from "@/app/membresias/acciones";
 import { registrarComisionComercial, COMERCIAL_DESDE } from "@/lib/comercial";
+import { calcularMora } from "@/lib/mora";
 import { hoyISO, mesHoyISO } from "@/lib/fecha";
 import { flash } from "@/lib/flash";
 import { parseMonto } from "@/lib/numero";
@@ -670,6 +671,58 @@ export async function confirmarCierre(formData: FormData) {
   }
   revalidatePath("/trd/clientes/facturacion");
   revalidatePath("/trd/clientes");
+}
+
+/**
+ * Agrega una MULTA POR MORA sobre una factura vencida (manual, nunca automático).
+ * Lee la fecha de factura y verifica que NO tenga pago registrado; calcula el valor
+ * sugerido (1% por cada bloque de 5 días pasada la gracia de 5, sobre el valor sin
+ * IVA) y crea un cobro propio. Para COL hereda el IVA de la factura original (se
+ * recalcula solo sobre la base de la multa). El valor es editable (`monto`).
+ */
+export async function agregarMultaMora(formData: FormData) {
+  await soloAdmin();
+  const facturaId = Number(formData.get("facturaId"));
+  const override = formData.get("monto") != null && String(formData.get("monto")).trim() !== ""
+    ? parseMonto(formData.get("monto")) : null;
+  const back = "/trd/clientes/facturacion";
+  const rows = await consulta(
+    `select id, entidad, cliente_id, cliente_nombre, facturado::float facturado, iva_pct::float iva_pct,
+            to_char(fecha_factura,'YYYY-MM-DD') fecha_factura, fecha_pago, estado, tasa
+       from public.factura_mensual where id = $1`,
+    [facturaId],
+  );
+  const f = rows[0] as Record<string, unknown> | undefined;
+  if (!f) redirect(`${back}?error=` + encodeURIComponent("Factura no encontrada."));
+  if (f!.estado === "pagado" || f!.fecha_pago != null) {
+    redirect(`${back}?error=` + encodeURIComponent("Esa factura ya tiene pago registrado: no aplica multa."));
+  }
+  if (!f!.fecha_factura) {
+    redirect(`${back}?error=` + encodeURIComponent("La factura no tiene fecha de facturación para calcular la mora."));
+  }
+  const hoy = hoyISO();
+  const ivaPct = Number(f!.iva_pct) || 0;
+  const calc = calcularMora(Number(f!.facturado), ivaPct, String(f!.fecha_factura), hoy);
+  const montoSinIva = override != null && override > 0 ? override : calc.montoSinIva;
+  if (montoSinIva <= 0) {
+    redirect(`${back}?error=` + encodeURIComponent(`Aún no hay mora (${calc.dias} días de atraso, dentro de la gracia de 5 días).`));
+  }
+  const entidad = String(f!.entidad);
+  const pre = entidad === "COL" ? "$" : "US$";
+  const servicios = `Multa por mora · factura #${facturaId}`;
+  const desglose = `${calc.pct}% · ${calc.dias} días de atraso · ${pre}${Math.round(Number(f!.facturado)).toLocaleString("es-CO")}`;
+  await consulta(
+    `insert into public.factura_mensual
+       (mes, entidad, cliente_id, cliente_nombre, reserva, recurrente, servicios, precio_desglose,
+        facturado, medio, iva_pct, estado, fecha_factura, servicio_clave, tasa)
+     values ($1,$2,$3,$4,false,false,$5,$6,$7,null,$8,'por_facturar',$9,'multa_mora',$10)`,
+    [`${mesHoyISO()}-01`, entidad, f!.cliente_id ?? null, String(f!.cliente_nombre ?? "—"),
+     servicios, desglose, montoSinIva, ivaPct, hoy, f!.tasa ?? null],
+  );
+  await flash("Multa agregada");
+  revalidatePath("/trd/clientes/facturacion");
+  revalidatePath("/trd/clientes");
+  redirect(`${back}?mes=${mesHoyISO()}`);
 }
 
 export async function eliminarFactura(formData: FormData) {
