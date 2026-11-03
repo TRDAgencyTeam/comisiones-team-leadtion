@@ -11,6 +11,20 @@ const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 export const PCT_COMERCIAL = 10;
 
+/**
+ * La comisión es DINÁMICA: va enlazada a la factura del alta en Facturación. Solo
+ * cuenta si esa factura sigue existiendo y NO está anulada — o si la comisión ya se
+ * pagó (plata girada, no se revierte sola). Si la factura se borra (FK deja
+ * `factura_id` en null) o se anula, la comisión deja de contar automáticamente.
+ * Usa el alias `cc` para la tabla comision_comercial en la consulta donde se aplique.
+ */
+export const CC_VALIDA_SQL = `(
+  cc.estado = 'pagado'
+  or (cc.factura_id is not null and exists (
+        select 1 from public.factura_mensual f
+         where f.id = cc.factura_id and coalesce(f.estado,'') <> 'anulado'))
+)`;
+
 /** La comisión comercial aplica desde este mes en adelante (Mauro: septiembre no
  *  comisiona; octubre en adelante sí). Formato 'YYYY-MM'. */
 export const COMERCIAL_DESDE = "2026-10";
@@ -91,7 +105,7 @@ export async function comisionesComercialMes(mes: string): Promise<FilaComisionC
        from public.comision_comercial cc
        left join public.clientes cl on cl.id = cc.cliente_id
        join public.colaboradores co on co.id = cc.colaborador_id
-      where to_char(cc.mes,'YYYY-MM') = $1
+      where to_char(cc.mes,'YYYY-MM') = $1 and ${CC_VALIDA_SQL}
       order by cc.creado_en desc`,
     [mes],
   );
@@ -112,8 +126,9 @@ export async function comisionesComercialMes(mes: string): Promise<FilaComisionC
 /** Total (USD) de comisión comercial de un mes — alimenta el egreso de la madre. */
 export async function totalComercialMes(mes: string): Promise<{ total: number; n: number }> {
   const rows = await consulta(
-    `select coalesce(sum(monto_usd),0)::float t, count(*)::int n
-       from public.comision_comercial where to_char(mes,'YYYY-MM') = $1`,
+    `select coalesce(sum(cc.monto_usd),0)::float t, count(*)::int n
+       from public.comision_comercial cc
+      where to_char(cc.mes,'YYYY-MM') = $1 and ${CC_VALIDA_SQL}`,
     [mes],
   );
   return { total: round2(Number(rows[0]?.t ?? 0)), n: Number(rows[0]?.n ?? 0) };

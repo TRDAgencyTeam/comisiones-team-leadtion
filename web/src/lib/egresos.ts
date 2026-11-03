@@ -5,6 +5,7 @@ import { tasaUsdCop } from "@/lib/fx";
 import { calcLLC, calcCOL } from "@/lib/facturacion-calc";
 import { primerDiaMes, mesActualISO } from "@/lib/facturacion";
 import { calcularPnL, proyeccionLeadtionMes } from "@/lib/pnl";
+import { CC_VALIDA_SQL } from "@/lib/comercial";
 
 export interface EgresoRow {
   id: number;
@@ -101,7 +102,7 @@ export const asegurarEgresosFijosDelMes = cache(async (mes: string): Promise<num
       `select co.nombre, count(*)::int n, coalesce(sum(cc.monto_usd),0)::float t
          from public.comision_comercial cc
          join public.colaboradores co on co.id = cc.colaborador_id
-        where to_char(cc.mes,'YYYY-MM') = $1
+        where to_char(cc.mes,'YYYY-MM') = $1 and ${CC_VALIDA_SQL}
         group by co.nombre order by t desc`,
       [mes.slice(0, 7)],
     );

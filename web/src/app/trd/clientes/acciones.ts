@@ -675,7 +675,12 @@ export async function confirmarCierre(formData: FormData) {
 export async function eliminarFactura(formData: FormData) {
   await soloAdmin();
   const id = Number(formData.get("id"));
+  // La comisión comercial va enlazada a esta factura: si se borra, su comisión
+  // pendiente se anula también (las ya pagadas se conservan: plata girada).
+  await consulta(`delete from public.comision_comercial where factura_id=$1 and estado='pendiente'`, [id]);
   await consulta(`delete from public.factura_mensual where id=$1`, [id]);
   revalidatePath("/trd/clientes");
+  revalidatePath("/trd/clientes/facturacion");
+  revalidatePath("/comercial");
 }
 
