@@ -1324,6 +1324,20 @@ input[type="month"]::-webkit-calendar-picker-indicator { cursor: pointer; }
 .cf-table .neto { font-weight: 700; }
 .cf-table .acc { display: inline-flex; gap: 8px; align-items: center; }
 
+/* Botón "Multa por mora" en la fila de factura: chip ámbar (penalización). */
+.cf-multa-btn {
+  display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+  font-size: 0.78rem; font-weight: 700; line-height: 1; cursor: pointer;
+  padding: 5px 10px; border-radius: 999px;
+  color: var(--pending); background: var(--pending-soft);
+  border: 1px solid color-mix(in srgb, var(--pending) 38%, transparent);
+  transition: background .12s ease, border-color .12s ease, transform .06s ease;
+}
+.cf-multa-btn::before { content: "%"; font-size: 0.72rem; opacity: 0.85; }
+.cf-multa-btn:hover { background: color-mix(in srgb, var(--pending) 22%, var(--pending-soft)); border-color: var(--pending); }
+.cf-multa-btn:active { transform: translateY(1px); }
+.cf-multa-btn:focus-visible { outline: 2px solid var(--pending); outline-offset: 2px; }
+
 /* Egresos por categoría (grupos con subtotal + detalle) */
 .cf-egrupo { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); margin-top: 12px; overflow: hidden; }
 .cf-egrupo-h { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--bg); border-bottom: 1px solid var(--border); }

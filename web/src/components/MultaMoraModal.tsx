@@ -34,7 +34,7 @@ export function MultaMoraModal({ facturaId, facturado, ivaPct, entidad, fechaFac
 
   return (
     <>
-      <button type="button" className="link-ver" title="Agregar multa por mora" onClick={() => setAbierto(true)}>
+      <button type="button" className="cf-multa-btn" title="Agregar multa por mora" onClick={() => setAbierto(true)}>
         Multa
       </button>
       {abierto && (
