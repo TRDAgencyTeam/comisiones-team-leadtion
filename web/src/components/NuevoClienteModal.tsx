@@ -266,7 +266,10 @@ export function NuevoClienteModal({
                         </label>
                       ))}
                     </div>
-                    <span className="cf-hint">Marca si esta venta la trajo el equipo comercial. Solo aplica a clientes nuevos (no upgrades).</span>
+                    <span className="cf-hint">
+                      Marca si esta venta la trajo el equipo comercial. Solo aplica a clientes nuevos (no upgrades).
+                      {esRecurrente && pagoUnico && <> En pago único la base es el <b>valor ÷ {vigencia} meses</b>.</>}
+                    </span>
                   </div>
                 )}
 

@@ -718,9 +718,9 @@ a.btn-pagar { text-decoration: none; display: inline-block; }
   border-radius: 999px; background: var(--pending); color: #1a1205; font-size: 0.62rem; font-weight: 800;
   display: grid; place-items: center; line-height: 1; }
 .campana-badge.urg { background: var(--danger); color: #fff; }
-.campana-pop { position: absolute; top: calc(100% + 8px); right: 0; width: 300px; max-height: 60vh; overflow-y: auto;
+.campana-pop { position: fixed; width: 300px; max-width: calc(100vw - 24px); max-height: 60vh; overflow-y: auto;
   background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 12px;
-  box-shadow: 0 14px 44px rgba(0,0,0,0.3); z-index: 80; }
+  box-shadow: 0 14px 44px rgba(0,0,0,0.3); z-index: 200; }
 .campana-pop-h { padding: 10px 14px; font-weight: 700; font-size: 0.85rem; border-bottom: 1px solid var(--border); }
 .campana-pop-body { padding: 6px; }
 .campana-vacio { padding: 18px 12px; color: var(--muted); font-size: 0.85rem; text-align: center; margin: 0; }
