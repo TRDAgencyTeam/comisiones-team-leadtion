@@ -27,16 +27,20 @@ export function NuevoClienteModal({
   const [precios, setPrecios] = useState<string[]>([]);
   const [cuotas, setCuotas] = useState(1);
   const [existenteId, setExistenteId] = useState("");
+  // Plan recurrente vendido como PAGO ÚNICO (un solo pago + ventana de X meses).
+  const [pagoUnico, setPagoUnico] = useState(false);
+  const [vigencia, setVigencia] = useState(3);
 
   const srv = useMemo(() => catalogo.find((c) => c.clave === clave), [catalogo, clave]);
   const moneda = entidad === "COL" ? "COP" : "USD";
+  const esRecurrente = !!srv && srv.recurrente && !srv.porPersona;
   // Se puede dividir en cuotas si es pago único (no recurrente, no por persona).
   // Agente IA, Level Up y Reactivación admiten cuotas y conservan su membresía.
   // Reactivación puede venderse en cuotas distintas (ej. $1300 = 500+400+400).
   const permiteCuotas = !!srv && !srv.recurrente && !srv.porPersona;
-  // Meses a cobrar: recurrente = contrato (min_meses); con cuotas = # de cuotas; resto = 1.
-  const nMeses = srv && srv.recurrente && !srv.porPersona
-    ? Math.min(Math.max(srv.minMeses || 1, 1), 12)
+  // Meses a cobrar: recurrente = contrato (min_meses); pago único = 1; cuotas = #; resto = 1.
+  const nMeses = esRecurrente && !pagoUnico
+    ? Math.min(Math.max(srv!.minMeses || 1, 1), 12)
     : permiteCuotas ? cuotas : 1;
 
   // Recalcula los precios por defecto al cambiar servicio / entidad / personas.
@@ -52,6 +56,9 @@ export function NuevoClienteModal({
     if (srv.porPersona) {
       const totalUsd = (srv.precioPersona ?? 0) * Math.max(1, personas);
       setPrecios([conv(totalUsd)]);
+    } else if (esRecurrente && pagoUnico) {
+      // Pago único: un solo valor (negociado); se pre-llena con el precio del mes 1.
+      setPrecios([conv(srv.precioMes1)]);
     } else if (srv.recurrente) {
       const resto = conv(srv.precioResto ?? srv.precioMes1);
       setPrecios(Array.from({ length: nMeses }, (_, i) => (i === 0 ? conv(srv.precioMes1) : resto)));
@@ -68,7 +75,7 @@ export function NuevoClienteModal({
     } else {
       setPrecios([conv(srv.precioMes1)]);
     }
-  }, [clave, entidad, personas, srv, tasa, cuotas, permiteCuotas, nMeses]);
+  }, [clave, entidad, personas, srv, tasa, cuotas, permiteCuotas, nMeses, pagoUnico, esRecurrente]);
 
   // Bloquea el scroll del fondo mientras el popup está abierto.
   useEffect(() => {
@@ -141,6 +148,7 @@ export function NuevoClienteModal({
                     const def = s && !s.recurrente && !s.porPersona && !esCalSinCuotaDefault && s.minMeses > 1 ? s.minMeses : 1;
                     setCuotas(def);
                     setPersonas(s?.unidad === "hora" ? 3 : 1);
+                    setPagoUnico(false);
                   }}>
                     {Object.entries(grupos).map(([cat, items]) => (
                       <optgroup key={cat} label={CATEGORIA_LABEL[cat] ?? cat}>
@@ -150,9 +158,27 @@ export function NuevoClienteModal({
                   </select>
                 </div>
 
-                {srv?.recurrente && !srv?.porPersona && (
-                  <div className="cf-autonote">✓ Recurrente{srv.minMeses > 1 ? ` · contrato mínimo ${srv.minMeses} meses` : ""}. Se factura solo cada mes; al terminar el contrato pide confirmar continuidad.</div>
+                {esRecurrente && (
+                  <div className="cf-f">
+                    <label>Modalidad de cobro</label>
+                    <div className="cf-seg">
+                      <label><input type="radio" name="_mod" checked={!pagoUnico} onChange={() => setPagoUnico(false)} /><span>Recurrente (mensual)</span></label>
+                      <label><input type="radio" name="_mod" checked={pagoUnico} onChange={() => setPagoUnico(true)} /><span>Pago único</span></label>
+                    </div>
+                    {!pagoUnico
+                      ? <span className="cf-autonote">✓ Recurrente{srv!.minMeses > 1 ? ` · contrato mínimo ${srv!.minMeses} meses` : ""}. Se factura cada mes; al terminar el contrato pide confirmar continuidad.</span>
+                      : <span className="cf-autonote">✓ Pago único: se cobra una sola vez. El cliente cuenta como usuario Leadtion <b>sin cobro mensual</b> (el costo de API sí se asume). No entra en la facturación recurrente; se te avisará un mes antes de que venza para renovar.</span>}
+                  </div>
                 )}
+                {esRecurrente && pagoUnico && (
+                  <div className="cf-f">
+                    <label>Meses de servicio (vigencia)</label>
+                    <input type="number" min={1} max={24} value={vigencia} onChange={(e) => setVigencia(Math.max(1, Math.min(24, Number(e.target.value) || 1)))} />
+                    <span className="cf-hint">A los {vigencia} meses desde la activación debe renovar. Te avisamos un mes antes.</span>
+                  </div>
+                )}
+                <input type="hidden" name="pagoUnico" value={esRecurrente && pagoUnico ? "1" : "0"} />
+                <input type="hidden" name="vigenciaMeses" value={esRecurrente && pagoUnico ? vigencia : ""} />
 
                 {srv?.porPersona && (
                   <div className="cf-f">
@@ -164,7 +190,7 @@ export function NuevoClienteModal({
                 <div className="cf-f">
                   <input type="hidden" name="cuotas" value={permiteCuotas ? cuotas : nMeses} />
                   <div className="cf-price-head">
-                    <label style={{ margin: 0 }}>{srv?.precioVariable && cuotas <= 1 ? `Precio (${moneda}) — este cliente` : srv?.porPersona ? `Total (${moneda}) — editable` : `Precio por mes (${moneda}${moneda === "COP" ? " antes de IVA" : ""}) — editable`}</label>
+                    <label style={{ margin: 0 }}>{esRecurrente && pagoUnico ? `Precio pago único (${moneda}${moneda === "COP" ? " antes de IVA" : ""}) — editable` : srv?.precioVariable && cuotas <= 1 ? `Precio (${moneda}) — este cliente` : srv?.porPersona ? `Total (${moneda}) — editable` : `Precio por mes (${moneda}${moneda === "COP" ? " antes de IVA" : ""}) — editable`}</label>
                     {permiteCuotas && (
                       <div className="cf-cuotas-ctrl">
                         <span>Cuotas</span>

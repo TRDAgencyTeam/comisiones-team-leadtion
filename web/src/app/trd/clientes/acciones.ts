@@ -186,6 +186,8 @@ export async function crearClienteCascada(formData: FormData) {
   const afiliadoRef = String(formData.get("afiliadoRef") ?? "").trim() || null;
   const medio = txt(formData.get("medio")) ?? (entidad === "COL" ? "bancolombia" : "stripe");
   const estado = String(formData.get("estado") ?? "por_facturar");
+  const pagoUnico = String(formData.get("pagoUnico")) === "1";
+  const vigenciaMeses = Math.min(Math.max(Number(formData.get("vigenciaMeses")) || 0, 0), 24);
 
   const cuotasN = Math.min(Math.max(Number(formData.get("cuotas")) || 1, 1), 12);
   const precios = Array.from({ length: Math.max(4, cuotasN) }, (_, i) => n(formData.get(`precioMes${i + 1}`)));
@@ -205,6 +207,11 @@ export async function crearClienteCascada(formData: FormData) {
   // (ej. Plan Marketing Ads+IA+CRM). Social media/SEO/Canva → NO es cuenta Leadtion.
   const esAgencia = categoria === "agencia" && incluyeLeadtion;
   const recurrente = Boolean(c?.recurrente);
+  // Pago único: un plan recurrente vendido en UN solo pago. La factura NO es
+  // recurrente (no se autogenera cada mes); el cliente cuenta como usuario Leadtion
+  // pero sin cobro mensual, y se guarda su ventana de servicio para la renovación.
+  const esPagoUnico = pagoUnico && recurrente && vigenciaMeses > 0;
+  const facturaRecurrente = recurrente && !esPagoUnico;
   const nombreServicio = String(c?.nombre ?? servicioClave);
   const reserva = Boolean(c?.aplica_reserva) && String(formData.get("reserva")) === "1";
   const planLeadtion = ["agente_ai", "reactivacion", "level_up"].includes(servicioClave) ? servicioClave : null;
@@ -282,6 +289,27 @@ export async function crearClienteCascada(formData: FormData) {
     clienteId = await crearClienteCompleto(datos);
   }
 
+  // Pago único: etiqueta el cliente como usuario Leadtion SIN cobro mensual y guarda
+  // su ventana (vence_el = activación + vigencia). El costo de API ($10/mes) sigue
+  // contando porque queda con api_estado='incluida' (la API viene en la licencia).
+  const venceEl = esPagoUnico ? await (async () => {
+    const r = await consulta(`select (($1::date) + ($2 || ' months')::interval)::date d`, [fechaActivacion, vigenciaMeses]);
+    return String(r[0]!.d).slice(0, 10);
+  })() : null;
+  if (esPagoUnico) {
+    await consulta(
+      `update public.clientes
+          set pago_unico=true, vigencia_meses=$2, vence_el=$3,
+              es_leadtion=true, es_agencia=false, incluye_crm_en_marketing=false,
+              api_estado = case when coalesce(api_estado,'ninguna')='ninguna' then 'incluida' else api_estado end,
+              valor_licencia_general=0, soporte_valor=0, estado_actualizado_en=now()
+        where id=$1`,
+      [clienteId, vigenciaMeses, venceEl],
+    );
+    revalidatePath("/membresias/clientes");
+    revalidatePath("/cs");
+  }
+
   const ivaPct = entidad === "COL" ? 19 : 0;
   const tasaVal = entidad === "COL" ? (await tasaUsdCop()).cop : null;
   const facturado = precios[0] ?? 0;
@@ -311,14 +339,15 @@ export async function crearClienteCascada(formData: FormData) {
     // Fee recurrente (mes 2 en adelante): lo que se cobrará al autogenerar los meses
     // siguientes. Es la 2ª cuota del plan (ej. $897 del Plan Marketing), no el mes 1.
     // Si no hay 2º valor, se mantiene el del mes 1 (planes de monto fijo).
-    const mrrVal = recurrente ? (precios[1] && precios[1] > 0 ? precios[1] : facturado) : null;
+    const mrrVal = facturaRecurrente ? (precios[1] && precios[1] > 0 ? precios[1] : facturado) : null;
+    const serviciosFactura = esPagoUnico ? `${nombreServicio} · pago único (${vigenciaMeses} meses)` : nombreServicio;
     const facRows = await consulta(
       `insert into public.factura_mensual
          (mes, entidad, cliente_id, cliente_nombre, reserva, recurrente, servicios, precio_desglose,
-          facturado, medio, iva_pct, estado, mes_contrato, servicio_clave, tasa, mrr)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,1,$13,$14,$15) returning id`,
-      [mes, entidad, clienteId, nombreFactura, reserva, recurrente, nombreServicio, desglose,
-       facturado, medio, ivaPct, estado, servicioClave, tasaVal, mrrVal],
+          facturado, medio, iva_pct, estado, mes_contrato, servicio_clave, tasa, mrr, pago_unico, vence_el)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,1,$13,$14,$15,$16,$17) returning id`,
+      [mes, entidad, clienteId, nombreFactura, reserva, facturaRecurrente, serviciosFactura, desglose,
+       facturado, medio, ivaPct, estado, servicioClave, tasaVal, mrrVal, esPagoUnico, venceEl],
     );
     facturaId = facRows[0]?.id != null ? Number(facRows[0]!.id) : null;
   }

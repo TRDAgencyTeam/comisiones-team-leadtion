@@ -72,7 +72,7 @@ export interface PnL {
   cuentasActivas: number;
 }
 
-export type CategoriaLeadtion = "estandar" | "soporte" | "servicio" | "agencia";
+export type CategoriaLeadtion = "estandar" | "soporte" | "servicio" | "agencia" | "pago_unico";
 export interface LineaLeadtion {
   clienteId: number;
   nombre: string;
@@ -133,7 +133,7 @@ function agruparSoportes(rows: Record<string, unknown>[]): Map<number, PeriodoSo
 /** Trae UNA sola vez el maestro Leadtion (para clasificar uno o varios meses). */
 async function fetchDatosLeadtion(): Promise<DatosLeadtion> {
   const [clientes, servicios, soportes] = await Promise.all([
-    consulta(`select id, nombre, coalesce(es_agencia,false) es_agencia,
+    consulta(`select id, nombre, coalesce(es_agencia,false) es_agencia, coalesce(pago_unico,false) pago_unico,
                 coalesce(soporte_valor,0) sop, coalesce(valor_licencia_general,0) licgen,
                 to_char(fecha_activacion,'YYYY-MM') act, to_char(fecha_activacion,'YYYY-MM-DD') act_dia,
                 to_char(fecha_cancelacion,'YYYY-MM-DD') cancel
@@ -186,6 +186,14 @@ function clasificarCargosMes(d: DatosLeadtion, mes: string): LineaLeadtion[] {
     if (act != null && mes < act) continue; // aún no activo ese mes
     // Cancelado antes del corte de este mes → no se cobra (ese mes queda en $0).
     if (!cobraEsteMes(mes, (c.act_dia as string) ?? null, (c.cancel as string) ?? null)) continue;
+
+    // Pago único: el cliente cuenta como USUARIO Leadtion pero NO genera cobro mensual
+    // (el ingreso entró una sola vez en su factura). El costo de API ($10) sí cuenta
+    // aparte (apiIncluidaCount: cualquier activo con api_estado='incluida').
+    if (Boolean(c.pago_unico)) {
+      lineas.push({ clienteId: id, nombre, esAgencia: false, categoria: "pago_unico", valor: 0, fuenteValor: "pago único (sin cobro mensual)" });
+      continue;
+    }
 
     // Agencia: la licencia va incluida en el marketing → cargo $0, sin servicios propios.
     if (Boolean(c.es_agencia)) {
@@ -244,6 +252,7 @@ function conceptoLinea(l: LineaLeadtion): string {
   if (l.categoria === "servicio") return l.tipoServicio ? (SERVICIO_LABEL[l.tipoServicio] ?? "Servicio") : "Servicio";
   if (l.categoria === "soporte") return "Soporte";
   if (l.categoria === "agencia") return "Agencia (licencia incluida)";
+  if (l.categoria === "pago_unico") return "Pago único (sin cobro mensual)";
   return "Licencia";
 }
 

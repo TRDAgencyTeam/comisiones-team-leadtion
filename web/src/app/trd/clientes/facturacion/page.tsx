@@ -80,6 +80,51 @@ function Tabla({ filas, tasa, entidad, lineas, hoy }: { filas: FacturaRow[]; tas
   );
 }
 
+/** Días entre hoy y una fecha ISO (negativo = ya pasó). */
+function diasHasta(fechaISO: string | null, hoy: string): number | null {
+  if (!fechaISO) return null;
+  const a = new Date(`${fechaISO.slice(0, 10)}T00:00:00`), b = new Date(`${hoy}T00:00:00`);
+  return Math.round((a.getTime() - b.getTime()) / 86_400_000);
+}
+const fVence = (iso: string | null) => iso ? new Date(`${iso}T00:00:00`).toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" }) : "—";
+
+/** Sección de PAGOS ÚNICOS: seguimiento de renovación (no es facturación recurrente). */
+function PagoUnicoTabla({ filas, tasa, hoy }: { filas: FacturaRow[]; tasa: number; hoy: string }) {
+  return (
+    <div className="cf-table-wrap">
+      <table className="cf-table">
+        <thead>
+          <tr><th>Cliente</th><th>Servicio</th><th className="r">Pagado</th><th>Vence</th><th>Renovación</th><th>Estado</th><th></th></tr>
+        </thead>
+        <tbody>
+          {filas.map((f) => {
+            const d = diasHasta(f.venceEl, hoy);
+            const clase = d == null ? "" : d < 0 ? "pu-venc" : d <= 30 ? "pu-pronto" : "pu-ok";
+            const txt = d == null ? "—" : d < 0 ? `Vencido hace ${Math.abs(d)} d` : d === 0 ? "Vence hoy" : `Faltan ${d} d`;
+            return (
+              <tr key={f.id}>
+                <td className="nom">{f.clienteNombre}<small>{f.medio ?? ""}</small></td>
+                <td className="srv">{f.servicios ?? "—"}</td>
+                <td className="r">{f.entidad === "COL" ? cop(f.facturado) : usd(f.facturado)}</td>
+                <td>{fVence(f.venceEl)}</td>
+                <td><span className={`pu-chip ${clase}`}>{txt}</span></td>
+                <td><EstadoFactura id={f.id} estado={f.estado} fechaFactura={f.fechaFactura} /></td>
+                <td>
+                  <span className="acc">
+                    <Link href={`/trd/clientes/${f.id}`} className="link-ver">Ver</Link>
+                    <form action={eliminarFactura}><input type="hidden" name="id" value={f.id} /><button type="submit" className="btn-borrar icon-btn danger" title="Eliminar"><IconoBorrar /></button></form>
+                  </span>
+                </td>
+              </tr>
+            );
+          })}
+          {filas.length === 0 && <tr><td colSpan={7} className="cf-empty" style={{ padding: 24 }}>Sin pagos únicos este mes.</td></tr>}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 const ORDENES = ["reciente", "vieja", "monto_alto", "monto_bajo", "nombre"] as const;
 type Orden = typeof ORDENES[number];
 
@@ -107,6 +152,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
   const recCOL = ordenar(v.recurrentes.filter((f) => f.entidad === "COL"));
   const enCuotasOrd = ordenar(v.enCuotas);
   const delMomentoOrd = ordenar(v.delMomento);
+  const pagoUnicoOrd = [...v.pagoUnico].sort((x, y) => (x.venceEl ?? "9999").localeCompare(y.venceEl ?? "9999"));
   const otrosTotal = otros.reduce((s, o) => s + o.valorUsd, 0);
   const lineas = await lineasDeFacturas([...v.recurrentes, ...v.enCuotas, ...v.delMomento]);
   // Colombia: lo que se cobra al cliente vs. lo que es ingreso (antes de IVA → USD).
@@ -158,6 +204,16 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
         <>
           <div className="cf-sec-head"><h2>En cuotas (planes en pagos) <span className="count">{enCuotasOrd.length}</span></h2></div>
           <Tabla filas={enCuotasOrd} tasa={v.tasa} entidad="LLC" lineas={lineas} hoy={hoy} />
+        </>
+      )}
+
+      {pagoUnicoOrd.length > 0 && (
+        <>
+          <div className="cf-sec-head"><h2>Pagos únicos · seguimiento de renovación <span className="count">{pagoUnicoOrd.length}</span></h2></div>
+          <p className="cf-nota" style={{ marginTop: 0, marginBottom: 8 }}>
+            Planes vendidos en <b>un solo pago</b>. No se facturan cada mes: aquí solo se lleva el seguimiento de <b>cuándo deben renovar</b>. El sistema te avisa un mes antes del vencimiento.
+          </p>
+          <PagoUnicoTabla filas={pagoUnicoOrd} tasa={v.tasa} hoy={hoy} />
         </>
       )}
 

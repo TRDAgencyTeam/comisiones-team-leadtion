@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/app/login/actions";
 import { TemaToggle } from "@/components/TemaToggle";
+import { CampanaNotificaciones } from "@/components/CampanaNotificaciones";
+import type { Notificacion } from "@/lib/notificaciones";
 
 interface Item { href: string; label: string; ic: string; exact?: boolean }
 interface Grupo { key: string; label: string; ic: string; href?: string; exact?: boolean; hijos: Item[] }
@@ -33,7 +35,7 @@ const NAV: Entrada[] = [
 ];
 
 /** Menú lateral de la plataforma madre: enlaces y grupos desplegables (Egresos, Contabilidad). */
-export function TrdSidebar({ email }: { email: string | null }) {
+export function TrdSidebar({ email, notificaciones = [] }: { email: string | null; notificaciones?: Notificacion[] }) {
   const path = usePathname();
   const activo = (href: string, exact?: boolean) => (exact ? path === href : path === href || path.startsWith(`${href}/`));
   const grupoActivo = (g: Grupo) => (g.href ? activo(g.href, g.exact) : false) || g.hijos.some((h) => activo(h.href, h.exact));
@@ -56,6 +58,7 @@ export function TrdSidebar({ email }: { email: string | null }) {
             Ebenezer
           </div>
         </div>
+        <CampanaNotificaciones notificaciones={notificaciones} />
       </div>
       <div className="side-scroll">
         <div className="side-sec">Operación</div>

@@ -26,6 +26,8 @@ export interface FacturaRow {
   servicioClave: string | null;
   tasa: number | null;
   enCuotas: boolean;
+  pagoUnico: boolean;
+  venceEl: string | null;
 }
 
 /** Catálogo de servicios (para el modal Nuevo cliente y la vista). */
@@ -93,6 +95,8 @@ function mapRow(r: Record<string, unknown>): FacturaRow {
     servicioClave: (r.servicio_clave as string) ?? null,
     tasa: r.tasa != null ? Number(r.tasa) : null,
     enCuotas: Boolean(r.en_cuotas),
+    pagoUnico: Boolean(r.pago_unico),
+    venceEl: toISO(r.vence_el),
   };
 }
 
@@ -186,6 +190,7 @@ export interface VistaFacturacion {
   recurrentes: FacturaRow[];
   enCuotas: FacturaRow[];
   delMomento: FacturaRow[];
+  pagoUnico: FacturaRow[];
   leadtion: ServicioLeadtion[];
   membresias: MembresiasResumen;
   totales: {
@@ -206,9 +211,12 @@ export async function vistaFacturacion(mes: string): Promise<VistaFacturacion> {
   ]);
   const filas = rows.map(mapRow);
   const tasa = fx.cop;
-  const enCuotas = filas.filter((f) => f.enCuotas);
-  const recurrentes = filas.filter((f) => f.recurrente && !f.enCuotas);
-  const delMomento = filas.filter((f) => !f.recurrente && !f.enCuotas);
+  // Pago único (plan recurrente vendido en un solo pago): sección propia de
+  // seguimiento de renovación; NO entra en recurrentes ni en "del momento".
+  const pagoUnico = filas.filter((f) => f.pagoUnico);
+  const enCuotas = filas.filter((f) => f.enCuotas && !f.pagoUnico);
+  const recurrentes = filas.filter((f) => f.recurrente && !f.enCuotas && !f.pagoUnico);
+  const delMomento = filas.filter((f) => !f.recurrente && !f.enCuotas && !f.pagoUnico);
 
   let agenciaNetoUsd = 0, pasarelaUsd = 0, pendientes = 0;
   for (const f of filas) {
@@ -220,7 +228,7 @@ export async function vistaFacturacion(mes: string): Promise<VistaFacturacion> {
   const leadtionServiciosUsd = leadtion.reduce((s, x) => s + x.valorUsd, 0);
   const r2 = (n: number) => Math.round(n * 100) / 100;
   return {
-    tasa, recurrentes, enCuotas, delMomento, leadtion, membresias,
+    tasa, recurrentes, enCuotas, delMomento, pagoUnico, leadtion, membresias,
     totales: {
       agenciaNetoUsd: r2(agenciaNetoUsd), pasarelaUsd: r2(pasarelaUsd), leadtionServiciosUsd: r2(leadtionServiciosUsd),
       ingresosUsd: r2(agenciaNetoUsd + leadtionServiciosUsd + membresias.totalUsd), pendientes,

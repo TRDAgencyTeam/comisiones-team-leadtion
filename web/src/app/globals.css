@@ -707,6 +707,30 @@ a.btn-pagar { text-decoration: none; display: inline-block; }
   background: linear-gradient(120deg, #2e2a6e, #6d5ac0); padding: 5px; }
 .trd-side .eb-mark { width: 12px; height: 12px; object-fit: contain; opacity: 0.85; }
 
+/* Campanita de notificaciones (en el header del sidebar) */
+.campana { position: relative; margin-left: auto; }
+.campana-btn { background: none; border: none; color: #e7e6f0; cursor: pointer; padding: 6px; border-radius: 9px;
+  position: relative; display: inline-grid; place-items: center; opacity: 0.85; }
+.campana-btn:hover { opacity: 1; background: rgba(255,255,255,0.12); }
+.campana-badge { position: absolute; top: -1px; right: -1px; min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 999px; background: var(--pending); color: #1a1205; font-size: 0.62rem; font-weight: 800;
+  display: grid; place-items: center; line-height: 1; }
+.campana-badge.urg { background: var(--danger); color: #fff; }
+.campana-pop { position: absolute; top: calc(100% + 8px); right: 0; width: 300px; max-height: 60vh; overflow-y: auto;
+  background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 14px 44px rgba(0,0,0,0.3); z-index: 80; }
+.campana-pop-h { padding: 10px 14px; font-weight: 700; font-size: 0.85rem; border-bottom: 1px solid var(--border); }
+.campana-pop-body { padding: 6px; }
+.campana-vacio { padding: 18px 12px; color: var(--muted); font-size: 0.85rem; text-align: center; margin: 0; }
+.campana-item { display: flex; gap: 10px; align-items: flex-start; padding: 9px 10px; border-radius: 9px;
+  text-decoration: none; color: var(--text); }
+.campana-item:hover { background: var(--bg); }
+.campana-item .ci-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex: none; background: var(--pending); }
+.campana-item.urgente .ci-dot { background: var(--danger); }
+.campana-item .ci-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.campana-item .ci-txt b { font-size: 0.82rem; font-weight: 700; }
+.campana-item .ci-txt small { font-size: 0.75rem; color: var(--muted); }
+
 /* Indicador de carga: logo TRD palpitando (loading.tsx del módulo /trd) */
 .trd-loading { min-height: 70vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: var(--muted); }
 .trd-loading-badge { width: 72px; height: 72px; border-radius: 18px; display: flex; align-items: center; justify-content: center;
@@ -1337,6 +1361,12 @@ input[type="month"]::-webkit-calendar-picker-indicator { cursor: pointer; }
 .cf-multa-btn:hover { background: color-mix(in srgb, var(--pending) 22%, var(--pending-soft)); border-color: var(--pending); }
 .cf-multa-btn:active { transform: translateY(1px); }
 .cf-multa-btn:focus-visible { outline: 2px solid var(--pending); outline-offset: 2px; }
+
+/* Chip de renovación en la sección de Pagos únicos. */
+.pu-chip { display: inline-block; font-size: 0.75rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.pu-chip.pu-ok { color: var(--paid); background: color-mix(in srgb, var(--paid) 15%, transparent); }
+.pu-chip.pu-pronto { color: var(--pending); background: var(--pending-soft); }
+.pu-chip.pu-venc { color: var(--danger); background: color-mix(in srgb, var(--danger) 15%, transparent); }
 
 /* Egresos por categoría (grupos con subtotal + detalle) */
 .cf-egrupo { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); margin-top: 12px; overflow: hidden; }
