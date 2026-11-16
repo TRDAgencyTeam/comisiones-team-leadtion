@@ -293,8 +293,10 @@ export async function crearClienteCascada(formData: FormData) {
   // su ventana (vence_el = activación + vigencia). El costo de API ($10/mes) sigue
   // contando porque queda con api_estado='incluida' (la API viene en la licencia).
   const venceEl = esPagoUnico ? await (async () => {
-    const r = await consulta(`select (($1::date) + ($2 || ' months')::interval)::date d`, [fechaActivacion, vigenciaMeses]);
-    return String(r[0]!.d).slice(0, 10);
+    // to_char: pg devuelve la columna date como objeto Date; String(Date) daría el
+    // formato local ("Tue Feb 16"), inválido para ::date. Lo formateamos a texto.
+    const r = await consulta(`select to_char((($1::date) + ($2 || ' months')::interval), 'YYYY-MM-DD') d`, [fechaActivacion, vigenciaMeses]);
+    return String(r[0]!.d);
   })() : null;
   if (esPagoUnico) {
     await consulta(
@@ -354,8 +356,12 @@ export async function crearClienteCascada(formData: FormData) {
   await registrarCostoTercerizacion(mes, servicioClave, personas);
 
   // Comisión del equipo comercial: 10% de la venta neta, SOLO si es cliente NUEVO
-  // y el admin marcó al comercial. Una vez, sobre el TOTAL de la venta (todas las cuotas).
-  const ventaNeta = materializarCuotas ? totalVenta : facturado;
+  // y el admin marcó al comercial. Una vez, sobre el TOTAL de la venta (todas las
+  // cuotas). En PAGO ÚNICO la base es el valor dividido entre los meses de servicio
+  // (ej. $3.950 a 4 meses → base $987,5), según la regla de Mauro.
+  const ventaNeta = esPagoUnico && vigenciaMeses > 0
+    ? Math.round((facturado / vigenciaMeses) * 100) / 100
+    : materializarCuotas ? totalVenta : facturado;
   if (esClienteNuevo && comisionaComercial && facturaId && comercialIds.length && mes.slice(0, 7) >= COMERCIAL_DESDE) {
     for (const colId of comercialIds) {
       await registrarComisionComercial({

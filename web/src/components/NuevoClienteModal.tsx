@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CATEGORIA_LABEL, type ServicioCatalogo } from "@/lib/catalogo-tipos";
 import { MEDIOS, ESTADOS } from "@/lib/facturacion-calc";
 import { crearClienteCascada } from "@/app/trd/clientes/acciones";
+import { InfoTip } from "@/components/InfoTip";
 import { formatoMonto, montoATexto, parseMonto } from "@/lib/numero";
 
 const money = (n: number, moneda: "USD" | "COP") =>
@@ -160,21 +161,24 @@ export function NuevoClienteModal({
 
                 {esRecurrente && (
                   <div className="cf-f">
-                    <label>Modalidad de cobro</label>
+                    <label>Modalidad de cobro
+                      <InfoTip titulo="Modalidad de cobro">
+                        <b>Recurrente:</b> se factura cada mes; al terminar el contrato pide confirmar continuidad.<br />
+                        <b>Pago único:</b> se cobra una sola vez. El cliente cuenta como usuario Leadtion sin cobro mensual (el costo de API sí se asume). No entra en la facturación recurrente y te avisamos un mes antes de que venza para renovar.
+                      </InfoTip>
+                    </label>
                     <div className="cf-seg">
                       <label><input type="radio" name="_mod" checked={!pagoUnico} onChange={() => setPagoUnico(false)} /><span>Recurrente (mensual)</span></label>
                       <label><input type="radio" name="_mod" checked={pagoUnico} onChange={() => setPagoUnico(true)} /><span>Pago único</span></label>
                     </div>
-                    {!pagoUnico
-                      ? <span className="cf-autonote">✓ Recurrente{srv!.minMeses > 1 ? ` · contrato mínimo ${srv!.minMeses} meses` : ""}. Se factura cada mes; al terminar el contrato pide confirmar continuidad.</span>
-                      : <span className="cf-autonote">✓ Pago único: se cobra una sola vez. El cliente cuenta como usuario Leadtion <b>sin cobro mensual</b> (el costo de API sí se asume). No entra en la facturación recurrente; se te avisará un mes antes de que venza para renovar.</span>}
                   </div>
                 )}
                 {esRecurrente && pagoUnico && (
                   <div className="cf-f">
-                    <label>Meses de servicio (vigencia)</label>
+                    <label>Meses de servicio (vigencia)
+                      <InfoTip titulo="Vigencia">A los {vigencia} meses desde la activación debe renovar. Te avisamos un mes antes con la campanita.</InfoTip>
+                    </label>
                     <input type="number" min={1} max={24} value={vigencia} onChange={(e) => setVigencia(Math.max(1, Math.min(24, Number(e.target.value) || 1)))} />
-                    <span className="cf-hint">A los {vigencia} meses desde la activación debe renovar. Te avisamos un mes antes.</span>
                   </div>
                 )}
                 <input type="hidden" name="pagoUnico" value={esRecurrente && pagoUnico ? "1" : "0"} />

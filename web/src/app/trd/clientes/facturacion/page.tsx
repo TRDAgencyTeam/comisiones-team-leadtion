@@ -12,6 +12,7 @@ import { NuevoClienteModal } from "@/components/NuevoClienteModal";
 import { MovimientoModal } from "@/components/MovimientoModal";
 import { eliminarFactura, eliminarIngreso } from "../acciones";
 import { MultaMoraModal } from "@/components/MultaMoraModal";
+import { InfoTip } from "@/components/InfoTip";
 import { mesHoyISO, hoyISO } from "@/lib/fecha";
 import { IconoBorrar } from "@/components/Iconos";
 
@@ -166,7 +167,16 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
       <ClientesHeader mes={mes} activo="facturacion" tasa={v.tasa} navMes />
       {sp.error && <p className="alerta">{decodeURIComponent(sp.error)}</p>}
 
-      <div className="cf-sec-head">
+      <nav className="cf-anchors" aria-label="Ir a sección">
+        <a href="#sec-llc">USA (LLC) <i>{recLLC.length}</i></a>
+        {recCOL.length > 0 && <a href="#sec-col">Colombia <i>{recCOL.length}</i></a>}
+        <a href="#sec-momento">Del momento <i>{delMomentoOrd.length}</i></a>
+        {enCuotasOrd.length > 0 && <a href="#sec-cuotas">En cuotas <i>{enCuotasOrd.length}</i></a>}
+        {pagoUnicoOrd.length > 0 && <a href="#sec-pagounico">Pagos únicos <i>{pagoUnicoOrd.length}</i></a>}
+        <a href="#sec-otros">Otros ingresos</a>
+      </nav>
+
+      <div className="cf-sec-head" id="sec-llc">
         <h2>Clientes recurrentes · USA (LLC) <span className="count">{recLLC.length}</span></h2>
         <div style={{ display: "inline-flex", gap: 10, alignItems: "center" }}>
           <form method="get" className="cf-orden">
@@ -186,7 +196,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
       </div>
       <Tabla filas={recLLC} tasa={v.tasa} entidad="LLC" lineas={lineas} hoy={hoy} />
 
-      <div className="cf-sec-head"><h2>Clientes recurrentes · Colombia (COP) <span className="count">{recCOL.length}</span></h2></div>
+      <div className="cf-sec-head" id="sec-col"><h2>Clientes recurrentes · Colombia (COP) <span className="count">{recCOL.length}</span></h2></div>
       {recCOL.length > 0 && (
         <div className="cf-iva-strip">
           <div><span>Antes de IVA</span><b>{cop(totCOL.antes)}</b></div>
@@ -197,27 +207,28 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
       )}
       <Tabla filas={recCOL} tasa={v.tasa} entidad="COL" lineas={lineas} hoy={hoy} />
 
-      <div className="cf-sec-head"><h2>Servicios del momento <span className="count">{delMomentoOrd.length}</span></h2></div>
+      <div className="cf-sec-head" id="sec-momento"><h2>Servicios del momento <span className="count">{delMomentoOrd.length}</span></h2></div>
       <Tabla filas={delMomentoOrd} tasa={v.tasa} entidad="LLC" lineas={lineas} hoy={hoy} />
 
       {enCuotasOrd.length > 0 && (
         <>
-          <div className="cf-sec-head"><h2>En cuotas (planes en pagos) <span className="count">{enCuotasOrd.length}</span></h2></div>
+          <div className="cf-sec-head" id="sec-cuotas"><h2>En cuotas (planes en pagos) <span className="count">{enCuotasOrd.length}</span></h2></div>
           <Tabla filas={enCuotasOrd} tasa={v.tasa} entidad="LLC" lineas={lineas} hoy={hoy} />
         </>
       )}
 
       {pagoUnicoOrd.length > 0 && (
         <>
-          <div className="cf-sec-head"><h2>Pagos únicos · seguimiento de renovación <span className="count">{pagoUnicoOrd.length}</span></h2></div>
-          <p className="cf-nota" style={{ marginTop: 0, marginBottom: 8 }}>
-            Planes vendidos en <b>un solo pago</b>. No se facturan cada mes: aquí solo se lleva el seguimiento de <b>cuándo deben renovar</b>. El sistema te avisa un mes antes del vencimiento.
-          </p>
+          <div className="cf-sec-head" id="sec-pagounico">
+            <h2>Pagos únicos · renovación <span className="count">{pagoUnicoOrd.length}</span>
+              <InfoTip titulo="Pagos únicos">Planes vendidos en un solo pago. No se facturan cada mes: aquí solo se lleva el seguimiento de cuándo deben renovar. El sistema te avisa un mes antes del vencimiento con la campanita.</InfoTip>
+            </h2>
+          </div>
           <PagoUnicoTabla filas={pagoUnicoOrd} tasa={v.tasa} hoy={hoy} />
         </>
       )}
 
-      <div className="cf-sec-head">
+      <div className="cf-sec-head" id="sec-otros">
         <h2>Otros ingresos del mes <span className="count">{usd(otrosTotal)}</span></h2>
         <MovimientoModal mes={mes} tipo="ingreso" />
       </div>

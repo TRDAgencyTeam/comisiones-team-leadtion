@@ -58,10 +58,12 @@ export function TrdSidebar({ email, notificaciones = [] }: { email: string | nul
             Ebenezer
           </div>
         </div>
-        <CampanaNotificaciones notificaciones={notificaciones} />
       </div>
       <div className="side-scroll">
-        <div className="side-sec">Operación</div>
+        <div className="side-sec-row">
+          <span className="side-sec">Operación</span>
+          <CampanaNotificaciones notificaciones={notificaciones} />
+        </div>
         <nav>
           {NAV.map((e) => {
             if (!esGrupo(e)) {

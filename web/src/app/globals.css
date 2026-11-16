@@ -707,8 +707,10 @@ a.btn-pagar { text-decoration: none; display: inline-block; }
   background: linear-gradient(120deg, #2e2a6e, #6d5ac0); padding: 5px; }
 .trd-side .eb-mark { width: 12px; height: 12px; object-fit: contain; opacity: 0.85; }
 
-/* Campanita de notificaciones (en el header del sidebar) */
-.campana { position: relative; margin-left: auto; }
+/* Campanita de notificaciones (en la fila de sección del sidebar) */
+.trd-side .side-sec-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.trd-side .side-sec-row .side-sec { margin: 0 2px 0 8px; }
+.campana { position: relative; }
 .campana-btn { background: none; border: none; color: #e7e6f0; cursor: pointer; padding: 6px; border-radius: 9px;
   position: relative; display: inline-grid; place-items: center; opacity: 0.85; }
 .campana-btn:hover { opacity: 1; background: rgba(255,255,255,0.12); }
@@ -1367,6 +1369,30 @@ input[type="month"]::-webkit-calendar-picker-indicator { cursor: pointer; }
 .pu-chip.pu-ok { color: var(--paid); background: color-mix(in srgb, var(--paid) 15%, transparent); }
 .pu-chip.pu-pronto { color: var(--pending); background: var(--pending-soft); }
 .pu-chip.pu-venc { color: var(--danger); background: color-mix(in srgb, var(--danger) 15%, transparent); }
+
+/* InfoTip: ícono "?" con popup al pasar el cursor (reemplaza textos largos). */
+.infotip { position: relative; display: inline-flex; vertical-align: middle; margin-left: 5px; cursor: help; }
+.infotip-ic { width: 15px; height: 15px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 0.68rem; font-weight: 800; line-height: 1; background: var(--accent-soft); color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent); }
+.infotip-pop { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  width: 240px; max-width: 70vw; background: var(--panel); color: var(--text); border: 1px solid var(--border);
+  border-radius: 10px; padding: 9px 11px; font-size: 0.78rem; font-weight: 400; line-height: 1.45;
+  letter-spacing: normal; text-transform: none; box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  opacity: 0; visibility: hidden; transition: opacity .12s ease; z-index: 90; }
+.infotip:hover .infotip-pop, .infotip:focus-visible .infotip-pop { opacity: 1; visibility: visible; }
+.infotip-pop b { font-weight: 700; }
+
+/* Barra de anclas (navegación rápida entre secciones de Facturación). */
+.cf-anchors { position: sticky; top: 0; z-index: 25; display: flex; flex-wrap: wrap; gap: 7px;
+  padding: 9px 0; margin-bottom: 4px; background: var(--bg); border-bottom: 1px solid var(--border); }
+.cf-anchors a { display: inline-flex; align-items: center; gap: 5px; text-decoration: none;
+  font-size: 0.8rem; font-weight: 600; color: var(--text); padding: 4px 11px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--panel); white-space: nowrap; transition: border-color .12s, background .12s; }
+.cf-anchors a:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.cf-anchors a i { font-style: normal; font-size: 0.68rem; font-weight: 800; color: var(--muted);
+  background: var(--bg); border-radius: 999px; padding: 1px 6px; }
+.cf-sec-head { scroll-margin-top: 58px; }
 
 /* Egresos por categoría (grupos con subtotal + detalle) */
 .cf-egrupo { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); margin-top: 12px; overflow: hidden; }
