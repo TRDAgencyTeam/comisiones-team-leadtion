@@ -3,15 +3,17 @@ import { hoyISO } from "@/lib/fecha";
 import { enviarEmail, emailConfigurado, plantillaRecordatorioFacturas, type FacturaRecordatorio } from "@/lib/email";
 
 /**
- * Cron diario (8 a.m. Colombia) de recordatorios de FACTURACIÓN. Revisa las facturas
- * que están en "por_facturar" o "programado" con fecha de facturación, y envía un
- * correo a la persona encargada y al host con tres secciones:
+ * Cron diario (8 a.m. Colombia) de recordatorios de FACTURACIÓN. Revisa SOLO las
+ * facturas en estado "por_facturar" con fecha de facturación, y envía un correo a la
+ * persona encargada y al host con tres secciones:
  *   - Para mañana (1 día antes, para prepararlas).
  *   - Para hoy (hay que facturarlas hoy).
- *   - Vencidas: ya pasó su fecha y NO se marcaron como facturadas → "por favor hazla".
- * Como corre a diario, una factura vencida se vuelve a recordar cada día hasta que se
- * marque como Facturado/Pagado (o se anule). Vercel lo llama con Authorization: Bearer
- * $CRON_SECRET (si CRON_SECRET está en las envs).
+ *   - Vencidas: ya pasó su fecha y siguen en "por_facturar" → "por favor hazla".
+ * Los demás estados NO generan recordatorio: "facturado" y "pagado" (ya se hicieron),
+ * "programado" (ya está agendada, bajo control) y "anulado" (la cuenta ya no cuenta).
+ * Como corre a diario, una factura vencida se vuelve a recordar cada día hasta que
+ * salga de "por_facturar". Vercel lo llama con Authorization: Bearer $CRON_SECRET
+ * (si CRON_SECRET está en las envs).
  */
 
 /** Destinatarios: host + encargada de facturación. Configurable por env (CSV). */
@@ -34,12 +36,13 @@ export async function GET(req: Request) {
   const hoy = hoyISO();
   const manana = sumarDia(hoy, 1);
 
-  // Facturas que todavía hay que HACER (no las ya facturadas/pagadas/anuladas).
+  // SOLO las que siguen "por_facturar" (las programadas, facturadas, pagadas y
+  // anuladas NO se recuerdan).
   const rows = await consulta(
     `select cliente_nombre, servicios, coalesce(facturado,0)::float facturado, entidad,
             to_char(fecha_factura,'YYYY-MM-DD') ff
        from public.factura_mensual
-      where estado in ('por_facturar','programado') and fecha_factura is not null
+      where estado = 'por_facturar' and fecha_factura is not null
       order by fecha_factura, cliente_nombre`,
   );
 
