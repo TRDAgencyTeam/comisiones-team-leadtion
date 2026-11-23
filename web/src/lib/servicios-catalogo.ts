@@ -13,6 +13,8 @@ export interface ServicioAdmin {
   clave: string;
   nombre: string;
   categoria: string;
+  /** Marca/negocio: 'agencia' (TRD Agency), 'leadtion', 'ambas' (Agency + Leadtion). */
+  marca: string;
   recurrente: boolean;
   precioVariable: boolean;
   precioMes1: number | null;
@@ -46,6 +48,7 @@ function mapRow(r: Record<string, unknown>): ServicioAdmin {
     clave: String(r.clave),
     nombre: String(r.nombre),
     categoria: String(r.categoria),
+    marca: String(r.marca ?? "agencia"),
     recurrente: Boolean(r.recurrente),
     precioVariable: Boolean(r.precio_variable),
     precioMes1: numN(r.precio_mes1),
@@ -70,12 +73,19 @@ function mapRow(r: Record<string, unknown>): ServicioAdmin {
   };
 }
 
+/** Ingreso NETO aprox en USD de una fila de factura `f`: COL = antes de IVA ÷ tasa;
+ *  LLC = facturado − pasarela (Stripe 2,9% + $0,30). */
+const NETO_USD_SQL = `case
+  when f.entidad = 'COL' then f.facturado / nullif(f.tasa, 0)
+  when f.medio = 'stripe' then f.facturado - (f.facturado * 0.029 + 0.30)
+  else f.facturado end`;
+
 /** Subconsulta de uso por servicio_clave (facturas no anuladas). */
 const USO_SQL = `
   left join lateral (
     select count(*)::int veces,
            count(distinct coalesce(f.cliente_id::text, lower(trim(f.cliente_nombre)))) clientes,
-           coalesce(sum(case when f.entidad = 'COL' then f.facturado / nullif(f.tasa, 0) else f.facturado end), 0) ingreso_usd,
+           coalesce(sum(${NETO_USD_SQL}), 0) ingreso_usd,
            to_char(max(f.mes), 'YYYY-MM') ultimo_uso
       from public.factura_mensual f
      where f.servicio_clave = sc.clave and coalesce(f.estado,'') <> 'anulado'
@@ -120,6 +130,25 @@ export async function historialUsoServicio(clave: string): Promise<UsoFila[]> {
     facturado: Number(r.facturado),
     entidad: String(r.entidad ?? "LLC"),
     estado: String(r.estado ?? ""),
+  }));
+}
+
+/** Serie mensual de uso de un servicio (últimos `n` meses) para el gráfico. */
+export interface UsoMes { mes: string; facturas: number; ingresoUsd: number }
+export async function historialMensualServicio(clave: string, n = 12): Promise<UsoMes[]> {
+  const rows = await consulta(
+    `select to_char(f.mes,'YYYY-MM') mes, count(*)::int facturas,
+            coalesce(sum(${NETO_USD_SQL}),0)::float ingreso
+       from public.factura_mensual f
+      where f.servicio_clave = $1 and coalesce(f.estado,'') <> 'anulado'
+        and f.mes >= (date_trunc('month', current_date) - ($2 || ' months')::interval)
+      group by 1 order by 1`,
+    [clave, n],
+  );
+  return rows.map((r: Record<string, unknown>) => ({
+    mes: String(r.mes),
+    facturas: Number(r.facturas),
+    ingresoUsd: Math.round(Number(r.ingreso) * 100) / 100,
   }));
 }
 

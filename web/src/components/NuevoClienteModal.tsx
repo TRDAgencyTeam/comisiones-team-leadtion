@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { CATEGORIA_LABEL, type ServicioCatalogo } from "@/lib/catalogo-tipos";
 import { MEDIOS, ESTADOS } from "@/lib/facturacion-calc";
 import { crearClienteCascada } from "@/app/trd/clientes/acciones";
@@ -137,7 +138,10 @@ export function NuevoClienteModal({
                 </div>
 
                 <div className="cf-f">
-                  <label>Servicio</label>
+                  <label className="cf-label-row">
+                    <span>Servicio</span>
+                    <Link href="/trd/servicios/nuevo" className="link-ver cf-nuevo-srv" title="Crear un servicio o producto nuevo">+ Nuevo servicio o producto</Link>
+                  </label>
                   <select value={clave} onChange={(e) => {
                     const v = e.target.value; setClave(v);
                     const s = catalogo.find((c) => c.clave === v);

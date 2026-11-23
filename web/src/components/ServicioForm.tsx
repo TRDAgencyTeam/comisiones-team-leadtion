@@ -7,6 +7,11 @@ import { InputMonto } from "@/components/InputMonto";
 import { InfoTip } from "@/components/InfoTip";
 
 const CATS = ["agencia", "leadtion", "ghl", "puntual"] as const;
+const MARCAS: { v: string; label: string }[] = [
+  { v: "agencia", label: "TRD Agency" },
+  { v: "leadtion", label: "Leadtion" },
+  { v: "ambas", label: "Agency + Leadtion" },
+];
 
 /** Formulario para crear/editar un servicio del catálogo (Nueva factura). */
 export function ServicioForm({ action, servicio, error }: {
@@ -28,7 +33,13 @@ export function ServicioForm({ action, servicio, error }: {
           <input name="nombre" defaultValue={servicio?.nombre ?? ""} required placeholder="Ej: Plan Marketing, Diseño de Landing…" />
         </label>
 
-        <label>Categoría
+        <label>Marca (negocio)
+          <InfoTip titulo="Marca">A qué negocio pertenece: <b>TRD Agency</b>, <b>Leadtion</b>, o <b>Agency + Leadtion</b> (ej. Plan Marketing: servicio de agencia que además entrega cuenta Leadtion).</InfoTip>
+          <select name="marca" defaultValue={servicio?.marca ?? "agencia"}>
+            {MARCAS.map((m) => <option key={m.v} value={m.v}>{m.label}</option>)}
+          </select>
+        </label>
+        <label>Categoría <InfoTip titulo="Categoría">Define el flujo interno del servicio (agencia / leadtion / GHL / puntual). La marca es solo el negocio al que pertenece.</InfoTip>
           <select name="categoria" defaultValue={servicio?.categoria ?? "agencia"}>
             {CATS.map((c) => <option key={c} value={c}>{CATEGORIA_LABEL[c] ?? c}</option>)}
           </select>

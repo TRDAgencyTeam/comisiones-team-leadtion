@@ -1370,6 +1370,30 @@ input[type="month"]::-webkit-calendar-picker-indicator { cursor: pointer; }
 .pu-chip.pu-pronto { color: var(--pending); background: var(--pending-soft); }
 .pu-chip.pu-venc { color: var(--danger); background: color-mix(in srgb, var(--danger) 15%, transparent); }
 
+/* Nombre de servicio con lápiz de editar al pasar el cursor por la fila. */
+.srv-nom { display: inline-flex; align-items: center; gap: 7px; }
+.srv-edit { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 7px;
+  color: var(--muted); opacity: 0; transition: opacity .12s ease, background .12s ease, color .12s ease; }
+.reg-tabla tbody tr:hover .srv-edit, .srv-edit:focus-visible { opacity: 1; }
+.srv-edit:hover { background: var(--accent-soft); color: var(--accent); }
+.srv-edit svg { width: 14px; height: 14px; }
+
+/* Etiqueta con acción a la derecha (ej. "Servicio" + "+ Nuevo servicio"). */
+.cf-label-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.cf-nuevo-srv { font-size: 0.78rem; font-weight: 600; white-space: nowrap; }
+
+/* Mini gráfico de barras (uso por mes en la ficha del servicio). */
+.svc-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 680px) { .svc-charts { grid-template-columns: 1fr; } }
+.svc-chart { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow); }
+.svc-chart h3 { margin: 0 0 10px; font-size: 0.9rem; }
+.svc-bars { display: flex; align-items: flex-end; gap: 6px; height: 120px; }
+.svc-bar { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; min-width: 0; }
+.svc-bar .bar { width: 100%; max-width: 26px; border-radius: 5px 5px 0 0; background: var(--accent); min-height: 2px; }
+.svc-bar.cero .bar { background: var(--border); }
+.svc-bar .bv { font-size: 0.62rem; font-weight: 700; color: var(--muted); }
+.svc-bar .bm { font-size: 0.58rem; color: var(--faint); white-space: nowrap; }
+
 /* InfoTip: ícono "?" con popup al pasar el cursor (reemplaza textos largos). */
 .infotip { position: relative; display: inline-flex; vertical-align: middle; margin-left: 5px; cursor: help; }
 .infotip-ic { width: 15px; height: 15px; border-radius: 50%; display: grid; place-items: center;

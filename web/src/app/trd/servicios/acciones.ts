@@ -20,10 +20,12 @@ const txt = (v: FormDataEntryValue | null): string | null => {
 const bool = (fd: FormData, k: string): boolean => String(fd.get(k)) === "1";
 
 const CATEGORIAS = ["agencia", "leadtion", "ghl", "puntual"];
+const MARCAS = ["agencia", "leadtion", "ambas"];
 
 function parse(fd: FormData) {
   const nombre = String(fd.get("nombre") ?? "").trim();
   const categoria = CATEGORIAS.includes(String(fd.get("categoria"))) ? String(fd.get("categoria")) : "agencia";
+  const marca = MARCAS.includes(String(fd.get("marca"))) ? String(fd.get("marca")) : "agencia";
   const recurrente = bool(fd, "recurrente");
   const porPersona = bool(fd, "porPersona");
   const precioVariable = bool(fd, "precioVariable");
@@ -36,7 +38,7 @@ function parse(fd: FormData) {
   const minMeses = Math.min(Math.max(Math.round(Number(fd.get("minMeses")) || 1), 1), 24);
   const orden = Math.round(Number(fd.get("orden")) || 100);
   return {
-    nombre, categoria, recurrente, porPersona, precioVariable, incluyeLeadtion, comisionaComercial,
+    nombre, categoria, marca, recurrente, porPersona, precioVariable, incluyeLeadtion, comisionaComercial,
     aplicaCs, aplicaReferido, aplicaReserva, activo, minMeses, orden,
     precioMes1: nN(fd.get("precioMes1")),
     precioResto: nN(fd.get("precioResto")),
@@ -54,11 +56,11 @@ export async function crearServicio(fd: FormData) {
   const clave = await generarClaveUnica(d.nombre);
   await consulta(
     `insert into public.servicio_catalogo
-       (clave, nombre, categoria, recurrente, precio_variable, precio_mes1, precio_resto, min_meses,
+       (clave, nombre, categoria, marca, recurrente, precio_variable, precio_mes1, precio_resto, min_meses,
         aplica_cs, aplica_referido, aplica_reserva, por_persona, precio_persona, costo_persona, unidad,
         incluye_leadtion, comisiona_comercial, activo, orden, notas)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
-    [clave, d.nombre, d.categoria, d.recurrente, d.precioVariable, d.precioMes1, d.precioResto, d.minMeses,
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`,
+    [clave, d.nombre, d.categoria, d.marca, d.recurrente, d.precioVariable, d.precioMes1, d.precioResto, d.minMeses,
      d.aplicaCs, d.aplicaReferido, d.aplicaReserva, d.porPersona, d.precioPersona, d.costoPersona, d.unidad,
      d.incluyeLeadtion, d.comisionaComercial, d.activo, d.orden, d.notas],
   );
@@ -76,12 +78,12 @@ export async function actualizarServicio(fd: FormData) {
   if (!d.nombre) redirect(`/trd/servicios/${clave}?error=` + encodeURIComponent("El nombre es obligatorio."));
   await consulta(
     `update public.servicio_catalogo
-        set nombre=$2, categoria=$3, recurrente=$4, precio_variable=$5, precio_mes1=$6, precio_resto=$7,
-            min_meses=$8, aplica_cs=$9, aplica_referido=$10, aplica_reserva=$11, por_persona=$12,
-            precio_persona=$13, costo_persona=$14, unidad=$15, incluye_leadtion=$16, comisiona_comercial=$17,
-            activo=$18, orden=$19, notas=$20
+        set nombre=$2, categoria=$3, marca=$4, recurrente=$5, precio_variable=$6, precio_mes1=$7, precio_resto=$8,
+            min_meses=$9, aplica_cs=$10, aplica_referido=$11, aplica_reserva=$12, por_persona=$13,
+            precio_persona=$14, costo_persona=$15, unidad=$16, incluye_leadtion=$17, comisiona_comercial=$18,
+            activo=$19, orden=$20, notas=$21
       where clave=$1`,
-    [clave, d.nombre, d.categoria, d.recurrente, d.precioVariable, d.precioMes1, d.precioResto, d.minMeses,
+    [clave, d.nombre, d.categoria, d.marca, d.recurrente, d.precioVariable, d.precioMes1, d.precioResto, d.minMeses,
      d.aplicaCs, d.aplicaReferido, d.aplicaReserva, d.porPersona, d.precioPersona, d.costoPersona, d.unidad,
      d.incluyeLeadtion, d.comisionaComercial, d.activo, d.orden, d.notas],
   );
