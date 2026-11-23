@@ -16,6 +16,7 @@ const esGrupo = (e: Entrada): e is Grupo => "hijos" in e;
 const NAV: Entrada[] = [
   { href: "/trd/clientes", label: "Resumen del mes", ic: "◈", exact: true },
   { href: "/trd/clientes/facturacion", label: "Facturación", ic: "🧾" },
+  { href: "/trd/servicios", label: "Servicios y productos", ic: "🏷️" },
   {
     key: "egresos", label: "Egresos", ic: "⬦", href: "/trd/clientes/egresos",
     hijos: [
