@@ -46,18 +46,44 @@ function parse(formData: FormData) {
   return { entidad, clienteId, clienteNombre, mrr, reserva, recurrente, servicios, precioDesglose, facturado, medio, fechaFactura, fechaPago, ivaPct, estado };
 }
 
-/** Si el servicio tiene costo de tercerización por unidad, genera el egreso del
- *  mes (ej. grabación: $100/hora × horas). afecta la utilidad del mes. */
-async function registrarCostoTercerizacion(mes: string, servicioClave: string | null, cantidad: number) {
+const MES_LARGO = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+/**
+ * Si el servicio se terceriza (tiene `costo_persona` por unidad), genera AUTOMÁTICO
+ * el egreso del mes. Ej: grabación de contenido (único servicio tercerizado) con un
+ * proveedor en EE.UU.: el costo depende de la ciudad (Miami $133,33/h, Orlando
+ * $110/h) → cada ciudad es un servicio distinto con su `costo_persona`. Mínimo de
+ * horas = `min_meses` del servicio por-unidad (grabación = 3). El egreso queda con
+ * estructura "{Servicio} / {cliente} {Mes} {Año}", marca TRD, medio Bank of America,
+ * fecha = la de creación de la factura, y afecta la utilidad del mes.
+ */
+async function registrarCostoTercerizacion(
+  mes: string, servicioClave: string | null, cantidad: number,
+  clienteNombre: string, fechaFactura: string | null,
+) {
   if (!servicioClave || cantidad <= 0) return;
-  const rows = await consulta(`select nombre, costo_persona from public.servicio_catalogo where clave = $1`, [servicioClave]);
+  const rows = await consulta(
+    `select nombre, costo_persona, coalesce(por_persona,false) por_persona, coalesce(min_meses,1) min_meses
+       from public.servicio_catalogo where clave = $1`, [servicioClave]);
   const c = rows[0] as Record<string, unknown> | undefined;
   const costo = c?.costo_persona != null ? Number(c.costo_persona) : 0;
   if (costo <= 0) return;
+  // Mínimo de unidades (grabación: mínimo 3 horas) = min_meses del servicio por-unidad.
+  const minQty = c?.por_persona ? Math.max(1, Number(c?.min_meses ?? 1)) : 1;
+  const qty = Math.max(cantidad, minQty);
+  const total = Math.round(costo * qty * 100) / 100;
+  // "Grabación de contenido / Verónica Noviembre 2026" (sin la ciudad entre paréntesis).
+  const base = String(c?.nombre ?? "Servicio").replace(/\s*\([^)]*\)\s*$/, "").trim();
+  const [y, m] = mes.split("-").map(Number);
+  const concepto = `${base} / ${clienteNombre} ${MES_LARGO[(m ?? 1) - 1]} ${y}`;
+  const fecha = /^\d{4}-\d{2}-\d{2}$/.test(fechaFactura ?? "") ? fechaFactura : hoyISO();
+  // Evita duplicar si ya existe ese egreso en el mes (mismo concepto).
+  const ya = await consulta(`select 1 from public.egreso_mensual where mes=$1 and concepto=$2 limit 1`, [mes, concepto]);
+  if (ya.length > 0) return;
   await consulta(
-    `insert into public.egreso_mensual (mes, concepto, marca, valor_usd, afecta_utilidad, categoria)
-     values ($1,$2,'TRD',$3,true,'variable')`,
-    [mes, `Tercerización ${String(c?.nombre ?? "servicio")} (${cantidad} × $${costo})`, Math.round(costo * cantidad * 100) / 100],
+    `insert into public.egreso_mensual (mes, concepto, marca, fecha, valor_usd, medio_pago, afecta_utilidad, categoria)
+     values ($1,$2,'TRD',$3,$4,'Bank of America',true,'variable')`,
+    [mes, concepto, fecha, total],
   );
 }
 
@@ -135,7 +161,7 @@ export async function crearFactura(formData: FormData) {
     [mes, d.entidad, d.clienteId, d.clienteNombre, d.mrr, d.reserva, d.recurrente, d.servicios, d.precioDesglose,
      d.facturado, d.medio, d.fechaFactura, d.fechaPago, d.ivaPct, d.estado, servicioClave, tasaVal, d.recurrente ? 1 : null],
   );
-  await registrarCostoTercerizacion(mes, servicioClave, Number(formData.get("personas") ?? 0));
+  await registrarCostoTercerizacion(mes, servicioClave, Number(formData.get("personas") ?? 0), d.clienteNombre, d.fechaFactura);
   // Si es un servicio Leadtion de un cliente del maestro, sincroniza Membresías.
   await registrarServicioLeadtion(d.clienteId, servicioClave, mes, d.facturado);
   // Si es un plan de marketing con Leadtion incluida, lo vuelve miembro (licencia $0).
@@ -353,7 +379,7 @@ export async function crearClienteCascada(formData: FormData) {
     );
     facturaId = facRows[0]?.id != null ? Number(facRows[0]!.id) : null;
   }
-  await registrarCostoTercerizacion(mes, servicioClave, personas);
+  await registrarCostoTercerizacion(mes, servicioClave, personas, nombreFactura, null);
 
   // Comisión del equipo comercial: 10% de la venta neta, SOLO si es cliente NUEVO
   // y el admin marcó al comercial. Una vez, sobre el TOTAL de la venta (todas las
