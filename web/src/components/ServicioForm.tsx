@@ -22,6 +22,7 @@ export function ServicioForm({ action, servicio, error }: {
   const [recurrente, setRecurrente] = useState<boolean>(servicio?.recurrente ?? false);
   const [porPersona, setPorPersona] = useState<boolean>(servicio?.porPersona ?? false);
   const [precioVariable, setPrecioVariable] = useState<boolean>(servicio?.precioVariable ?? false);
+  const [unidad, setUnidad] = useState<string>(servicio?.unidad ?? "persona");
 
   return (
     <form action={action} className="persona-form">
@@ -44,10 +45,6 @@ export function ServicioForm({ action, servicio, error }: {
             {CATS.map((c) => <option key={c} value={c}>{CATEGORIA_LABEL[c] ?? c}</option>)}
           </select>
         </label>
-        <label>Orden en la lista <InfoTip titulo="Orden">Número para ordenar el servicio dentro de su categoría (menor = más arriba).</InfoTip>
-          <input name="orden" type="number" defaultValue={servicio?.orden ?? 100} />
-        </label>
-
         {/* Modalidad de cobro */}
         <div className="pf-full">
           <label style={{ marginBottom: 6 }}>Modalidad
@@ -99,23 +96,28 @@ export function ServicioForm({ action, servicio, error }: {
 
         <label className="pf-check pf-full">
           <input type="checkbox" name="porPersona" value="1" checked={porPersona} onChange={(e) => setPorPersona(e.target.checked)} />
-          Por persona / puesto (el total se multiplica por la cantidad)
-          <InfoTip titulo="Por persona">Ej: Campaña 90/10, grabación por persona, evento. Al vender se pone la cantidad y se multiplica el valor por persona. Estos no se dividen en cuotas.</InfoTip>
+          Se cobra por cantidad (persona, puesto u hora): el total se multiplica por la cantidad
+          <InfoTip titulo="Por cantidad">Ej: Campaña 90/10 (por persona), evento (por persona), mentoría (por hora). Al vender se pone la cantidad y se multiplica el valor por unidad. Estos no se dividen en cuotas.</InfoTip>
         </label>
 
         {porPersona && (
           <>
-            <label>Valor por persona <small style={{ color: "var(--faint)" }}>USD</small>
+            <label>Unidad de cobro
+              <select name="unidad" value={unidad} onChange={(e) => setUnidad(e.target.value)}>
+                <option value="persona">Por persona</option>
+                <option value="puesto">Por puesto</option>
+                <option value="hora">Por hora</option>
+              </select>
+            </label>
+            <label>Valor por {unidad} <small style={{ color: "var(--faint)" }}>USD</small>
               <InputMonto name="precioPersona" defaultValue={servicio?.precioPersona ?? ""} placeholder="0" />
             </label>
-            <label>Costo por persona <small style={{ color: "var(--faint)" }}>USD · opcional</small>
+            <label>Costo por {unidad} <small style={{ color: "var(--faint)" }}>USD · opcional</small>
               <InputMonto name="costoPersona" defaultValue={servicio?.costoPersona ?? ""} placeholder="0" />
-            </label>
-            <label>Unidad
-              <input name="unidad" defaultValue={servicio?.unidad ?? "persona"} placeholder="persona / hora" />
             </label>
           </>
         )}
+        {!porPersona && <input type="hidden" name="unidad" value="" />}
 
         <label className="pf-check">
           <input type="checkbox" name="aplicaCs" value="1" defaultChecked={servicio?.aplicaCs ?? true} />

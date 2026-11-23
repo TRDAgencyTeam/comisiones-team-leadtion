@@ -20,7 +20,7 @@ const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "o
 const fMes = (m: string | null) => { if (!m) return "—"; const [y, mm] = m.split("-").map(Number); return `${MESES[(mm ?? 1) - 1]} ${y}`; };
 
 function Modalidad({ s }: { s: ServicioAdmin }) {
-  if (s.porPersona) return <span className="cf-tag util">por persona</span>;
+  if (s.porPersona) return <span className="cf-tag util">por {s.unidad ?? "persona"}</span>;
   if (s.recurrente) return <span className="cf-tag" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>recurrente</span>;
   return <span className="cf-tag caja">un pago</span>;
 }
@@ -85,7 +85,7 @@ export default async function ServiciosPage() {
                       {s.activo && s.veces === 0 && <span className="freelance-tag" style={{ marginLeft: 6 }}>sin uso</span>}
                     </td>
                     <td><Modalidad s={s} /></td>
-                    <td className="right muted">{s.precioVariable ? "variable" : s.porPersona ? `${usd(s.precioPersona ?? 0)}/u` : s.precioMes1 != null ? usd(s.precioMes1) : "—"}</td>
+                    <td className="right muted">{s.precioVariable ? "variable" : s.porPersona ? `${usd(s.precioPersona ?? 0)}/${s.unidad ?? "u"}` : s.precioMes1 != null ? usd(s.precioMes1) : "—"}</td>
                     <td className="right strong">{s.veces}</td>
                     <td className="right muted">{s.clientes}</td>
                     <td className="right muted">{s.ingresoUsd > 0 ? usd(s.ingresoUsd) : "—"}</td>

@@ -54,6 +54,9 @@ export async function crearServicio(fd: FormData) {
   const d = parse(fd);
   if (!d.nombre) redirect("/trd/servicios/nuevo?error=" + encodeURIComponent("El nombre es obligatorio."));
   const clave = await generarClaveUnica(d.nombre);
+  // Orden automático: va al final (no se le pide al usuario).
+  const ord = await consulta(`select coalesce(max(orden),100)+10 ord from public.servicio_catalogo`);
+  const orden = Number(ord[0]?.ord ?? 100);
   await consulta(
     `insert into public.servicio_catalogo
        (clave, nombre, categoria, marca, recurrente, precio_variable, precio_mes1, precio_resto, min_meses,
@@ -62,7 +65,7 @@ export async function crearServicio(fd: FormData) {
      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`,
     [clave, d.nombre, d.categoria, d.marca, d.recurrente, d.precioVariable, d.precioMes1, d.precioResto, d.minMeses,
      d.aplicaCs, d.aplicaReferido, d.aplicaReserva, d.porPersona, d.precioPersona, d.costoPersona, d.unidad,
-     d.incluyeLeadtion, d.comisionaComercial, d.activo, d.orden, d.notas],
+     d.incluyeLeadtion, d.comisionaComercial, d.activo, orden, d.notas],
   );
   await flash("Servicio creado");
   revalidatePath("/trd/servicios");
@@ -81,11 +84,11 @@ export async function actualizarServicio(fd: FormData) {
         set nombre=$2, categoria=$3, marca=$4, recurrente=$5, precio_variable=$6, precio_mes1=$7, precio_resto=$8,
             min_meses=$9, aplica_cs=$10, aplica_referido=$11, aplica_reserva=$12, por_persona=$13,
             precio_persona=$14, costo_persona=$15, unidad=$16, incluye_leadtion=$17, comisiona_comercial=$18,
-            activo=$19, orden=$20, notas=$21
+            activo=$19, notas=$20
       where clave=$1`,
     [clave, d.nombre, d.categoria, d.marca, d.recurrente, d.precioVariable, d.precioMes1, d.precioResto, d.minMeses,
      d.aplicaCs, d.aplicaReferido, d.aplicaReserva, d.porPersona, d.precioPersona, d.costoPersona, d.unidad,
-     d.incluyeLeadtion, d.comisionaComercial, d.activo, d.orden, d.notas],
+     d.incluyeLeadtion, d.comisionaComercial, d.activo, d.notas],
   );
   await flash("Actualizado");
   revalidatePath("/trd/servicios");

@@ -190,7 +190,7 @@ export function NuevoClienteModal({
 
                 {srv?.porPersona && (
                   <div className="cf-f">
-                    <label>Cantidad de {srv.unidad === "hora" ? "horas" : "personas"} ({money(srv.precioPersona ?? 0, "USD")} c/u{entidad === "COL" ? " en USA · para Colombia escribe el total en COP" : ""})</label>
+                    <label>Cantidad de {srv.unidad === "hora" ? "horas" : srv.unidad === "puesto" ? "puestos" : "personas"} ({money(srv.precioPersona ?? 0, "USD")} c/u{entidad === "COL" ? " en USA · para Colombia escribe el total en COP" : ""})</label>
                     <input type="number" min={1} value={personas} onChange={(e) => setPersonas(Math.max(1, Number(e.target.value) || 1))} />
                   </div>
                 )}
