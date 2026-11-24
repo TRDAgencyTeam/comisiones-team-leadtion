@@ -49,42 +49,63 @@ function parse(formData: FormData) {
 const MES_LARGO = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
 /**
- * Si el servicio se terceriza (tiene `costo_persona` por unidad), genera AUTOMÁTICO
- * el egreso del mes. Ej: grabación de contenido (único servicio tercerizado) con un
- * proveedor en EE.UU.: el costo depende de la ciudad (Miami $133,33/h, Orlando
- * $110/h) → cada ciudad es un servicio distinto con su `costo_persona`. Mínimo de
- * horas = `min_meses` del servicio por-unidad (grabación = 3). El egreso queda con
- * estructura "{Servicio} / {cliente} {Mes} {Año}", marca TRD, medio Bank of America,
- * fecha = la de creación de la factura, y afecta la utilidad del mes.
+ * Sincroniza el egreso de TERCERIZACIÓN de una factura (único caso: grabación de
+ * contenido, con proveedor en EE.UU.). Es DINÁMICA y va ligada a la factura
+ * (`factura_origen_id`):
+ *  - Borra el egreso anterior de esa factura y lo recrea desde sus servicios.
+ *  - Si la factura está ANULADA no crea nada (queda sin egreso).
+ *  - Un servicio es tercerizado si tiene `costo_persona` > 0 (ej. grabación Miami
+ *    $100/h, Orlando $85/h). El costo depende de la ciudad = servicio distinto.
+ *  - Horas = valor cobrado al cliente ÷ precio por hora (mínimo `min_meses` horas,
+ *    grabación = 3). Egreso = horas × costo_persona.
+ *  - Toma los servicios de las LÍNEAS de la factura (factura_item) si las hay; si no,
+ *    del servicio principal. Así cubre "servicio adicional dentro de una factura".
+ * Egreso: "{Servicio} / {cliente} {Mes} {Año}", marca TRD, medio Bank of America,
+ * fecha = la de la factura, afecta la utilidad. Al borrar la factura, el FK en cascada
+ * borra el egreso solo.
  */
-async function registrarCostoTercerizacion(
-  mes: string, servicioClave: string | null, cantidad: number,
-  clienteNombre: string, fechaFactura: string | null,
-) {
-  if (!servicioClave || cantidad <= 0) return;
-  const rows = await consulta(
-    `select nombre, costo_persona, coalesce(por_persona,false) por_persona, coalesce(min_meses,1) min_meses
-       from public.servicio_catalogo where clave = $1`, [servicioClave]);
-  const c = rows[0] as Record<string, unknown> | undefined;
-  const costo = c?.costo_persona != null ? Number(c.costo_persona) : 0;
-  if (costo <= 0) return;
-  // Mínimo de unidades (grabación: mínimo 3 horas) = min_meses del servicio por-unidad.
-  const minQty = c?.por_persona ? Math.max(1, Number(c?.min_meses ?? 1)) : 1;
-  const qty = Math.max(cantidad, minQty);
-  const total = Math.round(costo * qty * 100) / 100;
-  // "Grabación de contenido / Verónica Noviembre 2026" (sin la ciudad entre paréntesis).
-  const base = String(c?.nombre ?? "Servicio").replace(/\s*\([^)]*\)\s*$/, "").trim();
+async function sincronizarTercerizacionFactura(facturaId: number | null) {
+  if (!facturaId) return;
+  await consulta(`delete from public.egreso_mensual where factura_origen_id = $1`, [facturaId]);
+  const fr = await consulta(
+    `select to_char(mes,'YYYY-MM-01') mes, cliente_nombre, entidad, estado, servicio_clave,
+            coalesce(facturado,0)::float facturado, tasa, to_char(fecha_factura,'YYYY-MM-DD') ff
+       from public.factura_mensual where id = $1`, [facturaId]);
+  const f = fr[0] as Record<string, unknown> | undefined;
+  if (!f || f.estado === "anulado") return; // anulada → sin egreso
+  const mes = String(f.mes);
+  const cliente = String(f.cliente_nombre ?? "—");
+  const esCol = String(f.entidad) === "COL";
+  const tasa = f.tasa != null ? Number(f.tasa) : 0;
+  const items = await consulta(
+    `select servicio_clave, coalesce(monto,0)::float monto from public.factura_item
+      where factura_id = $1 and servicio_clave is not null`, [facturaId]);
+  const lineas = items.length > 0
+    ? (items as Record<string, unknown>[]).map((it) => ({ clave: String(it.servicio_clave), monto: Number(it.monto) }))
+    : (f.servicio_clave ? [{ clave: String(f.servicio_clave), monto: Number(f.facturado) }] : []);
   const [y, m] = mes.split("-").map(Number);
-  const concepto = `${base} / ${clienteNombre} ${MES_LARGO[(m ?? 1) - 1]} ${y}`;
-  const fecha = /^\d{4}-\d{2}-\d{2}$/.test(fechaFactura ?? "") ? fechaFactura : hoyISO();
-  // Evita duplicar si ya existe ese egreso en el mes (mismo concepto).
-  const ya = await consulta(`select 1 from public.egreso_mensual where mes=$1 and concepto=$2 limit 1`, [mes, concepto]);
-  if (ya.length > 0) return;
-  await consulta(
-    `insert into public.egreso_mensual (mes, concepto, marca, fecha, valor_usd, medio_pago, afecta_utilidad, categoria)
-     values ($1,$2,'TRD',$3,$4,'Bank of America',true,'variable')`,
-    [mes, concepto, fecha, total],
-  );
+  const fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(f.ff ?? "")) ? String(f.ff) : hoyISO();
+  for (const l of lineas) {
+    const sc = await consulta(
+      `select nombre, coalesce(costo_persona,0)::float costo, coalesce(precio_persona,0)::float precio,
+              coalesce(min_meses,1) mm from public.servicio_catalogo where clave = $1`, [l.clave]);
+    const s = sc[0] as Record<string, unknown> | undefined;
+    const costo = Number(s?.costo ?? 0);
+    if (costo <= 0) continue; // no tercerizado
+    const precio = Number(s?.precio ?? 0);
+    const montoUsd = esCol && tasa > 0 ? l.monto / tasa : l.monto;
+    const minH = Math.max(1, Number(s?.mm ?? 1));
+    const horas = precio > 0 ? Math.max(minH, Math.round(montoUsd / precio)) : minH;
+    const total = Math.round(costo * horas * 100) / 100;
+    if (total <= 0) continue;
+    const base = String(s?.nombre ?? "Servicio").replace(/\s*\([^)]*\)\s*$/, "").trim();
+    const concepto = `${base} / ${cliente} ${MES_LARGO[(m ?? 1) - 1]} ${y}`;
+    await consulta(
+      `insert into public.egreso_mensual (mes, concepto, marca, fecha, valor_usd, medio_pago, afecta_utilidad, categoria, factura_origen_id)
+       values ($1,$2,'TRD',$3,$4,'Bank of America',true,'variable',$5)`,
+      [mes, concepto, fecha, total, facturaId],
+    );
+  }
 }
 
 const SERVICIOS_LEADTION = ["agente_ai", "reactivacion", "level_up"];
@@ -153,15 +174,15 @@ export async function crearFactura(formData: FormData) {
   if (!d.clienteNombre) redirect(`/trd/clientes/nuevo?mes=${mes.slice(0, 7)}&error=` + encodeURIComponent("El nombre del cliente es obligatorio."));
   const servicioClave = txt(formData.get("servicioClave"));
   const tasaVal = d.entidad === "COL" ? (await tasaUsdCop()).cop : null;
-  await consulta(
+  const fRows = await consulta(
     `insert into public.factura_mensual
        (mes, entidad, cliente_id, cliente_nombre, mrr, reserva, recurrente, servicios, precio_desglose,
         facturado, medio, fecha_factura, fecha_pago, iva_pct, estado, servicio_clave, tasa, mes_contrato)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) returning id`,
     [mes, d.entidad, d.clienteId, d.clienteNombre, d.mrr, d.reserva, d.recurrente, d.servicios, d.precioDesglose,
      d.facturado, d.medio, d.fechaFactura, d.fechaPago, d.ivaPct, d.estado, servicioClave, tasaVal, d.recurrente ? 1 : null],
   );
-  await registrarCostoTercerizacion(mes, servicioClave, Number(formData.get("personas") ?? 0), d.clienteNombre, d.fechaFactura);
+  await sincronizarTercerizacionFactura(fRows[0]?.id != null ? Number(fRows[0]!.id) : null);
   // Si es un servicio Leadtion de un cliente del maestro, sincroniza Membresías.
   await registrarServicioLeadtion(d.clienteId, servicioClave, mes, d.facturado);
   // Si es un plan de marketing con Leadtion incluida, lo vuelve miembro (licencia $0).
@@ -185,6 +206,7 @@ export async function editarFactura(formData: FormData) {
     [id, d.entidad, d.clienteId, d.clienteNombre, d.mrr, d.reserva, d.recurrente, d.servicios, d.precioDesglose,
      d.facturado, d.medio, d.fechaFactura, d.fechaPago, d.ivaPct, d.estado],
   );
+  await sincronizarTercerizacionFactura(id);
   await flash("Actualizado");
   revalidatePath("/trd/clientes");
   revalidatePath("/trd/clientes/facturacion");
@@ -379,7 +401,7 @@ export async function crearClienteCascada(formData: FormData) {
     );
     facturaId = facRows[0]?.id != null ? Number(facRows[0]!.id) : null;
   }
-  await registrarCostoTercerizacion(mes, servicioClave, personas, nombreFactura, null);
+  await sincronizarTercerizacionFactura(facturaId);
 
   // Comisión del equipo comercial: 10% de la venta neta, SOLO si es cliente NUEVO
   // y el admin marcó al comercial. Una vez, sobre el TOTAL de la venta (todas las
@@ -551,6 +573,8 @@ export async function guardarServiciosFactura(formData: FormData) {
       where id = $1`,
     [facturaId, total, nombres.join(" + ") || null, primerClave],
   );
+  // Recalcula el egreso de tercerización si alguna línea es un servicio tercerizado.
+  await sincronizarTercerizacionFactura(facturaId);
   // Sincroniza a Membresías los ítems que sean servicios Leadtion.
   const fr = await consulta(`select cliente_id, to_char(mes,'YYYY-MM') mes from public.factura_mensual where id=$1`, [facturaId]);
   const cid = fr[0]?.cliente_id != null ? Number(fr[0]!.cliente_id) : null;
@@ -600,6 +624,8 @@ export async function cambiarEstadoFactura(formData: FormData) {
       where id = $1`,
     [id, estado, fecha, hoy],
   );
+  // Si se anula, el egreso de tercerización se quita; si vuelve a activo, se recrea.
+  await sincronizarTercerizacionFactura(id);
   await flash("Actualizado");
   revalidatePath("/trd/clientes");
   revalidatePath("/trd/clientes/facturacion");
@@ -689,6 +715,8 @@ export async function confirmarCierre(formData: FormData) {
       await consulta(`update public.factura_mensual set facturado=$2, servicios=$3, actualizado_en=now() where id=$1`, [facturaId, total, servicios]);
     }
   }
+  // Recalcula el egreso de tercerización (anulada → se quita; quedó con menos ítems → se ajusta).
+  if (anularFactura || offItemIds.length) await sincronizarTercerizacionFactura(facturaId);
 
   if (clienteId && ltRes !== "igual") {
     if (ltRes === "cancelar" || ltRes === "pausar") {
