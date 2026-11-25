@@ -1382,6 +1382,83 @@ input[type="month"]::-webkit-calendar-picker-indicator { cursor: pointer; }
 .cf-label-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
 .cf-nuevo-srv { font-size: 0.78rem; font-weight: 600; white-space: nowrap; }
 
+/* ===== Módulo de Contratos ===== */
+.wrap.wide { max-width: 1180px; }
+.ctr-wiz { display: grid; grid-template-columns: minmax(0,430px) 1fr; gap: 20px; align-items: start; }
+.ctr-form .grp { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; margin-bottom: 14px; }
+.ctr-form .grp > h3 { margin: 0 0 12px; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.ctr-form .grp > h3 .dot { width: 22px; height: 22px; border-radius: 7px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-size: 0.72rem; font-weight: 800; }
+.ctr-form label { display: block; font-size: 0.78rem; font-weight: 600; margin-bottom: 10px; color: var(--text); }
+.ctr-form label small { color: var(--faint); font-weight: 400; }
+.ctr-form input, .ctr-form select, .ctr-form textarea { width: 100%; margin-top: 5px; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 9px; padding: 9px 11px; font-family: inherit; font-size: 0.86rem; }
+.ctr-form .chk { display: flex; align-items: center; gap: 8px; font-weight: 500; margin-bottom: 0; }
+.ctr-form .chk input { width: auto; margin: 0; }
+.ctr-form .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ctr-hint { font-size: 0.74rem; color: var(--faint); margin: 0 0 8px; }
+.ctr-payline { display: grid; grid-template-columns: 1fr 130px 32px; gap: 8px; margin-bottom: 8px; }
+.ctr-payline input { margin-top: 0; }
+.ctr-delx { border: 1px solid var(--border); background: transparent; color: var(--danger); border-radius: 8px; cursor: pointer; }
+.ctr-addline { border: 1px dashed var(--accent); background: var(--accent-soft); color: var(--accent); border-radius: 9px; padding: 8px; width: 100%; cursor: pointer; font-weight: 600; font-size: 0.82rem; }
+.ctr-acc { display: flex; gap: 10px; justify-content: flex-end; }
+.ctr-preview { position: sticky; top: 16px; }
+.ctr-preview-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; flex-wrap: wrap; }
+.ctr-lbl { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.ctr-legend { font-size: 0.72rem; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
+.ctr-legend .sw { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+.sw-var { background: #f0c64a; } .sw-fix { background: #c9cdd8; }
+.ctr-paper { background: #fff; color: #20202a; border-radius: 12px; box-shadow: var(--shadow); padding: 40px 46px; max-height: 76vh; overflow: auto; }
+.ctr-detalle .ctr-paper { max-height: none; }
+/* Documento legal */
+.contrato-doc { font-family: Georgia, "Times New Roman", serif; color: #24242e; line-height: 1.6; font-size: 0.93rem; }
+.contrato-doc .c-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e4e1d7; padding-bottom: 14px; margin-bottom: 20px; gap: 14px; flex-wrap: wrap; }
+.contrato-doc .c-brands { display: flex; align-items: center; gap: 16px; }
+.c-trd { display: inline-flex; align-items: center; gap: 7px; font-family: Inter, sans-serif; font-weight: 800; color: #141320; font-size: 1.02rem; letter-spacing: -0.02em; }
+.c-trd .c-hex { width: 28px; height: 28px; background: #141320; color: #fff; font-size: 0.56rem; font-weight: 800; display: grid; place-items: center; clip-path: polygon(50% 0,93% 20%,100% 65%,75% 100%,25% 100%,0 65%,7% 20%); }
+.c-lt { display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid #141320; border-radius: 999px; padding: 3px 13px 3px 9px; font-family: Inter, sans-serif; font-weight: 700; color: #141320; font-size: 0.9rem; }
+.c-lt .c-leaf { width: 10px; height: 14px; background: #141320; border-radius: 0 100% 0 100%; transform: rotate(-8deg); }
+.c-tag { font-family: Inter, sans-serif; font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase; color: #9a9ab0; }
+.c-title { font-family: Inter, sans-serif; font-size: 1.25rem; letter-spacing: -0.01em; margin: 0 0 2px; color: #17161f; }
+.c-plan { font-family: Inter, sans-serif; font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase; color: #8a7ad6; font-weight: 700; margin: 0 0 20px; }
+.contrato-doc h2 { font-family: Inter, sans-serif; font-size: 1rem; margin: 22px 0 8px; color: #17161f; }
+.contrato-doc p { margin: 0 0 11px; }
+.contrato-doc ol.c-abc { margin: 0 0 11px; padding-left: 22px; } .contrato-doc ol.c-abc li { margin-bottom: 3px; }
+.c-fechas { list-style: none; margin: 0 0 11px; padding: 12px 14px; background: #f7f5ef; border-radius: 10px; font-family: Inter, sans-serif; }
+.c-fechas li { display: flex; justify-content: space-between; padding: 3px 0; font-size: 0.9rem; }
+.c-pagos { list-style: none; margin: 0 0 11px; padding: 12px 14px; background: #fbf4e6; border: 1px solid #f0dcae; border-radius: 10px; font-family: Inter, sans-serif; }
+.c-pagos li { display: flex; justify-content: space-between; padding: 5px 0; font-size: 0.9rem; border-bottom: 1px dashed #ead9b6; }
+.c-pagos li:last-child { border-bottom: none; }
+.c-nota { font-style: italic; color: #6a5a1a; }
+.c-mini { font-size: 0.82rem; color: #6a6a7a; }
+.cvar { background: #fff5cf; border-bottom: 2px solid #f0c64a; padding: 0 3px; border-radius: 3px; font-weight: 600; color: #5a4a10; font-family: Inter, sans-serif; font-style: normal; }
+.c-sign { display: flex; gap: 40px; margin-top: 28px; font-family: Inter, sans-serif; }
+.c-sign-box { flex: 1; }
+.c-sign-lbl { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: #6a6a7a; font-weight: 700; }
+.c-sign-line { height: 58px; border: 1px dashed #c9b7f0; border-radius: 8px; background: #f6f2ff; display: grid; place-items: center; color: #9a86d6; font-size: 0.8rem; margin-top: 6px; overflow: hidden; }
+.c-sign-line.signed { border-style: solid; border-color: #b7a6ef; background: #fff; }
+.c-sign-id { font-size: 0.64rem; color: #9a9ab0; margin-top: 4px; }
+.c-firma-img { max-height: 52px; } .c-firma-ink { font-size: 2rem; color: #1a1a33; }
+.c-foot { font-family: Inter, sans-serif; font-size: 0.74rem; color: #8a8a9a; border-top: 1px solid #eee; margin-top: 22px; padding-top: 12px; }
+.ctr-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+.ctr-chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.e-borrador { color: var(--faint); background: var(--bg); }
+.e-enviado { color: var(--info, #5aa6ff); background: var(--info-soft, #122a44); }
+.e-visto { color: var(--pending); background: var(--pending-soft); }
+.e-firmado { color: var(--paid); background: var(--paid-soft); }
+.e-vencido, .e-anulado { color: var(--danger); background: var(--danger-soft); }
+.ctr-detalle { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+.ctr-aside { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 16px; }
+.ctr-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
+.ctr-card h3 { margin: 0 0 10px; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.ctr-dl { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 0.84rem; }
+.ctr-dl:last-child { border-bottom: none; } .ctr-dl span { color: var(--muted); } .ctr-dl b { text-align: right; }
+.ctr-dl .mono { font-family: ui-monospace, monospace; font-size: 0.72rem; font-weight: 500; }
+.ctr-firmante { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; } .ctr-firmante small { color: var(--muted); }
+.ctr-estado-form { display: flex; gap: 8px; } .ctr-estado-form select { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 9px; padding: 8px; }
+.ctr-ev { display: flex; gap: 8px; padding: 7px 0; border-bottom: 1px dashed var(--border); font-size: 0.82rem; }
+.ctr-ev:last-child { border-bottom: none; } .ctr-ev .t { color: var(--faint); font-size: 0.72rem; white-space: nowrap; width: 118px; flex: none; }
+@media (max-width: 900px) { .ctr-wiz { grid-template-columns: 1fr; } .ctr-detalle { grid-template-columns: 1fr; } .ctr-aside { position: static; } }
+@media print { .trd-side, .no-print { display: none !important; } .ctr-detalle { display: block; } .ctr-paper { box-shadow: none; max-height: none; padding: 0; } .main, .trd-main { padding: 0 !important; } body { background: #fff; } }
+
 /* Mini gráfico de barras (uso por mes en la ficha del servicio). */
 .svc-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 680px) { .svc-charts { grid-template-columns: 1fr; } }
