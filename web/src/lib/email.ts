@@ -36,6 +36,35 @@ export function emailConfigurado(): boolean {
   return !!process.env.RESEND_API_KEY && !!process.env.RESEND_FROM;
 }
 
+/** URL base de la app (para enlaces en correos, ej. el portal de firma). */
+export const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://leadtionteam.vercel.app";
+
+/** Correo de solicitud de firma de contrato que recibe el cliente. */
+export function plantillaContratoFirma(d: { nombre: string; titulo: string; enlace: string; venceTexto: string }): { subject: string; html: string } {
+  const subject = `Firma aquí · ${d.titulo} — TRD Agency / Leadtion`;
+  const html = `
+  <div style="font-family:'Poppins',Arial,sans-serif;background:#f1f2f6;padding:26px">
+    <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,.08)">
+      <div style="background:#141320;padding:20px;text-align:center">
+        <img src="${BASE_URL}/brand/trd/trd-logo-white.png" alt="TRD Agency" height="24" style="height:24px;vertical-align:middle;margin:0 10px" />
+        <img src="${BASE_URL}/brand/leadtion-logo-white.png" alt="Leadtion" height="20" style="height:20px;vertical-align:middle;margin:0 10px" />
+      </div>
+      <div style="padding:28px 30px;color:#3a3a48;font-size:15px;line-height:1.6">
+        <p>¡Hola, <b>${d.nombre}</b>! 👋</p>
+        <p>Por favor firma la siguiente propuesta comercial, la cual fue conversada y revisada contigo, para darle comienzo a este magnífico proceso.</p>
+        <div style="text-align:center;margin:24px 0">
+          <a href="${d.enlace}" style="display:inline-block;background:#6d5ac0;color:#fff;text-decoration:none;font-weight:700;padding:14px 26px;border-radius:11px;font-size:16px">Revisar y firmar el contrato →</a>
+        </div>
+        <p style="font-size:13px;color:#8a8a9a;text-align:center">Este enlace es personal y ${d.venceTexto}.</p>
+      </div>
+      <div style="background:#f7f6fb;padding:16px 24px;font-size:12px;color:#9a9ab0;text-align:center;line-height:1.5">
+        Firma digital con sello de tiempo y UUID.<br/>TRD Investment LLC · Florida, EE. UU. · Si no esperabas este correo, ignóralo.
+      </div>
+    </div>
+  </div>`;
+  return { subject, html };
+}
+
 export async function enviarEmail({ to, subject, html, replyTo }: CorreoParams): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM;

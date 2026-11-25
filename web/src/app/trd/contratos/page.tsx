@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { soloAdmin } from "@/lib/sesion";
-import { listarContratos, resumenContratos, type EstadoContrato } from "@/lib/contratos";
+import { listarContratos, resumenContratos, valorContratado, type EstadoContrato } from "@/lib/contratos";
+import { fmtMoneda } from "@/lib/contrato-plantilla";
 
 export const metadata = { title: "Contratos" };
 export const dynamic = "force-dynamic";
@@ -12,8 +13,9 @@ const fFecha = (iso: string | null) => iso ? new Date(iso).toLocaleDateString("e
 
 export default async function ContratosPage() {
   await soloAdmin();
-  const [contratos, resumen] = await Promise.all([listarContratos(), resumenContratos()]);
+  const [contratos, resumen, valores] = await Promise.all([listarContratos(), resumenContratos(), valorContratado()]);
   const n = (e: EstadoContrato) => resumen[e] ?? 0;
+  const valUsd = valores.find((x) => x.moneda === "USD")?.total ?? 0;
 
   return (
     <main className="wrap">
@@ -29,7 +31,7 @@ export default async function ContratosPage() {
         <div className="kpi"><span className="kpi-lbl">Borradores</span><span className="kpi-num">{n("borrador")}</span></div>
         <div className="kpi destacado"><span className="kpi-lbl">Por firmar</span><span className="kpi-num">{n("enviado") + n("visto")}</span></div>
         <div className="kpi"><span className="kpi-lbl">Firmados</span><span className="kpi-num" style={{ color: "var(--paid)" }}>{n("firmado")}</span></div>
-        <div className="kpi"><span className="kpi-lbl">Total</span><span className="kpi-num">{contratos.length}</span></div>
+        <div className="kpi"><span className="kpi-lbl">Valor contratado (USD)</span><span className="kpi-num">{fmtMoneda(valUsd, "USD")}</span></div>
       </div>
 
       <div className="reg-tabla-wrap" style={{ marginTop: 16 }}>

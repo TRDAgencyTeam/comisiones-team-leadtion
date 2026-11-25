@@ -4,6 +4,7 @@ import { soloAdmin } from "@/lib/sesion";
 import { obtenerContrato, eventosContrato } from "@/lib/contratos";
 import { renderContrato, type FirmaContrato } from "@/lib/contrato-plantilla";
 import { cambiarEstadoContrato, eliminarContrato } from "../acciones";
+import { BASE_URL } from "@/lib/email";
 import { ImprimirBtn } from "@/components/ImprimirBtn";
 import { IconoBorrar } from "@/components/Iconos";
 
@@ -66,6 +67,14 @@ export default async function ContratoDetallePage({ params }: { params: Promise<
               <span className={`ctr-chip e-${c.estado}`} style={{ marginTop: 6 }}>{ESTADO_LABEL[c.estado]}</span>
             </div>
           </div>
+
+          {c.token && c.estado !== "firmado" && c.estado !== "borrador" && (
+            <div className="ctr-card">
+              <h3>Enlace de firma del cliente</h3>
+              <a href={`${BASE_URL}/firmar/${c.token}`} target="_blank" rel="noreferrer" className="link-ver" style={{ wordBreak: "break-all", fontSize: "0.8rem" }}>{BASE_URL}/firmar/{c.token}</a>
+              <p className="ctr-hint" style={{ marginTop: 6 }}>Se envió por correo. Si quieres, compártelo también manualmente.</p>
+            </div>
+          )}
 
           <div className="ctr-card">
             <h3>Estado (manual)</h3>

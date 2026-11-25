@@ -17,6 +17,7 @@ export interface Contrato {
   estado: EstadoContrato;
   valorResumen: string | null;
   vigenciaResumen: string | null;
+  token: string | null;
   fechaEnvio: string | null;
   fechaVence: string | null;
   fechaFirma: string | null;
@@ -47,6 +48,7 @@ function mapRow(r: Record<string, unknown>): Contrato {
     estado: String(r.estado) as EstadoContrato,
     valorResumen: (r.valor_resumen as string) ?? null,
     vigenciaResumen: (r.vigencia_resumen as string) ?? null,
+    token: (r.token as string) ?? null,
     fechaEnvio: iso(r.fecha_envio),
     fechaVence: iso(r.fecha_vence),
     fechaFirma: iso(r.fecha_firma),
@@ -60,7 +62,7 @@ function mapRow(r: Record<string, unknown>): Contrato {
 }
 
 const CAMPOS = `id, uuid, cliente_id, cliente_nombre, cliente_email, cliente_domicilio, plantilla,
-  titulo, variables, estado, valor_resumen, vigencia_resumen, fecha_envio, fecha_vence, fecha_firma,
+  titulo, variables, estado, valor_resumen, vigencia_resumen, token, fecha_envio, fecha_vence, fecha_firma,
   firma_tipo, firma_data, firma_fuente, recordatorio_dias, creado_en, actualizado_en`;
 
 export async function listarContratos(): Promise<Contrato[]> {
@@ -70,6 +72,13 @@ export async function listarContratos(): Promise<Contrato[]> {
 
 export async function obtenerContrato(id: number): Promise<Contrato | null> {
   const rows = await consulta(`select ${CAMPOS} from public.contrato where id = $1`, [id]);
+  return rows.length ? mapRow(rows[0] as Record<string, unknown>) : null;
+}
+
+/** Contrato por su token público (portal de firma del cliente). */
+export async function obtenerContratoPorToken(token: string): Promise<Contrato | null> {
+  if (!token) return null;
+  const rows = await consulta(`select ${CAMPOS} from public.contrato where token = $1`, [token]);
   return rows.length ? mapRow(rows[0] as Record<string, unknown>) : null;
 }
 
@@ -85,6 +94,15 @@ export async function eventosContrato(id: number): Promise<EventoContrato[]> {
 
 export async function registrarEvento(id: number, tipo: string, descripcion: string): Promise<void> {
   await consulta(`insert into public.contrato_evento (contrato_id, tipo, descripcion) values ($1,$2,$3)`, [id, tipo, descripcion]);
+}
+
+/** Valor contratado (suma numérica de total_monto) por divisa, excluyendo anulados. */
+export async function valorContratado(): Promise<{ moneda: string; total: number }[]> {
+  const rows = await consulta(
+    `select coalesce(moneda,'USD') moneda, coalesce(sum(total_monto),0)::float total
+       from public.contrato where estado <> 'anulado' group by 1 order by total desc`,
+  );
+  return rows.map((r: Record<string, unknown>) => ({ moneda: String(r.moneda), total: Number(r.total) }));
 }
 
 /** Resumen por estado para los KPIs. */

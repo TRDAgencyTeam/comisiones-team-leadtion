@@ -18,6 +18,10 @@ export default function RootLayout({
       <head>
         {/* Tema elegido (claro/oscuro) antes del primer pintado: sin parpadeo. */}
         <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
+        {/* Poppins: tipografía de los contratos (y disponible en toda la plataforma). */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Dancing+Script:wght@600&family=Great+Vibes&family=Sacramento&display=swap" />
       </head>
       <body>
         {children}

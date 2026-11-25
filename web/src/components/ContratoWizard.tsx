@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { renderContrato, PLANTILLAS, varsPlanMarketingVacias, type VarsPlanMarketing, type PagoLinea } from "@/lib/contrato-plantilla";
+import { renderContrato, PLANTILLAS, MONEDAS, varsPlanMarketingVacias, fmtMoneda, totalContrato, type VarsPlanMarketing, type PagoLinea } from "@/lib/contrato-plantilla";
 import { guardarContrato } from "@/app/trd/contratos/acciones";
 import { conCarga } from "@/lib/carga";
 
@@ -52,8 +52,10 @@ export function ContratoWizard({ id, inicial }: { id?: number; inicial?: VarsPla
             <label>Permanencia (meses)
               <input value={v.meses} onChange={(e) => set({ meses: e.target.value })} />
             </label>
-            <label className="chk" style={{ alignSelf: "end", paddingBottom: 9 }}>
-              <input type="checkbox" checked={v.bono} onChange={(e) => set({ bono: e.target.checked })} /> + mes de bono
+            <label>Moneda
+              <select value={v.moneda} onChange={(e) => set({ moneda: e.target.value })}>
+                {MONEDAS.map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
             </label>
           </div>
           <div className="dos">
@@ -75,15 +77,17 @@ export function ContratoWizard({ id, inicial }: { id?: number; inicial?: VarsPla
         </div>
 
         <div className="grp"><h3><span className="dot">3</span> Inversión y forma de pago</h3>
-          <p className="ctr-hint">Agrega las líneas que quieras: mensual, pago único, cuotas, Black Friday…</p>
+          <p className="ctr-hint">Monto numérico ({v.moneda}) para poder sumar el valor del contrato. La “nota” es texto libre opcional (ej. “o $1.500/mes”).</p>
           {v.pagos.map((p, i) => (
-            <div className="ctr-payline" key={i}>
+            <div className="ctr-payline3" key={i}>
               <input value={p.concepto} onChange={(e) => setPago(i, { concepto: e.target.value })} placeholder="Concepto" />
-              <input value={p.valor} onChange={(e) => setPago(i, { valor: e.target.value })} placeholder="Valor" />
+              <input type="number" step="0.01" inputMode="decimal" value={p.monto || ""} onChange={(e) => setPago(i, { monto: parseFloat(e.target.value) || 0 })} placeholder="Monto" />
+              <input value={p.nota ?? ""} onChange={(e) => setPago(i, { nota: e.target.value })} placeholder="Nota (opc.)" />
               <button type="button" className="ctr-delx" onClick={() => set({ pagos: v.pagos.filter((_, j) => j !== i) })}>✕</button>
             </div>
           ))}
-          <button type="button" className="ctr-addline" onClick={() => set({ pagos: [...v.pagos, { concepto: "", valor: "" }] })}>+ Agregar línea de pago</button>
+          <button type="button" className="ctr-addline" onClick={() => set({ pagos: [...v.pagos, { concepto: "", monto: 0 }] })}>+ Agregar línea de pago</button>
+          <div className="ctr-total">Total del contrato: <b>{fmtMoneda(totalContrato(v), v.moneda)}</b></div>
           <label className="chk" style={{ marginTop: 12 }}>
             <input type="checkbox" checked={v.cobrosAuto} onChange={(e) => set({ cobrosAuto: e.target.checked })} /> Cobros automáticos por Stripe tras el primer pago
           </label>

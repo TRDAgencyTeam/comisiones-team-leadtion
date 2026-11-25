@@ -8,6 +8,7 @@ import { soloAdmin } from "@/lib/sesion";
 import { flash } from "@/lib/flash";
 import { resumenPlanMarketing, type VarsPlanMarketing } from "@/lib/contrato-plantilla";
 import { registrarEvento } from "@/lib/contratos";
+import { enviarEmail, emailConfigurado, plantillaContratoFirma, BASE_URL } from "@/lib/email";
 
 export interface ContratoInput {
   id?: number;
@@ -24,39 +25,55 @@ export async function guardarContrato(input: ContratoInput): Promise<void> {
   await soloAdmin();
   const nombre = (input.clienteNombre || input.variables?.clienteNombre || "").trim();
   if (!nombre) throw new Error("El nombre del cliente es obligatorio.");
-  const { valor, vigencia } = resumenPlanMarketing(input.variables);
+  const { valor, vigencia, total } = resumenPlanMarketing(input.variables);
+  const moneda = input.variables?.moneda || "USD";
   const titulo = `${nombre} — Plan Marketing Ads + IA + CRM`;
 
   let id = input.id ?? 0;
   if (id) {
     await consulta(
       `update public.contrato set cliente_nombre=$2, cliente_email=$3, cliente_domicilio=$4,
-          plantilla=$5, titulo=$6, variables=$7, valor_resumen=$8, vigencia_resumen=$9, actualizado_en=now()
+          plantilla=$5, titulo=$6, variables=$7, valor_resumen=$8, vigencia_resumen=$9,
+          total_monto=$10, moneda=$11, actualizado_en=now()
         where id=$1`,
       [id, nombre, input.clienteEmail ?? null, input.clienteDomicilio ?? null, input.plantilla, titulo,
-       JSON.stringify(input.variables), valor, vigencia],
+       JSON.stringify(input.variables), valor, vigencia, total, moneda],
     );
     await registrarEvento(id, "editado", "Contrato actualizado");
   } else {
     const rows = await consulta(
       `insert into public.contrato
-         (uuid, cliente_nombre, cliente_email, cliente_domicilio, plantilla, titulo, variables, estado, valor_resumen, vigencia_resumen)
-       values ($1,$2,$3,$4,$5,$6,$7,'borrador',$8,$9) returning id`,
+         (uuid, cliente_nombre, cliente_email, cliente_domicilio, plantilla, titulo, variables, estado, valor_resumen, vigencia_resumen, total_monto, moneda)
+       values ($1,$2,$3,$4,$5,$6,$7,'borrador',$8,$9,$10,$11) returning id`,
       [randomUUID(), nombre, input.clienteEmail ?? null, input.clienteDomicilio ?? null, input.plantilla, titulo,
-       JSON.stringify(input.variables), valor, vigencia],
+       JSON.stringify(input.variables), valor, vigencia, total, moneda],
     );
     id = Number(rows[0]!.id);
     await registrarEvento(id, "creado", "Contrato creado desde plantilla Plan Marketing");
   }
 
   if (input.enviar) {
+    const token = randomUUID();
     await consulta(
       `update public.contrato set estado='enviado', fecha_envio=now(),
-          fecha_vence = now() + interval '5 days', actualizado_en=now()
-        where id=$1 and estado='borrador'`,
-      [id],
+          fecha_vence = now() + interval '5 days', token=$2, actualizado_en=now()
+        where id=$1`,
+      [id, token],
     );
     await registrarEvento(id, "enviado", `Solicitud de firma enviada a ${input.clienteEmail ?? "el cliente"}`);
+    // Correo al cliente con el enlace del portal de firma.
+    if (input.clienteEmail && emailConfigurado()) {
+      const enlace = `${BASE_URL}/firmar/${token}`;
+      const { subject, html } = plantillaContratoFirma({
+        nombre: nombre.split(" ")[0] || nombre, titulo: "Contrato de servicio", enlace, venceTexto: "vence en 5 días",
+      });
+      try {
+        await enviarEmail({ to: input.clienteEmail, subject, html });
+        await registrarEvento(id, "correo", `Correo de firma enviado a ${input.clienteEmail}`);
+      } catch {
+        await registrarEvento(id, "correo_error", "No se pudo enviar el correo de firma (revisar RESEND)");
+      }
+    }
   }
 
   await flash(input.enviar ? "Contrato enviado" : "Borrador guardado");

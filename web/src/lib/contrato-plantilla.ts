@@ -5,21 +5,35 @@
  * (vista previa del editor) y sin él queda limpio (PDF/firma).
  */
 
-export interface PagoLinea { concepto: string; valor: string }
+/** Línea de pago: concepto + monto NUMÉRICO (para poder sumar el valor del contrato).
+ *  La divisa es a nivel de contrato (`moneda`). `nota` es texto libre opcional
+ *  (ej. "o $1.500/mes") que no entra en la suma. */
+export interface PagoLinea { concepto: string; monto: number; nota?: string }
+
+export const MONEDAS = ["USD", "COP", "EUR", "MXN"] as const;
 
 export interface VarsPlanMarketing {
   clienteNombre: string;
   clienteEmail?: string | null;
   clienteDomicilio?: string | null;
   meses: string;            // ej. "4"
-  bono: boolean;            // + mes de bono
+  bono?: boolean;           // (obsoleto; ya no se usa en la UI)
+  moneda: string;           // USD | COP | EUR | MXN (default USD)
   fechaInicio?: string | null;     // YYYY-MM-DD
   fechaCampanas?: string | null;   // opcional
   fechaFin?: string | null;
-  notaEspecial?: string | null;    // ej. "Diciembre se da como bono..."
+  notaEspecial?: string | null;
   pagos: PagoLinea[];
   cobrosAuto: boolean;
   anotaciones?: string | null;
+}
+
+/** Formatea un monto con su divisa. COP sin decimales; el resto con 2. */
+export function fmtMoneda(monto: number, moneda = "USD"): string {
+  const m = Number(monto) || 0;
+  try {
+    return new Intl.NumberFormat("es-CO", { style: "currency", currency: moneda, maximumFractionDigits: moneda === "COP" ? 0 : 2 }).format(m);
+  } catch { return `${m} ${moneda}`; }
 }
 
 export interface FirmaContrato { tipo: "dibujo" | "texto"; data: string; fuente?: string; fecha?: string }
@@ -42,17 +56,21 @@ const esc = (s: unknown) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g,
 export function varsPlanMarketingVacias(): VarsPlanMarketing {
   return {
     clienteNombre: "", clienteEmail: "", clienteDomicilio: "Florida, EE. UU.",
-    meses: "4", bono: false, fechaInicio: null, fechaCampanas: null, fechaFin: null, notaEspecial: "",
-    pagos: [{ concepto: "Primer mes", valor: "USD $1.400" }, { concepto: "Meses 2 a 4", valor: "USD $897 / mes" }],
+    meses: "4", moneda: "USD", fechaInicio: null, fechaCampanas: null, fechaFin: null, notaEspecial: "",
+    pagos: [{ concepto: "Primer mes", monto: 1400 }, { concepto: "Meses 2 a 4 (c/u)", monto: 897 }],
     cobrosAuto: true, anotaciones: "",
   };
 }
 
+/** Total numérico del contrato (suma de los montos de las líneas de pago). */
+export function totalContrato(v: VarsPlanMarketing): number {
+  return (v.pagos || []).reduce((s, p) => s + (Number(p.monto) || 0), 0);
+}
+
 /** Resumen corto del valor y la vigencia (para la lista y el detalle). */
-export function resumenPlanMarketing(v: VarsPlanMarketing): { valor: string; vigencia: string } {
-  const valor = v.pagos.filter((p) => p.concepto || p.valor).map((p) => p.valor).filter(Boolean).join(" · ") || "—";
-  const vig = `${v.meses} meses${v.bono ? " + bono" : ""}`;
-  return { valor, vigencia: vig };
+export function resumenPlanMarketing(v: VarsPlanMarketing): { valor: string; vigencia: string; total: number } {
+  const total = totalContrato(v);
+  return { valor: fmtMoneda(total, v.moneda), vigencia: `${v.meses} meses`, total };
 }
 
 type Opts = { resaltar?: boolean; firma?: FirmaContrato | null };
@@ -73,12 +91,14 @@ export function renderPlanMarketing(v: VarsPlanMarketing, o: Opts = {}): string 
   const nom = V(esc(v.clienteNombre || "__________"), o);
   const dom = V(esc(v.clienteDomicilio || "__________"), o);
   const mail = v.clienteEmail ? ` ${V(`(${esc(v.clienteEmail)})`, o)}` : "";
-  const perm = V(`cuatro (${esc(v.meses)}) meses${v.bono ? " + Bono" : ""}`, o);
+  const perm = V(`${esc(v.meses)} meses`, o);
   const ini = V(fechaLarga(v.fechaInicio), o);
   const camp = v.fechaCampanas ? V(fechaLarga(v.fechaCampanas), o) : "";
   const fin = V(fechaLarga(v.fechaFin), o);
-  const pagos = v.pagos.filter((p) => p.concepto || p.valor)
-    .map((p) => `<li><span>${esc(p.concepto) || "—"}</span><b>${V(esc(p.valor) || "—", o)}</b></li>`).join("") || "<li><span>—</span></li>";
+  const lineas = (v.pagos || []).filter((p) => p.concepto || p.monto);
+  const pagos = (lineas.map((p) =>
+      `<li><span>${esc(p.concepto) || "—"}${p.nota ? ` <small>(${esc(p.nota)})</small>` : ""}</span><b>${V(fmtMoneda(p.monto, v.moneda), o)}</b></li>`).join("")
+    + (lineas.length ? `<li class="c-total"><span>Total</span><b>${V(fmtMoneda(totalContrato(v), v.moneda), o)}</b></li>` : "")) || "<li><span>—</span></li>";
   const firmaBox = o.firma
     ? (o.firma.tipo === "dibujo"
       ? `<img src="${esc(o.firma.data)}" alt="firma" class="c-firma-img">`
@@ -90,8 +110,8 @@ export function renderPlanMarketing(v: VarsPlanMarketing, o: Opts = {}): string 
 <article class="contrato-doc">
   <header class="c-head">
     <div class="c-brands">
-      <span class="c-trd"><span class="c-hex">TRD</span>Agency</span>
-      <span class="c-lt"><span class="c-leaf"></span>Leadtion</span>
+      <img src="/brand/trd/trd-logo-black.png" alt="TRD Agency" class="c-logo c-logo-trd">
+      <img src="/brand/leadtion-logo-black.png" alt="Leadtion" class="c-logo c-logo-lt">
     </div>
     <span class="c-tag">Contrato · Lead Gen</span>
   </header>
