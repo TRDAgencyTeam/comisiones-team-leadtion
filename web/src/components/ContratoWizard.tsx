@@ -5,13 +5,16 @@ import { renderContrato, PLANTILLAS, MONEDAS, varsPlanMarketingVacias, fmtMoneda
 import { guardarContrato } from "@/app/trd/contratos/acciones";
 import { conCarga } from "@/lib/carga";
 
-export function ContratoWizard({ id, inicial }: { id?: number; inicial?: VarsPlanMarketing }) {
+export function ContratoWizard({ id, inicial, plantilla: plantillaIni }: { id?: number; inicial?: VarsPlanMarketing; plantilla?: string }) {
   const [v, setV] = useState<VarsPlanMarketing>(inicial ?? varsPlanMarketingVacias());
-  const [plantilla] = useState("plan_marketing");
+  const [plantilla, setPlantilla] = useState(plantillaIni ?? "plan_marketing");
+  const extras = v.plantillasExtra ?? [];
   const [pending, start] = useTransition();
   const set = (patch: Partial<VarsPlanMarketing>) => setV((x) => ({ ...x, ...patch }));
   const setPago = (i: number, patch: Partial<PagoLinea>) =>
     setV((x) => ({ ...x, pagos: x.pagos.map((p, j) => (j === i ? { ...p, ...patch } : p)) }));
+  const toggleExtra = (clave: string) =>
+    setV((x) => { const cur = x.plantillasExtra ?? []; return { ...x, plantillasExtra: cur.includes(clave) ? cur.filter((c) => c !== clave) : [...cur, clave] }; });
 
   const html = useMemo(() => renderContrato(plantilla, v, { resaltar: true }), [plantilla, v]);
 
@@ -29,11 +32,22 @@ export function ContratoWizard({ id, inicial }: { id?: number; inicial?: VarsPla
     <div className="ctr-wiz">
       <div className="ctr-form">
         <div className="grp"><h3><span className="dot">1</span> Plantilla y cliente</h3>
-          <label>Plantilla de contrato
-            <select value={plantilla} disabled>
-              {PLANTILLAS.map((p) => <option key={p.clave} value={p.clave}>{p.nombre}{p.disponible ? "" : " — (próximamente)"}</option>)}
+          <label>Contrato principal <small>(trae el intro y la firma)</small>
+            <select value={plantilla} onChange={(e) => { const nv = e.target.value; setPlantilla(nv); setV((x) => ({ ...x, plantillasExtra: (x.plantillasExtra ?? []).filter((c) => c !== nv) })); }}>
+              {PLANTILLAS.filter((p) => p.disponible).map((p) => <option key={p.clave} value={p.clave}>{p.nombre}</option>)}
             </select>
           </label>
+          <div className="field">
+            <label style={{ marginBottom: 6 }}>Servicios adicionales en el mismo documento <small>(opcional)</small></label>
+            <div className="ctr-extras">
+              {PLANTILLAS.filter((p) => p.disponible && p.clave !== plantilla).map((p) => (
+                <label key={p.clave} className="chk">
+                  <input type="checkbox" checked={extras.includes(p.clave)} onChange={() => toggleExtra(p.clave)} /> {p.nombre}
+                </label>
+              ))}
+            </div>
+            <p className="ctr-hint" style={{ marginTop: 6 }}>Se agregan en un <b>solo documento</b> con <b>una sola firma</b>. El intro (“Entre TRD INVESTMENT LLC… y EL CLIENTE…”) no se repite.</p>
+          </div>
           <label>Nombre del cliente *
             <input value={v.clienteNombre} onChange={(e) => set({ clienteNombre: e.target.value })} placeholder="Nombre del cliente" />
           </label>

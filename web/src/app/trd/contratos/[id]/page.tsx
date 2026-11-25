@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { soloAdmin } from "@/lib/sesion";
 import { obtenerContrato, eventosContrato } from "@/lib/contratos";
-import { renderContrato, type FirmaContrato } from "@/lib/contrato-plantilla";
+import { renderContrato, plantillaNombre, type FirmaContrato } from "@/lib/contrato-plantilla";
 import { cambiarEstadoContrato, eliminarContrato } from "../acciones";
 import { BASE_URL } from "@/lib/email";
 import { ImprimirBtn } from "@/components/ImprimirBtn";
@@ -35,7 +35,7 @@ export default async function ContratoDetallePage({ params }: { params: Promise<
         <div>
           <p style={{ margin: 0 }}><Link href="/trd/contratos" className="link-ver">← Contratos</Link></p>
           <h1>{c.clienteNombre}</h1>
-          <p className="sub">Plan Marketing Ads + IA + CRM · <span className={`ctr-chip e-${c.estado}`}>{ESTADO_LABEL[c.estado]}</span></p>
+          <p className="sub">{plantillaNombre(c.plantilla)}{(c.variables?.plantillasExtra?.length ?? 0) > 0 ? ` + ${c.variables!.plantillasExtra!.length} servicio(s)` : ""} · <span className={`ctr-chip e-${c.estado}`}>{ESTADO_LABEL[c.estado]}</span></p>
         </div>
         <div style={{ display: "inline-flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           {c.estado === "borrador" && <Link href={`/trd/contratos/${c.id}/editar`} className="btn-secondary">Editar</Link>}

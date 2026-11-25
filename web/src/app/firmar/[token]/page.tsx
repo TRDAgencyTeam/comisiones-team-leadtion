@@ -37,7 +37,7 @@ export default async function FirmarPage({ params }: { params: Promise<{ token: 
 
       <div className="fc-paper ctr-paper" dangerouslySetInnerHTML={{ __html: html }} />
 
-      <p className="fc-foot">Firma digital con sello de tiempo y UUID · TRD Investment LLC · Florida, EE. UU.</p>
+      <p className="fc-foot">Firma digital con sello de tiempo y UUID · TRD Investment LLC · Sheridan, Wyoming (EE. UU.)</p>
     </main>
   );
 }

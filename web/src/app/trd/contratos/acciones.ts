@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { consulta } from "@/lib/db";
 import { soloAdmin } from "@/lib/sesion";
 import { flash } from "@/lib/flash";
-import { resumenPlanMarketing, type VarsPlanMarketing } from "@/lib/contrato-plantilla";
+import { resumenPlanMarketing, plantillaNombre, type VarsPlanMarketing } from "@/lib/contrato-plantilla";
 import { registrarEvento } from "@/lib/contratos";
 import { enviarEmail, emailConfigurado, plantillaContratoFirma, BASE_URL } from "@/lib/email";
 
@@ -27,7 +27,8 @@ export async function guardarContrato(input: ContratoInput): Promise<void> {
   if (!nombre) throw new Error("El nombre del cliente es obligatorio.");
   const { valor, vigencia, total } = resumenPlanMarketing(input.variables);
   const moneda = input.variables?.moneda || "USD";
-  const titulo = `${nombre} — Plan Marketing Ads + IA + CRM`;
+  const extras = input.variables?.plantillasExtra ?? [];
+  const titulo = `${nombre} — ${plantillaNombre(input.plantilla)}${extras.length ? ` (+${extras.length})` : ""}`;
 
   let id = input.id ?? 0;
   if (id) {

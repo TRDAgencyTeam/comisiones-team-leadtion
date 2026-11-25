@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { soloAdmin } from "@/lib/sesion";
 import { listarContratos, resumenContratos, valorContratado, type EstadoContrato } from "@/lib/contratos";
-import { fmtMoneda } from "@/lib/contrato-plantilla";
+import { fmtMoneda, plantillaNombre } from "@/lib/contrato-plantilla";
 
 export const metadata = { title: "Contratos" };
 export const dynamic = "force-dynamic";
@@ -41,7 +41,7 @@ export default async function ContratosPage() {
             {contratos.map((c) => (
               <tr key={c.id}>
                 <td><Link href={`/trd/contratos/${c.id}`} className="link-ver">{c.clienteNombre}</Link></td>
-                <td className="muted">Plan Marketing</td>
+                <td className="muted">{plantillaNombre(c.plantilla)}{(c.variables?.plantillasExtra?.length ?? 0) > 0 ? ` +${c.variables!.plantillasExtra!.length}` : ""}</td>
                 <td>{c.valorResumen ?? "—"}</td>
                 <td className="muted">{c.vigenciaResumen ?? "—"}</td>
                 <td><span className={`ctr-chip e-${c.estado}`}>{ESTADO_LABEL[c.estado] ?? c.estado}</span></td>

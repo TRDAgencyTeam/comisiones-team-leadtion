@@ -1401,6 +1401,11 @@ input[type="month"]::-webkit-calendar-picker-indicator { cursor: pointer; }
 .ctr-payline3 input { margin-top: 0; }
 .ctr-total { text-align: right; font-size: 0.84rem; color: var(--muted); margin-top: 10px; }
 .ctr-total b { color: var(--text); font-size: 1.05rem; }
+.ctr-extras { display: flex; flex-direction: column; gap: 7px; background: var(--bg); border: 1px solid var(--border); border-radius: 9px; padding: 11px 13px; }
+.ctr-extras .chk { font-weight: 500; }
+.contrato-doc .c-servicio { display: flex; align-items: baseline; gap: 10px; margin: 32px 0 6px; padding-top: 16px; border-top: 2px solid #e4e1d7; }
+.contrato-doc .c-servicio span { font-family: "Poppins", Inter, sans-serif; font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: #8a7ad6; font-weight: 700; }
+.contrato-doc .c-servicio b { font-family: "Poppins", Inter, sans-serif; font-size: 1.1rem; color: #17161f; }
 .ctr-delx { border: 1px solid var(--border); background: transparent; color: var(--danger); border-radius: 8px; cursor: pointer; }
 .ctr-addline { border: 1px dashed var(--accent); background: var(--accent-soft); color: var(--accent); border-radius: 9px; padding: 8px; width: 100%; cursor: pointer; font-weight: 600; font-size: 0.82rem; }
 .ctr-acc { display: flex; gap: 10px; justify-content: flex-end; }
@@ -1418,7 +1423,7 @@ input[type="month"]::-webkit-calendar-picker-indicator { cursor: pointer; }
 .contrato-doc .c-fechas, .contrato-doc .c-pagos, .contrato-doc .cvar, .contrato-doc .c-sign, .contrato-doc .c-foot,
 .contrato-doc .c-sign-lbl { font-family: "Poppins", Inter, sans-serif; }
 .c-logo { width: auto; object-fit: contain; display: block; }
-.c-logo-trd { height: 30px; } .c-logo-lt { height: 24px; }
+.c-logo-trd { height: 44px; } .c-logo-lt { height: 36px; }
 .c-pagos li.c-total { border-top: 1.5px solid #e3cf9a; border-bottom: none; font-weight: 800; margin-top: 3px; padding-top: 8px; font-size: 0.95rem; }
 .c-pagos small { color: #8a7a4a; font-weight: 400; }
 .contrato-doc .c-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e4e1d7; padding-bottom: 14px; margin-bottom: 20px; gap: 14px; flex-wrap: wrap; }
@@ -1465,15 +1470,15 @@ input[type="month"]::-webkit-calendar-picker-indicator { cursor: pointer; }
 .ctr-dl .mono { font-family: ui-monospace, monospace; font-size: 0.72rem; font-weight: 500; }
 .ctr-firmante { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; } .ctr-firmante small { color: var(--muted); }
 .ctr-estado-form { display: flex; gap: 8px; } .ctr-estado-form select { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 9px; padding: 8px; }
-.ctr-ev { display: flex; gap: 8px; padding: 7px 0; border-bottom: 1px dashed var(--border); font-size: 0.82rem; }
-.ctr-ev:last-child { border-bottom: none; } .ctr-ev .t { color: var(--faint); font-size: 0.72rem; white-space: nowrap; width: 118px; flex: none; }
+.ctr-ev { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 0.84rem; }
+.ctr-ev:last-child { border-bottom: none; } .ctr-ev .t { color: var(--faint); font-size: 0.7rem; }
 @media (max-width: 900px) { .ctr-wiz { grid-template-columns: 1fr; } .ctr-detalle { grid-template-columns: 1fr; } .ctr-aside { position: static; } }
 @media print { .trd-side, .no-print { display: none !important; } .ctr-detalle { display: block; } .ctr-paper { box-shadow: none; max-height: none; padding: 0; } .main, .trd-main { padding: 0 !important; } body { background: #fff; } }
 
 /* ===== Portal público de firma (/firmar/[token]) ===== */
 .fc-page { min-height: 100vh; background: #15131f; padding: 24px 16px 50px; display: flex; flex-direction: column; align-items: center; font-family: "Poppins", Inter, sans-serif; }
 .fc-top { display: flex; gap: 18px; align-items: center; justify-content: center; padding: 10px 0 20px; }
-.fc-logo { height: 26px; width: auto; } .fc-logo-lt { height: 22px; }
+.fc-logo { height: 40px; width: auto; } .fc-logo-lt { height: 32px; }
 .fc-ok { background: #113026; color: #34d399; border: 1px solid #1d5a44; border-radius: 12px; padding: 16px 20px; font-weight: 700; max-width: 800px; width: 100%; text-align: center; margin-bottom: 16px; }
 .fc-centro { background: #1d1b2a; border: 1px solid #2a2d38; border-radius: 16px; padding: 40px; max-width: 520px; text-align: center; color: #e9e8f2; }
 .fc-centro h1 { margin: 0 0 8px; font-size: 1.3rem; } .fc-centro p { color: #9a98ad; margin: 0; }

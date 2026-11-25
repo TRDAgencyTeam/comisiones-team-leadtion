@@ -19,7 +19,7 @@ export default async function EditarContratoPage({ params }: { params: Promise<{
       <p><Link href={`/trd/contratos/${c.id}`} className="link-ver">← Volver al contrato</Link></p>
       <h1>Editar contrato</h1>
       <p className="sub">{c.clienteNombre} · Plan Marketing. Cambia lo que necesites; la vista previa se actualiza sola.</p>
-      <ContratoWizard id={c.id} inicial={vars} />
+      <ContratoWizard id={c.id} inicial={vars} plantilla={c.plantilla} />
     </main>
   );
 }
